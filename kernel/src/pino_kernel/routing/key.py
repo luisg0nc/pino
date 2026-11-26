@@ -2,7 +2,9 @@
 
 Each part is the sha256 of a canonical text (UUIDs, fills, silkscreen, values and formatting left out):
 nets by pad, placement, footprint pads, the outline, zones and rule areas, kept (locked) copper, the rules,
-the routing instructions (the plan without its rules and warnings), and the router and kernel versions.
+the routing instructions (the plan without its rules and warnings), and the router and kernel versions. The
+reference labels are a part too, though the copper does not depend on them: the routed board is the build's board
+with the copper on it, and its DRC checks the labels, so a label moved by board.py needs that board made again.
 The key is the first 12 hex of the sha256 over the parts.
 """
 
@@ -19,11 +21,11 @@ from ..sexpr import dump, find, find_all, num, parse
 from .krt import ROUTER_ID
 from .plan import RoutePlan
 
-PARTS = ("nets", "placement", "footprints", "outline", "zones", "kept", "rules", "plan", "router")
+PARTS = ("nets", "placement", "footprints", "outline", "zones", "kept", "rules", "plan", "router", "labels")
 REASONS = {"nets": "connections changed", "placement": "parts moved", "footprints": "footprints changed",
            "outline": "outline changed", "zones": "zones or keep-outs changed", "kept": "kept copper changed",
            "rules": "rules changed", "plan": "routing instructions changed",
-           "router": "router or kernel version changed"}
+           "router": "router or kernel version changed", "labels": "labels moved"}
 
 
 @dataclass(frozen=True)
@@ -57,7 +59,7 @@ def _canon(node) -> str:
 def _parts(board_text: str, pro_text: str, dru_text: str | None, plan: RoutePlan, router_id: str,
            kernel_version: str) -> dict[str, str]:
     root = parse(board_text)
-    nets, placement, footprints, outline, zones, kept = [], [], [], [], [], []
+    nets, placement, footprints, outline, zones, kept, labels = [], [], [], [], [], [], []
     for n in root[1:]:
         if not isinstance(n, list) or not n:
             continue
@@ -79,6 +81,7 @@ def _parts(board_text: str, pro_text: str, dru_text: str | None, plan: RoutePlan
                 local = (float(pat[3]) if len(pat) > 3 else 0.0) - A
                 pads.append(f"{dump(p).replace(chr(10), ' ')} at {pat[1]} {pat[2]} {num(local % 360)}")
             footprints.append(f"{ref} {n[1]} " + "; ".join(sorted(pads)))
+            labels += [f"{ref} {_canon(p)}" for p in find_all(n, "property") if len(p) > 1 and p[1] == "Reference"]
         elif kind.startswith("gr_") and find(n, "layer") is not None and str(find(n, "layer")[1]) == "Edge.Cuts":
             outline.append(_canon(n))
         elif kind == "zone":
@@ -96,6 +99,7 @@ def _parts(board_text: str, pro_text: str, dru_text: str | None, plan: RoutePlan
         "footprints": "\n".join(sorted(footprints)), "outline": "\n".join(sorted(outline)),
         "zones": "\n".join(sorted(zones)), "kept": "\n".join(sorted(kept)), "rules": rules,
         "plan": json.dumps(plan_d, sort_keys=True), "router": f"{router_id}\n{kernel_version}",
+        "labels": "\n".join(sorted(labels)),
     }
     return {k: _sha(texts[k]) for k in PARTS}
 
@@ -108,4 +112,9 @@ def route_key(board_text: str, pro_text: str, dru_text: str | None, plan: RouteP
 
 
 def stale_reasons(old: RouteKey, new: RouteKey) -> list[str]:
-    return [REASONS[k] for k in PARTS if old.parts.get(k) != new.parts.get(k)]
+    """Why the copper is stale. Labels moved is said only when nothing else changed: a part that moves takes its
+    neighbours' labels with it."""
+    changed = [k for k in PARTS if old.parts.get(k) != new.parts.get(k)]
+    if len(changed) > 1 and "labels" in changed:
+        changed.remove("labels")
+    return [REASONS[k] for k in changed]

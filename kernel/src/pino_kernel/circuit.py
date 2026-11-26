@@ -222,6 +222,19 @@ class RouteHint:
 
 
 @dataclass
+class LabelSpec:
+    """board.py's label(): where one part's reference label goes, by hand. side and at are exclusive; rot alone
+    turns the automatic search; hide leaves the label off the silkscreen."""
+
+    ref: str
+    side: str | None  # top | bottom | left | right
+    at: tuple[float, float] | None  # the label's centre from the part's origin, board mm
+    rot: float | None  # degrees, counter-clockwise
+    hide: bool
+    line: int | None = None
+
+
+@dataclass
 class Hole:
     name: str
     x: float
@@ -263,6 +276,7 @@ class Circuit:
     kept_routes: list[KeptRoute] = field(default_factory=list)
     fixed_vias: list[FixedVia] = field(default_factory=list)
     route_hints: list[RouteHint] = field(default_factory=list)
+    labels: list[LabelSpec] = field(default_factory=list)
     _pin_nets: dict = field(default=None, init=False, repr=False, compare=False)
 
     def to_json(self) -> str:

@@ -114,6 +114,7 @@ class Placed:
     datasheet: str = ""
     description: str = ""
     hand_fit: bool = False
+    label: object | None = None  # labels.Label: where the Reference text goes, set by write_board
 
 
 # --- loading -------------------------------------------------------------------------
@@ -373,6 +374,34 @@ def _text_order(item, item_uuid):
     return head + first + [[Sym("uuid"), item_uuid]] + rest
 
 
+def _with_label(item, p: Placed, X: float, Y: float) -> list:
+    """The Reference field moved, turned, sized or hidden as its label says. A field's position is written in the
+    footprint's own frame (KiCad turns it with the footprint) and its angle as on the board."""
+    S = Sym
+    lab = p.label
+    out = []
+    for c in item:
+        if isinstance(c, list) and c and c[0] == "hide":
+            continue
+        if isinstance(c, list) and c and c[0] == "at" and not lab.hidden:
+            WX, WY = to_kicad(lab.x, lab.y)
+            fx, fy = rotate(WX - X, WY - Y, -p.rot)
+            c = [S("at"), num(round(fx, 6)), num(round(fy, 6)), num(norm_angle(lab.angle))]
+        elif isinstance(c, list) and c and c[0] == "effects":
+            c = [S("effects"), *[_sized(e, lab) for e in c[1:]]]
+        out.append(c)
+        if isinstance(c, list) and c and c[0] == "layer" and lab.hidden:
+            out.append([S("hide"), S("yes")])
+    return out
+
+
+def _sized(e, lab) -> list:
+    if not (isinstance(e, list) and e and e[0] == "font"):
+        return e
+    rest = [c for c in e[1:] if not (isinstance(c, list) and c and c[0] in ("size", "thickness"))]
+    return [Sym("font"), [Sym("size"), num(lab.size), num(lab.size)], [Sym("thickness"), num(lab.thickness)], *rest]
+
+
 def _empty_prop(name, p, item_uuid, value="", thickness=None):
     """A hidden field on the fab layer. KiCad writes a font thickness for user fields (LCSC) and none for
     Datasheet and Description; matching it keeps a re-save unchanged."""
@@ -484,6 +513,8 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
                 if isinstance(cc, list) and cc[0] == "at":
                     item[j] = _abs_angle(cc, p.rot, always=kind != "pad")
                     break
+        if kind == "property" and item[1] == "Reference" and p.label is not None:
+            item = _with_label(item, p, X, Y)
         if kind == "pad":
             number = item[1]
             net = p.pad_nets.get(number) if number else None

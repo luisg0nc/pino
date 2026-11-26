@@ -475,7 +475,7 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
         pad_found, files = clock.run("write board", write_files)
     except FootprintNotFound as e:
         return fail(f"a footprint was not found: {e}", [Finding("kernel", "footprint_not_found", "error", str(e))])
-    findings += pad_found
+    findings += pad_found + files.findings
 
     # -- kicad-cli, two workers
     runs: dict[str, CliRun] = {}
