@@ -164,6 +164,10 @@
     { "pino": "app/src/renderer/ui/view/useTagAt.ts", "torno": "app/src/renderer/ui/view/useTagAt.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/view/useTagAt.test.ts", "torno": "app/src/renderer/ui/view/useTagAt.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/view/Tag.tsx", "torno": "app/src/renderer/ui/view/Tag.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the subject is a point of a flat view, in its pixels; no 3D projection, moving subjects or problem tags" },
-    { "pino": "app/src/renderer/ui/view/Band.tsx", "torno": "app/src/renderer/ui/view/Band.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's band kinds (a failed or older build, routing) from shared/view; torno's modes cut" }
+    { "pino": "app/src/renderer/ui/view/Band.tsx", "torno": "app/src/renderer/ui/view/Band.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's band kinds (a failed or older build, routing) from shared/view; torno's modes cut" },
+    { "pino": "app/src/renderer/ui/view/Compass.tsx", "torno": "app/src/renderer/ui/view/Compass.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the 3D tab only: cube, projection and Fit, as props; no sketch planes, layouts, explode or saved views" },
+    { "pino": "app/src/renderer/ui/view/ViewCube.tsx", "torno": "app/src/renderer/ui/view/ViewCube.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "no view locks and no number keys (pino's 1 to 8 are copper layers)" },
+    { "pino": "app/src/renderer/styles/compass.css", "torno": "app/src/renderer/styles/compass.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the sketch, lock, layout, explode and saved-view rules cut" },
+    { "pino": "app/src/renderer/viewport/lights.ts", "torno": "app/src/renderer/viewport/lights.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the sky from +Y: KiCad's GLB has y up" }
   ]
 }

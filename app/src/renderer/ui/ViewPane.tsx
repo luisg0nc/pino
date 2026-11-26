@@ -3,6 +3,7 @@ import { pressed } from '../../shared/keys'
 import { emptyWords, TAB_NAMES, tabLabel, type ViewTab } from '../../shared/view'
 import { BoardView } from '../board/BoardView'
 import { SheetView } from '../sheet/SheetView'
+import { ThreeView } from '../three/ThreeView'
 import { actions, useStore } from '../state/store'
 import { useViewModel, type ViewModel } from '../state/viewModel'
 import { numbered } from './numbered'
@@ -72,7 +73,7 @@ export function ViewPane() {
 function Drawn({ tab, model }: { tab: ViewTab; model: ViewModel }) {
   if (tab === 'board') return <BoardView model={model} />
   if (tab === 'schematic') return <SheetView model={model} />
-  return <Empty />
+  return <ThreeView model={model} />
 }
 
 function Empty() {

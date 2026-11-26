@@ -44,7 +44,15 @@ const onSheet = async (run: Launched): Promise<void> => {
   await run.page.mouse.move(5, 5)
 }
 
+const in3d = async (run: Launched): Promise<void> => {
+  await onSheet(run)
+  await tab(run, '3D').click()
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().three?.loaded ?? false), { timeout: 20_000 }).toBe(true)
+}
+
 const SHOTS: Record<string, Shot> = {
+  '3d': { at: in3d },
+  '3d-dark': { dark: true, at: in3d },
   sheet: { at: onSheet },
   'sheet-dark': { dark: true, at: onSheet },
   board: { at: onBoard },

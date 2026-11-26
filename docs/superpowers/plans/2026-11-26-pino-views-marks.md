@@ -639,6 +639,8 @@ git commit -m "Schematic tab: KiCad's sheet in the board's ink, clickable by par
 
 ### Task 8: The 3D view: the GLB in the solder-mask material
 
+> As built: the GLB's materials are only `mat_N`, so `classify` tells the board from its parts by KiCad's mesh names (`board_soldermask`, `board_copper`, `board_pad`, `board_silkscreen`, `board_PCB`). The GLB is in metres on the board file's page (x to x, y to z). `Bare board` hides the parts, the silk and the mask, to show the copper as etched. The cube has no number keys, since 1 to 8 pick copper layers. The lights are turned down so the mask reads as the picked green. Clicking in 3D does not select (the plan does not ask for it).
+
 **Files:**
 - Create: `app/src/renderer/three/glb.ts`, `material.ts`, `ThreeView.tsx`, `app/src/renderer/styles/three.css`; copy torno's `ui/view/Compass.tsx`, `ui/view/ViewCube.tsx`, `styles/compass.css`, `viewport/lights.ts`
 - Modify: `app/package.json` (`three ^0.186.1`, `@types/three ^0.186.0`), `app/src/renderer/ui/ViewPane.tsx`, `shared-from-torno.json`
@@ -652,7 +654,7 @@ git commit -m "Schematic tab: KiCad's sheet in the board's ink, clickable by par
   - `ThreeView.tsx`: a live three.js view (WebGLRenderer, `antialias`, `preserveDrawingBuffer: true` so `look` can read it), orbit by drag, pan by right drag, zoom by wheel; torno's compass (Perspective, Ortho) top right; options "Parts", "Silk", "Bare board" top left; the selected part gets torno's leader to a `Tag` with the part's `describeTarget`; disposes geometry and textures on each new GLB. Hint pill: "Drag turns, right drag pans, scroll zooms".
   - Test hook: `drawn().three = { hash: string | null; loaded: boolean; meshes: number; board: boolean }`.
 
-- [ ] **Step 1: Inspect the fixture GLB, then write the failing tests**
+- [x] **Step 1: Inspect the fixture GLB, then write the failing tests**
 
 Read the fixture's `board.glb` JSON chunk with a small node snippet (first 20 bytes are the header, then the JSON chunk) and write down its material names, base colours and the board node's bounding box. Then:
 
@@ -668,21 +670,21 @@ it('maps a board point into the GLB where the board is', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/three`
 Expected: FAIL.
 
-- [ ] **Step 3: Add three, copy the compass, write the view**
+- [x] **Step 3: Add three, copy the compass, write the view**
 
 `pnpm -C app add three@^0.186.1 && pnpm -C app add -D @types/three@^0.186.0`. GLTFLoader from `three/examples/jsm/loaders/GLTFLoader.js`. The board sits on the plate with a soft shadow; no ground grid.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run src/renderer/three && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/package.json pnpm-lock.yaml app/src/renderer shared-from-torno.json

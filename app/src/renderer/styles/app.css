@@ -14,4 +14,6 @@
 @import './views.css';
 @import './board.css';
 @import './sheet.css';
+@import './three.css';
+@import './compass.css';
 @import './leaders.css';

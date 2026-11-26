@@ -38,7 +38,7 @@ const ROWS = [
   row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
 
   row('board.layer', ['1', '2', '3', '4', '5', '6', '7', '8'], 'Board: look at the copper layer of that number, from the top', 'The views', 'view'),
-  row('board.fit', ['F'], 'Board: fit the whole board in the view', 'The views', 'view'),
+  row('board.fit', ['F'], 'Fit the whole drawing in the view', 'The views', 'view'),
   row('board.nets', ['N'], 'Board: net colours on or off', 'The views', 'view'),
   row('view.drop', ['Esc'], 'Put down the tool in hand, then what is selected', 'The views', 'view'),
 

@@ -10,6 +10,9 @@ import type { Placement } from './circuit'
 /** The three views over one build of a board. */
 export type ViewTab = 'schematic' | 'board' | '3d'
 
+/** The standard views of the 3D tab. */
+export type ViewName = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right' | 'iso'
+
 export const TAB_NAMES: Record<ViewTab, string> = { schematic: 'Schematic', board: 'Board', '3d': '3D' }
 
 /** What is in hand in the views: the same thing in all three. */
