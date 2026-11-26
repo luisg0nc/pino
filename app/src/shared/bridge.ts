@@ -4,6 +4,7 @@ import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
+import type { EngineInfo } from './ready'
 import type { BoardLook, LookRequest, LookResult, Selection, ViewTab } from './view'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
@@ -78,6 +79,8 @@ export interface PinoBridge {
     /** A file of the route with this key, as text. */
     routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>
     onState(cb: (s: BuildState) => void): () => void
+    /** Whether Claude Code, KiCad and the engine are here; asked once a run. */
+    engineInfo(): Promise<EngineInfo>
   }
   view: {
     /** What the window shows, so that Claude can be told what the person sees. */

@@ -63,7 +63,8 @@ const bridge: PinoBridge = {
     result: (projectId, hash) => invoke('build:result', projectId, hash),
     file: (projectId, hash, name) => invoke('build:file', projectId, hash, name),
     routeFile: (projectId, key, name) => invoke('build:routeFile', projectId, key, name),
-    onState: (cb) => subscribe('build:state', cb)
+    onState: (cb) => subscribe('build:state', cb),
+    engineInfo: () => invoke('build:engineInfo')
   },
   view: {
     tell: (projectId, view) => invoke('view:tell', projectId, view),

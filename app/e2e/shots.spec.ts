@@ -22,6 +22,8 @@ interface Shot {
   width?: number
   height?: number
   dark?: boolean
+  /** The first screen: no project is opened. */
+  first?: true
   env?: Record<string, string>
   /** Drives the window to what the picture is of; `project` is the folder it has open. */
   at?(run: Launched, project: string): Promise<void>
@@ -71,6 +73,8 @@ const routed = async (run: Launched): Promise<void> => {
 }
 
 const SHOTS: Record<string, Shot> = {
+  'first-light': { first: true },
+  'first-dark': { first: true, dark: true },
   'board-routing': {
     env: { ...ROUTES, FAKE_KERNEL_ROUTE_MS: '700' },
     at: async (run) => {
@@ -130,14 +134,16 @@ test.beforeAll(() => {
 for (const [name, shot] of Object.entries(SHOTS)) {
   test(name, async () => {
     const project = referenceProject()
-    const run = await launch({ project, env: shot.env })
+    // The first screen with the stand-in found, as on a machine that is ready.
+    const run = await launch({ ...(shot.first ? { agent: true } : { project }), env: shot.env })
     try {
       const scheme = shot.dark ? ('dark' as const) : ('light' as const)
       await run.app.evaluate(({ nativeTheme }, source) => void (nativeTheme.themeSource = source), scheme)
       // Playwright emulates a scheme of its own: it is told the same one.
       await run.page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme })
       await resize(run.app, run.page, shot.width ?? 1440, shot.height ?? 900)
-      await waitForBuild(run.page, 1)
+      if (shot.first) await expect(run.page.locator('.welcome-ready li[data-ok]')).toHaveCount(3)
+      else await waitForBuild(run.page, 1)
       await shot.at?.(run, project)
       await run.page.evaluate(() => document.fonts.ready.then(() => undefined))
       await settled(run.page)

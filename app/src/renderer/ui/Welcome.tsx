@@ -1,6 +1,9 @@
-import { useEffect } from 'react'
-import { Logo } from './Logo'
+import { useEffect, useState } from 'react'
+import { APP } from '../../shared/app'
+import { readyLines, type ReadyLine } from '../../shared/ready'
+import { numbered } from './numbered'
 import { Plate } from './plate/Plate'
+import { ProbeDrawing } from './plate/ProbeDrawing'
 import { nameOf } from './openFolder'
 import { actions, useStore } from '../state/store'
 
@@ -24,17 +27,28 @@ export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () =>
     return () => window.removeEventListener('focus', read)
   }, [])
 
+  const [ready, setReady] = useState<ReadyLine[] | null>(null)
+  useEffect(() => {
+    let here = true
+    void window.pino.build.engineInfo().then(
+      (info) => here && setReady(readyLines(info)),
+      () => {}
+    )
+    return () => {
+      here = false
+    }
+  }, [])
+
   const returning = recent.length > 0
 
   return (
     <main className="welcome-page" data-region="viewport">
       <div className="welcome-drag" aria-hidden="true" />
       <Plate>
-        <h1 className="plate-headline">
-          <Logo />
-        </h1>
+        <ProbeDrawing />
+        <h1 className="plate-headline">{APP.name}</h1>
         <p className="plate-lead">
-          <strong>Design circuit boards with Claude Code.</strong> It writes the board in Python; you point at what to change.
+          <strong>Make circuit boards with an AI agent.</strong> It writes the board in Python; you point at what to change.
         </p>
       </Plate>
       <div className="welcome-side">
@@ -70,7 +84,17 @@ export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () =>
             Open folder
           </button>
         </div>
-        <p className="welcome-note">This version has no engine yet: a folder opens with a chat, and no board is built or drawn.</p>
+        <ul className="welcome-ready" aria-label="What pino needs">
+          {ready === null ? (
+            <li>Looking for Claude Code and KiCad.</li>
+          ) : (
+            ready.map((line) => (
+              <li key={line.text} data-ok={line.ok}>
+                {numbered(line.text)}
+              </li>
+            ))
+          )}
+        </ul>
         {problem !== null && (
           <p className="welcome-problem" role="alert">
             {problem}

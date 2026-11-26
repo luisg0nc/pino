@@ -15,7 +15,14 @@ test('with no project, the window is the first screen on the green dye, with the
   try {
     const plate = page.locator('[data-region="viewport"] .plate')
     await expect(plate).toBeVisible()
-    await expect(page.locator('.logo-word')).toHaveText('pino')
+    await expect(page.locator('.plate-headline')).toHaveText('pino')
+    await expect(page.locator('.probe-drawing')).toBeVisible()
+    // What pino needs, as the stand-in engine says it; no agent was asked for, so Claude Code is not found.
+    await expect(page.getByRole('list', { name: 'What pino needs' }).getByRole('listitem')).toHaveText([
+      /^Claude Code was not found/,
+      'KiCad 10.0.6 found, with its libraries',
+      "pino's Python environment is ready"
+    ])
     await expect(page.locator('.welcome-ways').getByRole('button')).toHaveText(['Open folder'])
     // The plate is the dye itself.
     expect(await plate.evaluate((el) => getComputedStyle(el).backgroundColor)).toMatch(/^rgb\((23, 102, 58|18, 61, 37)\)$/)

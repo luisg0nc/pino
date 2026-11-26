@@ -318,18 +318,24 @@ button.crumb[aria-expanded='true'] {
   -webkit-app-region: no-drag;
 }
 
-/* The logo's placeholder: the name, set in the interface face. The mark comes from the design mocks. */
-.logo-word {
-  font-family: var(--font-ui);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+/* The mark (ui/Logo.tsx): graphite with its board in the accent; on the dye, in the dye's own two tones. */
+.logo {
+  flex: none;
+  color: var(--ink);
 }
 
-.title-vise .logo-word {
-  font-size: 15px;
-  line-height: 1;
+.logo [data-fill='ink'] {
+  fill: currentColor;
 }
 
-.plate-headline .logo-word {
-  font-size: inherit;
+.logo [data-fill='accent'] {
+  fill: var(--accent);
+}
+
+.logo[data-tone='on-dye'] {
+  color: var(--on-dye);
+}
+
+.logo[data-tone='on-dye'] [data-fill='accent'] {
+  fill: var(--on-dye-muted);
 }

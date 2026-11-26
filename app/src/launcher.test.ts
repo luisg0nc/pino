@@ -141,15 +141,16 @@ it('still says how it is used', () => {
   for (const word of ['usage: pino [folder]', '--print-command', '--install-desktop', '--uninstall-desktop', '--print-desktop', 'PINO_OZONE']) expect(help).toContain(word)
 })
 
-it('has a placeholder icon: a solder-mask green tile with a pad on it, and nothing else', () => {
+it('has the probe for its icon: the mark on its tile, and nothing that runs or reaches out', () => {
   const svg = readFileSync(join(scripts, 'pino.svg'), 'utf8')
   const tokens = readFileSync(resolve(__dirname, 'renderer/styles/tokens.css'), 'utf8')
-  const light = (name: string): string => new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`).exec(tokens)![1]
+  const accent = /--accent:\s*(#[0-9A-Fa-f]{6})/.exec(tokens)![1]
   expect(svg).toContain('viewBox="0 0 64 64"')
-  expect(svg).toContain(`<rect width="64" height="64" rx="14" fill="${light('--dye')}"/>`)
-  expect(svg).toContain(`<circle cx="32" cy="32" r="12" fill="none" stroke="${light('--on-dye')}" stroke-width="6"/>`)
-  expect(svg).toMatch(/placeholder/i)
-  expect(svg).not.toMatch(/<(script|image|text)|href=/)
+  // the paper tile, and one board in the accent under the probe
+  expect(svg).toContain('<rect width="64" height="64" rx="14" fill="#F1EFEA"/>')
+  expect(svg.match(new RegExp(accent, 'g'))).toHaveLength(1)
+  expect(svg).not.toMatch(/placeholder/i)
+  for (const file of [svg, readFileSync(join(scripts, 'pino-16.svg'), 'utf8')]) expect(file).not.toMatch(/<(script|image|text)|href=/)
 })
 
 it("builds again when the build's config changes, and starts what it prints: the command is made once", () => {

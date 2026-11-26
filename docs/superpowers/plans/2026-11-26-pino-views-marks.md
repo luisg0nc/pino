@@ -1196,6 +1196,8 @@ git commit -m "Routing in the views and route, route_net, nudge and keep for Cla
 
 ### Task 17: The probe: logo, icon and the first screen
 
+> As built: the board's hatching is cut at its edges (the mock's last line sticks out). Lines are drawn with `pathLength` 1, so nothing measures them. The title bar's mark at 20 px is the 16 px drawing with two pixels round it, so every edge stays on a whole pixel. The readiness lines also say whether Claude Code is found, which `EngineInfo.claude` carries; main asks `version` the first time the screen asks, not at every start. There is no "Open the example" button: pino has no example yet.
+
 **Files:**
 - Modify: `scripts/pino.svg`, `scripts/pino.png`, `app/src/renderer/ui/Logo.tsx`, `app/src/renderer/ui/Welcome.tsx`, `app/src/renderer/styles/welcome.css`, `app/src/renderer/ui/TitleBar.tsx`, `CLAUDE.md` (the placeholder line), `.claude/rules/first-screen.md`
 - Create: `scripts/pino-16.svg`, `app/src/renderer/ui/probe.ts`
@@ -1209,7 +1211,7 @@ git commit -m "Routing in the views and route, route_net, nudge and keep for Cla
   - `Logo.tsx`: `Logo({ size: 16 | 20 | 64, tone: 'ink' | 'on-dye' })`, the title bar's mark at 20 px from `ICON16_SHAPES` scaled on whole pixels.
   - First screen (mock `logo/b-probe.png`): the dyed field on the left with the scribed probe drawing in `--scribe` (strokes draw 1.6 s by `stroke-dashoffset`, dimensions fade in at 1.1 s, the board part's hatch fills at 1.4 s, once; reduced motion shows it drawn), the name in Instrument Sans 600 and the tagline in the Global Constraints; the right-hand panel as the shell has it, with the line about the engine removed and the readiness lines "Claude Code is ready", "KiCad 10.0.6 found, with its libraries", "pino's Python environment is ready" taken from `kernel version` through a new `build.engineInfo(): Promise<{ kicad: string | null; kernel: string | null; problem: string | null }>` (main runs the kernel's `version` once at start, under test the stand-in's).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('draws the icon on whole pixels and the tile on the 64 grid', () => {
@@ -1221,21 +1223,21 @@ it('ships the probe as the launcher's icon', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/probe.test.ts src/launcher.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the shapes, the icons, the logo and the first screen**
+- [x] **Step 3: Write the shapes, the icons, the logo and the first screen**
 
 `styles.test.ts` keeps holding that no animation is infinite.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts app/src CLAUDE.md .claude/rules/first-screen.md

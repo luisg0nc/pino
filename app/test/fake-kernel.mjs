@@ -339,8 +339,16 @@ function serve() {
   lines.on('close', () => void queue.then(() => stop(undefined)))
 }
 
+/** What `pino-kernel version` prints: the engine's own shape. */
+function version() {
+  const found = !env.FAKE_KERNEL_NO_KICAD
+  const libraries = found ? { KICAD10_SYMBOL_DIR: '/usr/share/kicad/symbols' } : null
+  send({ kernel: VERSION, schema: 'pino.build/1', kicad_cli: found ? '10.0.6' : null, libraries })
+}
+
 const command = process.argv[2] ?? 'serve'
 if (command === 'serve') serve()
+else if (command === 'version') version()
 else {
   process.stderr.write(`fake kernel: unknown command ${command}\n`)
   process.exit(2)

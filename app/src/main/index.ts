@@ -21,6 +21,10 @@ import type { LookResult } from '../shared/view'
 import { openProject } from './project'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
+import { readEngine, versionCommand } from './engineInfo'
+import type { EngineInfo } from '../shared/ready'
+import { agentEnv } from './sessions/agentEnv'
+import { findCommand } from './sessions/choice'
 import { Routing } from './routing'
 import { type Config, configOf, listed, recentWith } from './recent'
 import { claudeAdapter } from './sessions/claude'
@@ -359,7 +363,14 @@ void app.whenReady().then(async () => {
   if (isDebug) console.error(`[${APP.name}] listening at ${http.url('/')}`)
   // A folder of a project that pino may not write into is said in the window, once.
   onNotOwn((_dir, message) => broadcast('notice', { text: message }))
-  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing })
+  const adapter = claudeAdapter(env('AGENT_CMD'))
+  let engineSaid: Promise<EngineInfo> | undefined
+  const engineInfo = () =>
+    (engineSaid ??= readEngine(versionCommand(kernelCommand(process.env, app.getAppPath())), { env: process.env, cwd: app.getPath('userData') }).then((said) => ({
+      ...said,
+      claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
+    })))
+  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing, engineInfo })
   // Every build that drew something has the marks found again on it.
   builds.onResult((projectId, result) => {
     const project = holder.open()

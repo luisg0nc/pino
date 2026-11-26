@@ -4,6 +4,7 @@ import type { MarkPatch, NewMark } from '../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../shared/project'
 import { readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
 import type { Builds } from './builds'
+import type { EngineInfo } from '../shared/ready'
 import type { MarkStore } from './marks/store'
 import type { Routing } from './routing'
 import { lastConversation } from './sessions/chatlog'
@@ -18,7 +19,7 @@ import { takeAnswer, type ViewHolder } from './view'
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
-//            build:state, build:rebuild, build:result, build:file, build:routeFile, view:tell,
+//            build:state, build:rebuild, build:result, build:file, build:routeFile, build:engineInfo, view:tell,
 //            route:start, route:cancel, marks:list, marks:add, marks:update, marks:remove, marks:resolve
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
@@ -46,6 +47,8 @@ export interface IpcDeps {
   views: ViewHolder
   marks: MarkStore
   routing: Routing
+  /** Whether what pino needs is on this machine. */
+  engineInfo: () => Promise<EngineInfo>
 }
 
 /** Sends a message to the window, if there is one to hear it. */
@@ -55,7 +58,7 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ projects, sessions, trust, models, builds, views, marks, routing }: IpcDeps): void {
+export function registerIpc({ projects, sessions, trust, models, builds, views, marks, routing, engineInfo }: IpcDeps): void {
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -124,6 +127,7 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
     const project = mustBeOpen(id)
     return readArtifact(project, String(hash), name as ArtifactName, await buildOf(project, String(hash)))
   })
+  handle('build:engineInfo', () => engineInfo())
   handle('build:routeFile', (id: unknown, key: unknown, name: unknown) => readRouteFile(mustBeOpen(id), String(key), name as RouteFile))
   builds.onState((state) => broadcast('build:state', state))
   handle('route:start', async (id: unknown) => void (await routing.start(mustBeOpen(id))))

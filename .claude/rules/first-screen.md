@@ -36,13 +36,18 @@ paths:
   so in a notice.
 - With no project open the window is `ui/Welcome.tsx`, two halves of one grid (`welcome.css`) to the window's edges:
   at the left the dyed plate (`ui/plate/Plate.tsx`, its children on `--dye`), at the right, on `--surface`, the one
-  way in, "Open folder", and what the stage does not do yet. Coming back, "Recent folders" stands where the first
+  way in, "Open folder", and what pino needs. Coming back, "Recent folders" stands where the first
   run's sentence does. The error of a folder that did not open is one `role="alert"` line.
 - **The first screen has no title bar and the window no frame**, so the top 40 px (`welcome-drag`) is a drag strip
   over both halves, and the window controls (`BareControls`) stand over its right end. pino draws the three controls
   itself everywhere (`ui/WindowControls.tsx`): it is Linux only.
-- **The logo and the first screen's drawing are placeholders** until the design mocks: `ui/Logo.tsx` is the word
-  `pino` in Instrument Sans 600, and the plate has no drawing.
+- **The mark is the probe** (`ui/probe.ts`): a spring test probe on a pad, seen from the side. `ui/Logo.tsx` draws
+  it with no tile (at 16 and 20 px from the drawing made on whole pixels). The first screen carries it as a scribed
+  drawing (`ui/plate/ProbeDrawing.tsx`, `plate.css`) that is made once, in 1.6 s, and stands drawn when less motion
+  is asked for. `scripts/pino.svg` and `pino-16.svg` are what the shapes draw (`probe.test.ts`); after a change
+  there, redraw `scripts/pino.png` with `rsvg-convert -w 512 -h 512 scripts/pino.svg -o scripts/pino.png`.
+- Under the way in, three lines say whether Claude Code, KiCad and the engine are there (`shared/ready.ts`). Main
+  asks the engine `version` once a run (`main/engineInfo.ts`), only when the screen asks.
 - With a project open, the title bar (`ui/TitleBar.tsx`) has the logo, the project's crumb and its menu
   (`ui/FolderMenu.tsx`, `useMenu` for its keys): the recent folders (the open one marked "current"), "Open folder…"
   and "Close project".
