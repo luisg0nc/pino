@@ -52,7 +52,7 @@ export interface Launched {
  * `kernel`: the engine's stand-in (the default), or the real engine through `uv`, which only `real-kernel.spec.ts`
  * asks for.
  */
-export async function launch(opts: { project?: string; agent?: boolean; env?: Record<string, string>; kernel?: 'fake' | 'real' } = {}): Promise<Launched> {
+export async function launch(opts: { project?: string; agent?: boolean; env?: Record<string, string>; kernel?: 'fake' | 'real'; args?: string[] } = {}): Promise<Launched> {
   const home = tempFolder('home')
   const config = opts.env?.PINO_CONFIG ?? join(tempFolder('config'), 'config.json')
   // What the shell the specs run from may have set of pino's own switches means nothing to a run.
@@ -72,7 +72,9 @@ export async function launch(opts: { project?: string; agent?: boolean; env?: Re
     ...(opts.project ? { PINO_PROJECT: opts.project } : {}),
     ...opts.env
   }
-  const app = await electron.launch({ args: ['.'], cwd: appDir, env })
+  // A CI runner has no GPU: the 3D view and Claude's picture of it are drawn in software there.
+  const software = process.env.CI ? ['--enable-unsafe-swiftshader'] : []
+  const app = await electron.launch({ args: ['.', ...software, ...(opts.args ?? [])], cwd: appDir, env })
   const page = await app.firstWindow()
   await page.waitForSelector('[data-region]')
   return { app, page, config }

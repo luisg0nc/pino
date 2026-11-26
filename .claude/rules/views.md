@@ -38,7 +38,7 @@ route's copper while there is one.
 - The Schematic is KiCad's SVG in pino's ink (`sheet/ink.ts` maps KiCad's colours to tokens and strips anything that
   runs, restyles the window or reaches out). What is where comes from `sheet.json`. Pins and chips on it are HTML at a fixed size.
 - 3D is the build's GLB, lit and recoloured (`three/stage.ts`, `material.ts`, by mesh name), drawn only when
-  something changed.
+  something changed. Where there is no WebGL the tab says so: an error thrown out of an effect blanks the window.
 - The route card's head says how the build stands in a word or three (`headSaid`); the counts are in its checks.
 - Pins nearer than `GATHER` are one pin with a count. A chip stands off what it marks: at a part's or a pad's corner.
 - A tag stands clear of what it names and is tied to it by a leader. What lies over a view carries `data-tag-avoid`.

@@ -38,6 +38,8 @@ export function ThreeView({ model }: { model: ViewModel }) {
   const selection = useStore((s) => s.selection)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
+  /** A machine whose graphics give no WebGL: there is no stage, and nothing that would move a camera. */
+  const [noGl, setNoGl] = useState(false)
   const [options, setOptions] = useState<Options>(() => kept.get(model.projectId)?.options ?? { parts: true, silk: true, bare: false })
   const [ortho, setOrtho] = useState(() => kept.get(model.projectId)?.ortho ?? false)
   const [view, setView] = useState<ViewName | null>(null)
@@ -49,7 +51,14 @@ export function ThreeView({ model }: { model: ViewModel }) {
   const camera = () => (orthoRef.current ? stage.current!.ortho : stage.current!.perspective)
 
   useEffect(() => {
-    const renderer = new THREE.WebGLRenderer({ canvas: canvas.current!, antialias: true, alpha: true, preserveDrawingBuffer: true })
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas: canvas.current!, antialias: true, alpha: true, preserveDrawingBuffer: true })
+    } catch {
+      // Thrown out of an effect it would take the whole window with it.
+      setNoGl(true)
+      return
+    }
     const { scene, key, shadow } = makeScene()
     const perspective = new THREE.PerspectiveCamera(FOV, 1, 0.001, 20)
     const orthographic = new THREE.OrthographicCamera(-1, 1, 1, -1, -20, 40)
@@ -75,6 +84,7 @@ export function ThreeView({ model }: { model: ViewModel }) {
   }, [])
 
   useEffect(() => {
+    if (!stage.current) return
     let here = true
     let held: Loaded | null = null
     void loadModel(model).then(
@@ -174,7 +184,7 @@ export function ThreeView({ model }: { model: ViewModel }) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (typingIn(e.target) || e.defaultPrevented) return
-      if (pressed(e, 'board.fit')) frameBoard(camera().position.clone().sub(stage.current!.controls.target))
+      if (pressed(e, 'board.fit') && stage.current) frameBoard(camera().position.clone().sub(stage.current.controls.target))
       else if (pressed(e, 'view.drop') && store.getState().selection) actions.select(null)
       else return
       e.preventDefault()
@@ -236,12 +246,21 @@ export function ThreeView({ model }: { model: ViewModel }) {
   return (
     <div ref={root} className="three-view">
       <canvas ref={canvas} aria-label="The board in 3D" />
-      <div className="three-options" role="group" aria-label="What is drawn" data-tag-avoid="">
-        {toggle('parts', 'Parts')}
-        {toggle('silk', 'Silk')}
-        {toggle('bare', 'Bare board')}
-      </div>
-      <Compass on={view} go={go} ortho={ortho} setOrtho={setOrtho} fit={() => frameBoard(camera().position.clone().sub(stage.current!.controls.target))} />
+      {noGl && (
+        <p className="three-note selectable" role="alert">
+          This machine gives pino no WebGL, which the 3D view needs. The schematic and the board work as usual.
+        </p>
+      )}
+      {!noGl && (
+        <>
+          <div className="three-options" role="group" aria-label="What is drawn" data-tag-avoid="">
+            {toggle('parts', 'Parts')}
+            {toggle('silk', 'Silk')}
+            {toggle('bare', 'Bare board')}
+          </div>
+          <Compass on={view} go={go} ortho={ortho} setOrtho={setOrtho} fit={() => frameBoard(camera().position.clone().sub(stage.current!.controls.target))} />
+        </>
+      )}
       {subject && part && (
         <Tag id="selection" subject={subject} prefer="right">
           <p className="tag-head">
@@ -250,15 +269,17 @@ export function ThreeView({ model }: { model: ViewModel }) {
           <p className="tag-more">{words.slice(2).join(' · ')}</p>
         </Tag>
       )}
-      {!loaded && !problem && <p className="three-note">Reading the 3D model.</p>}
+      {!loaded && !problem && !noGl && <p className="three-note">Reading the 3D model.</p>}
       {problem && (
         <p className="three-note selectable" role="alert">
           The 3D model could not be read: {problem}
         </p>
       )}
-      <p className="hint" data-tag-avoid="">
-        Drag turns, right drag pans, scroll zooms
-      </p>
+      {!noGl && (
+        <p className="hint" data-tag-avoid="">
+          Drag turns, right drag pans, scroll zooms
+        </p>
+      )}
     </div>
   )
 }

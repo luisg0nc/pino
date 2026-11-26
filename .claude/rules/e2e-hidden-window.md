@@ -36,6 +36,9 @@ The person is working on this desktop. No test, script or check may put a window
   `PINO_SHOTS` naming a folder outside the repository. A hidden window gives **one** picture a launch, and **none**
   once it has been resized with a board drawn (the call never returns): a shot of another size is a launch with
   `PINO_TEST_SIZE=1920x1080`, which main reads under test alone (`frame.ts` `windowSize`). No spec resizes.
+- A CI runner has no GPU, and Chromium makes no WebGL context there unless asked to draw it in software: `launch.ts`
+  passes `--enable-unsafe-swiftshader` when `CI` is set. The app itself never does. A run that must have no WebGL
+  passes `--disable-gpu --disable-software-rasterizer` (`--disable-webgl` and `--disable-3d-apis` leave it on).
 - Every spec runs the engine's stand-in (`app/test/fake-kernel.mjs`, whose header lists its switches).
   `real-kernel.spec.ts` alone asks for the real engine (`launch({ kernel: 'real' })`), and is skipped where uv,
   kicad-cli or `kernel/.venv` is missing; it runs uv offline, so nothing is fetched into the run's empty home.

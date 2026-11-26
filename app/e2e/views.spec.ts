@@ -203,3 +203,17 @@ test('the wheel zooms the board and the sheet over a chip or a pin as it does ov
     await app.close()
   }
 })
+
+test('on a machine with no WebGL the 3D tab says so, and the rest of the window carries on', async () => {
+  const { app, page } = await launch({ project: referenceProject(), args: ['--disable-gpu', '--disable-software-rasterizer'] })
+  try {
+    await waitForBuild(page, 1)
+    await tab(page, '3D').click()
+    await expect(page.locator('.views-panel [role="alert"]')).toContainText('This machine gives pino no WebGL, which the 3D view needs.')
+    await onBoard(page)
+    await clickTarget(page, PAD)
+    await expect.poll(async () => (await state(page)).selection?.label).toBe('U2.1')
+  } finally {
+    await app.close()
+  }
+})

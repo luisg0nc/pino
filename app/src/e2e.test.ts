@@ -48,6 +48,14 @@ describe('the specs', () => {
     expect(specsNaming(/setContentSize|setBounds|setSize\(/)).toEqual([])
   })
 
+  // A CI runner has no GPU, and Chromium draws WebGL in software only when asked, which it calls unsafe for pages
+  // from elsewhere: the tests ask, on CI, and pino never does.
+  it('asks for software WebGL on CI alone, in the launcher and nowhere in the app', () => {
+    expect(read('e2e/launch.ts')).toContain("process.env.CI ? ['--enable-unsafe-swiftshader'] : []")
+    const main = readdirSync(join(app, 'src', 'main'), { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.ts'))
+    expect(main.filter((f) => /swiftshader/i.test(read(`src/main/${f}`)))).toEqual([])
+  })
+
   it('no spec takes a screenshot or touches the clipboard', () => {
     expect(specsNaming(/\.screenshot\(|clipboard/)).toEqual([])
   })
