@@ -189,7 +189,7 @@ git commit -m "kernel: package skeleton, S-expressions, IDs, coordinates, librar
   - `KicadCli(libraries: Libraries, home: Path, argv0: Sequence[str])`; `KicadCli.find(env=os.environ) -> list[str] | None` (`shlex.split(env["PINO_KICAD_CLI"])` when set and its first word resolves, else `shutil.which("kicad-cli")`).
   - Methods, each deleting its output file or folder first (a failed run must not leave the last build's report behind): `version() -> str`, `erc(sch, out) -> CliRun`, `netlist(sch, out) -> CliRun`, `sch_svg(sch, out_dir) -> CliRun`, `drc(pcb, out, *, refill=False, save=False, parity=False) -> CliRun`, `pcb_svg(pcb, out_dir, layers: Sequence[str]) -> CliRun`, `glb(pcb, out) -> CliRun`, `render(pcb, out, *, side="top", width=1600, height=1200) -> CliRun`, `sch_upgrade(sch) -> CliRun`, `run(step, *args, timeout=120.0) -> CliRun`, `env() -> dict[str, str]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `fake_kicad_cli.py` prints one JSON line `{"argv": sys.argv[1:], "env": {k: os.environ.get(k) for k in WATCHED}}`; prints `--define-var` for any `--help`; sleeps 30 s when its first argument is `sleep`; never writes an output file.
 
@@ -230,24 +230,24 @@ def test_real_version_is_10(tmp_path):
     assert cli.version().startswith("10.")
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_kicad_cli.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.kicad_cli'`
 
-- [ ] **Step 3: Write `kicad_cli.py`**
+- [x] **Step 3: Write `kicad_cli.py`**
 
 - `env()`: `os.environ` minus `DISPLAY` and `WAYLAND_DISPLAY`, plus `KICAD_CONFIG_HOME=<home>/config`, `XDG_CACHE_HOME=<home>/cache`, plus `libraries.path_vars()`. Create both folders on first use.
 - `-D NAME=VALUE` for each path var is added to a subcommand only when `<argv0> <subcommand> --help` lists `--define-var`; the answer is cached per subcommand on the instance.
 - `run()` uses `subprocess.run(argv, env=..., capture_output=True, text=True, timeout=..., start_new_session=True)`; on `TimeoutExpired` it kills the child's process group with `os.killpg(proc.pid, SIGKILL)` (only that group) and returns `returncode=-9` with output `"timed out after <n> s"`. Paths are passed as `str(path)` list items, never through a shell.
 - Exact commands: `sch erc --format json --severity-all -o OUT SCH`; `sch export netlist --format kicadxml -o OUT SCH`; `sch export svg -o DIR SCH`; `pcb drc --format json --severity-all [--refill-zones] [--save-board] [--schematic-parity] -o OUT PCB`; `pcb export svg --mode-multi --exclude-drawing-sheet --page-size-mode 2 -l L1,L2,… -o DIR/ PCB` (if this kicad-cli's `pcb export svg --help` lacks `--mode-multi`, one `--mode-single` call per layer named `DIR/board-<layer with . replaced by _>.svg`); `pcb export glb --include-tracks --include-pads --include-zones --include-silkscreen --include-soldermask -o OUT PCB`; `pcb render --side SIDE --width W --height H --quality basic -o OUT PCB`; `sch upgrade --force SCH`; `version`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_kicad_cli.py -v`
 Expected: PASS (the real-version test passes or skips with the marker message)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/kicad_cli.py kernel/tests/fake_kicad_cli.py kernel/tests/test_kicad_cli.py
