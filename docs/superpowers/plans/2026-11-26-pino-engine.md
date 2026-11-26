@@ -361,7 +361,7 @@ git commit -m "kernel: symbol loader that does not depend on KiCad's indentation
   - `findings.At(space: str, x=None, y=None, layer=None, file=None, line=None)` (`space` in `board|sheet|source`), `findings.Finding(source, code, severity, message, at: At | None = None, refs=(), pins=(), nets=())` frozen, `to_json() -> dict`, `SEVERITIES = ("error", "warning", "info")`.
   - `fab.FabProfile(name, layers, min_track, min_clearance, min_via_drill, min_via_diameter, min_annular, min_hole, hole_to_hole, copper_to_edge, silk_min_width, silk_min_text_height, board_thickness=1.6, copper_oz=1.0)`, `fab.jlc_standard_2layer`, `fab.jlc_standard_4layer`, `fab.PROFILES: dict[str, FabProfile]`, `fab.for_layers(n) -> FabProfile`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_json_round_trip_is_exact(sample_circuit):           # a hand-built Circuit with every field set
@@ -394,22 +394,22 @@ def test_jlc_profiles():
     assert set(fab.PROFILES) == {"jlc-standard-2layer", "jlc-standard-4layer"}
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_circuit.py tests/test_fab.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write the three modules**
+- [x] **Step 3: Write the three modules**
 
 - `to_json`: `json.dumps(..., indent=1, sort_keys=True, ensure_ascii=False) + "\n"`; floats rounded to 6 decimals; lists keep declaration order (layout reads it).
 - Profiles (conservative values at or above JLC's published standard minimums; a person checks them against JLC's capability page before stage 8 makes fab files): 2-layer `min_track 0.15, min_clearance 0.15, min_via_drill 0.3, min_via_diameter 0.6, min_annular 0.15, min_hole 0.3, hole_to_hole 0.5, copper_to_edge 0.3, silk_min_width 0.15, silk_min_text_height 1.0`; 4-layer the same except `min_track 0.1, min_clearance 0.1`. Both 1.6 mm, 1 oz.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_circuit.py tests/test_fab.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/circuit.py kernel/src/pino_kernel/findings.py kernel/src/pino_kernel/fab.py kernel/tests/test_circuit.py kernel/tests/test_fab.py
