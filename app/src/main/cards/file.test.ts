@@ -75,11 +75,11 @@ describe('readCardsFile', () => {
 
   it('drops a fab card whose ask is missing or not whole', () => {
     const fab = { layers: 4, thickness: 1, assembly: 'mix', boards: 10 }
-    const asks = [{ ...fab, extra: 1 }, undefined, { ...fab, layers: 3 }, { ...fab, thickness: 1.5 }, { ...fab, assembly: 'me' }, { ...fab, boards: 0 }, { ...fab, boards: 2.5 }]
+    const asks = [{ ...fab, extra: 1 }, undefined, { ...fab, layers: 3 }, { ...fab, thickness: 1.5 }, { ...fab, assembly: 'me' }, { ...fab, boards: 0 }, { ...fab, boards: 2.5 }, { ...fab, boards: 10_001 }]
     const read = readCardsFile({ next: 9, cards: asks.map((ask, i) => card(`C${i + 1}`, { kind: 'fab', text: undefined, fab: ask })) })
     expect(read?.file.cards.map((c) => c.id)).toEqual(['C1'])
     expect(read?.file.cards[0].fab).toEqual(fab)
-    expect(read?.dropped).toBe(6)
+    expect(read?.dropped).toBe(7)
   })
 
   it('drops a size card whose size is missing or not whole, and keeps only the fields a size has', () => {

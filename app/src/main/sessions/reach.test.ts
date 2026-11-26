@@ -31,6 +31,26 @@ describe('refusalOf', () => {
     expect(refusalOf(dir, 'Write', { file_path: join(dir, 'reference', 'brief.md') })).toBeUndefined()
     expect(refusalOf(dir, 'Read', { file_path: 'brief.md' })).toBeUndefined()
   })
+  it('refuses a write through a dangling link that resolves to a brief.md not there yet', () => {
+    const bare = join(root, 'bare')
+    mkdirSync(join(bare, 'sub'), { recursive: true })
+    // A relative link, a chain of two, one from a folder below, and one by way of a linked folder.
+    symlinkSync('brief.md', join(bare, 'words.md'))
+    symlinkSync('words.md', join(bare, 'chain.md'))
+    symlinkSync('../brief.md', join(bare, 'sub', 'up.md'))
+    symlinkSync(bare, join(bare, 'sub', 'here'))
+    symlinkSync(join(bare, 'brief.md'), join(root, 'b', 'whole.md'))
+    symlinkSync(join(root, 'b', 'whole.md'), join(bare, 'round.md'))
+    for (const path of ['words.md', 'chain.md', 'sub/up.md', 'sub/here/words.md', 'round.md']) {
+      for (const tool of ['Write', 'Edit']) expect([path, refusalOf(bare, tool, { file_path: path })]).toEqual([path, BRIEF_REFUSAL(tool)])
+    }
+    // A dangling link to another file is not the brief's; one that goes round in a circle ends the looking.
+    symlinkSync('notes.md', join(bare, 'other.md'))
+    symlinkSync('loop-b.md', join(bare, 'loop-a.md'))
+    symlinkSync('loop-a.md', join(bare, 'loop-b.md'))
+    expect(refusalOf(bare, 'Write', { file_path: 'other.md' })).toBeUndefined()
+    expect(refusalOf(bare, 'Write', { file_path: 'loop-a.md' })).toBeUndefined()
+  })
   it('refuses anything outside the project folder, a folder beside it among them, and says why', () => {
     for (const file of [join(root, 'b', 'board.py'), join(root, 'top.py'), join(root, 'common', 'shared.py'), join(root, 'fresh', 'board.py'), join(dir, '..', 'b', 'x.py'), join(dir, 'link', 'x.py')]) {
       expect(refusalOf(dir, 'Write', { file_path: file })).toContain(`works on the project in ${dir}`)

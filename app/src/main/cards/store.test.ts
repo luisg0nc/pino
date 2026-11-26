@@ -71,6 +71,27 @@ describe('reading', () => {
 })
 
 describe('the person’s changes', () => {
+  it('lands two changes made at once, each with its own id', async () => {
+    const [a, b] = await Promise.all([store.person(P, note('a')), store.person(P, note('b'))])
+    expect(a.cards.map((c) => c.id)).toEqual(['C1'])
+    expect(b.cards.map((c) => c.id)).toEqual(['C1', 'C2'])
+    expect(onDisk().cards.map((c) => c.id)).toEqual(['C1', 'C2'])
+  })
+
+  it('reads what is on disk in a new run, and goes on from its numbers', async () => {
+    await store.person(P, note())
+    await store.person(P, { op: 'remove', ids: ['C1'] })
+    const again = newStore()
+    expect((await again.person(P, note())).cards.map((c) => c.id)).toEqual(['C2'])
+  })
+
+  it('tells nothing of a change that waited out a forget', async () => {
+    const wait = store.person(P, note())
+    store.forget(P)
+    await wait
+    expect(changes).toEqual([])
+  })
+
   it('gives ids C1, C2 in order, and never again after a remove', async () => {
     await store.person(P, note('a'))
     await store.person(P, note('b'))
@@ -104,6 +125,7 @@ describe('the person’s changes', () => {
       { op: 'add', kind: 'picture' },
       { op: 'add', kind: 'size', size: { what: 'x', value: '1', unit: 'cm', source: 'measured' } },
       { op: 'add', kind: 'fab', fab: { layers: 3, thickness: 1.6, assembly: 'jlc', boards: 5 } },
+      { op: 'add', kind: 'fab', fab: { layers: 2, thickness: 1.6, assembly: 'jlc', boards: 10_001 } },
       { op: 'add', kind: 'part', lcsc: 'R1' },
       note('x'.repeat(MAX_TEXT_CHARS + 1))
     ]) {

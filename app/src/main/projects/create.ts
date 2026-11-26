@@ -3,6 +3,7 @@ import { constants } from 'node:fs'
 import { lstatSync, readdirSync, rmSync } from 'node:fs'
 import { type FileHandle, lstat, mkdir, open, readdir, rename, rm, rmdir } from 'node:fs/promises'
 import { extname, isAbsolute, join } from 'node:path'
+import { APP } from '../../shared/app'
 import type { CreateRequest } from '../../shared/bridge'
 import { linkProblem, MAX_LINK_NOTE, MAX_LINKS, MAX_PDF_BYTES, MAX_PHOTO_BYTES, MOST_REFERENCES, PDF_FORMATS, projectNameProblem, referenceFiles } from '../../shared/projectName'
 import { MAX_SIZES, checkSize } from '../../shared/size'
@@ -53,7 +54,9 @@ export interface CreateDeps {
 }
 
 /** What a crash before the rename leaves: `.<name>.pino-new-<12 hex>`. Nothing else is ours to remove. */
-const TEMP_FOLDER = /^\.[A-Za-z0-9][A-Za-z0-9._-]*\.pino-new-[0-9a-f]{12}$/
+const TEMP_FOLDER = new RegExp(`^\\.[A-Za-z0-9][A-Za-z0-9._-]*\\.${APP.name}-new-[0-9a-f]{12}$`)
+/** A new one's name for a project of this name: hidden, so that no listing shows it. */
+const tempName = (name: string): string => `.${name}.${APP.name}-new-${randomBytes(6).toString('hex')}`
 
 /** How old a hidden folder is before it is taken for a crash's: no create takes this long, however big the photos. */
 export const STALE_AFTER_MS = 10 * 60 * 1000
@@ -279,7 +282,7 @@ export async function createProject(req: CreateRequest, deps: CreateDeps): Promi
   const name = typeof req?.name === 'string' ? req.name : ''
   const target = join(deps.root, name)
   const slots = await checked(req, deps, await readdir(deps.root))
-  const temp = join(deps.root, `.${name}.pino-new-${randomBytes(6).toString('hex')}`)
+  const temp = join(deps.root, tempName(name))
   let claimed = false
   await mkdir(temp)
   try {

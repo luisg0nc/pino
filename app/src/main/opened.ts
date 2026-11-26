@@ -3,7 +3,9 @@
 
 import { lstat, mkdir, realpath } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
+import { APP } from '../shared/app'
 import type { ProjectInfo, RecentFolder } from '../shared/project'
+import { isInsideFolder } from './sessions/inside'
 import type { OpenFolder, WorkspaceInfo } from '../shared/workspace'
 import { isProjectFolder, openProject, workspaceOf } from './project'
 import { type Config, listed, recentWith } from './recent'
@@ -80,7 +82,10 @@ export function openedHolder(deps: OpenedDeps): Opened {
   const lookAt = async (root: string): Promise<WorkspaceInfo> => {
     const { dir } = await openProject(root)
     if (dir === '/') throw new Error('The top of the disk cannot be your folder of boards: choose a folder in your home folder, such as ~/boards.')
-    if (dir === (await realHome())) throw new Error('Your home folder cannot be your folder of boards: choose a folder in it, such as ~/boards.')
+    const home = await realHome()
+    if (dir === home) throw new Error('Your home folder cannot be your folder of boards: choose a folder in it, such as ~/boards.')
+    // One that holds it would list it, or a folder on the way to it, as a board.
+    if (isInsideFolder(dir, home)) throw new Error(`${basename(dir)} holds your home folder, so it cannot be your folder of boards: choose a folder in your home folder, such as ~/${SUGGESTED}.`)
     deps.sweep?.(dir)
     return scanWorkspace(dir)
   }
@@ -93,6 +98,9 @@ export function openedHolder(deps: OpenedDeps): Opened {
     const info = await openProject(found.dir)
     // Made a link since it was listed: it is not the workspace's own.
     if (info.dir !== found.dir) throw missing
+    // An open project is written into (`.pino/`): never the home folder, nor one that holds it.
+    const home = await realHome()
+    if (info.dir === home || isInsideFolder(info.dir, home)) throw new Error(`${name} is your home folder or holds it: ${APP.name} does not open it as a board.`)
     return info
   }
 

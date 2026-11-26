@@ -1,9 +1,33 @@
-import { join, resolve } from 'node:path'
+import { readlinkSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
 import { APP } from '../../shared/app'
 import { isInsideFolder, realPathOrNearest } from './inside'
 
 /** The tools that write a file, and the key of their input that names it. */
 const WRITERS: Record<string, string> = { Write: 'file_path', Edit: 'file_path', MultiEdit: 'file_path', NotebookEdit: 'notebook_path' }
+
+/** The most links followed one after another, as Linux does: a circle of links ends there. */
+const MOST_LINKS = 40
+
+/**
+ * Where a write of `path` lands, by real paths: a link as its last name is followed also when what it names is not
+ * there yet, since the write would make it.
+ */
+function writtenAt(path: string): string {
+  let at = path
+  for (let hop = 0; hop < MOST_LINKS; hop++) {
+    const placed = join(realPathOrNearest(dirname(at)), basename(at))
+    let target: string
+    try {
+      target = readlinkSync(placed)
+    } catch {
+      // Not a link, or nothing there.
+      return realPathOrNearest(placed)
+    }
+    at = resolve(dirname(placed), target)
+  }
+  return at
+}
 
 /**
  * Why a tool of the agent is refused, or undefined when it may go on. A session writes only in its own project's
@@ -22,7 +46,7 @@ export function refusalOf(dir: string, name: string, input: unknown): string | u
   if (isInsideFolder(join(dir, APP.folder), path)) {
     return `${name} may not write under ${APP.folder}/: it is ${APP.name}'s own, and a hand edit skips its rules. Read a file there with Read.`
   }
-  if (realPathOrNearest(path) === realPathOrNearest(join(dir, 'brief.md'))) return BRIEF_REFUSAL(name)
+  if (writtenAt(path) === writtenAt(join(dir, 'brief.md'))) return BRIEF_REFUSAL(name)
   if (isInsideFolder(dir, path)) return undefined
   return `This session works on the project in ${dir}. ${name} may write only there. ` +
     `Another project is the person's to open: ask them to open it in ${APP.name}.`

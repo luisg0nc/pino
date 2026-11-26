@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { TEMP_NEW, scanOrder, scanWorkspace } from './workspace'
+import { scanOrder, scanWorkspace } from './workspace'
 
 const made: string[] = []
 const temp = (): string => {
@@ -34,7 +34,6 @@ describe('scanWorkspace', () => {
     ])
     expect(ws.root).toBe(root)
     expect(ws.name).toBe(basename(root))
-    expect(TEMP_NEW.test('.a.pino-new-0123456789ab')).toBe(true)
   })
 
   it('lists a folder named with spaces and non-ASCII letters', async () => {

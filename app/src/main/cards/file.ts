@@ -2,6 +2,7 @@ import { copyFile, lstat, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { type Card, type CardKind, type CardsFile, type CardTurn, type CardWas, type FabAsk, type PartFact, type PartReading, CARD_ID, CARD_KINDS, emptyCards, LCSC, MAX_NAME_CHARS, MAX_TEXT_CHARS, MAX_WAS } from '../../shared/cards'
 import { checkSize } from '../../shared/size'
+import { checkFab } from '../../shared/slots'
 import { FOLDER, ownFolder, writeOwn } from '../own'
 
 const FOLDER_NAME = 'brief'
@@ -42,19 +43,10 @@ function partOf(value: unknown): PartFact | null | undefined {
   return { lcsc: value.lcsc, ...(reading ? { reading } : {}) }
 }
 
-const LAYERS = [2, 4] as const
-const THICKNESS = [0.8, 1.0, 1.2, 1.6, 2.0] as const
-const ASSEMBLY = ['jlc', 'hand', 'mix'] as const
-
-/** What a fab card asks, whole; undefined when it is not. */
+/** What a fab card asks, whole; undefined when it is not. The rule is the New project page's (`checkFab`). */
 export function fabOf(value: unknown): FabAsk | undefined {
-  if (!isRecord(value)) return undefined
-  const layers = LAYERS.find((n) => n === value.layers)
-  const thickness = THICKNESS.find((n) => n === value.thickness)
-  const assembly = ASSEMBLY.find((a) => a === value.assembly)
-  const { boards } = value
-  if (!layers || !thickness || !assembly || !finite(boards) || !Number.isInteger(boards) || boards < 1) return undefined
-  return { layers, thickness, assembly, boards }
+  const checked = checkFab(value)
+  return typeof checked === 'string' ? undefined : checked
 }
 
 /** The longest id of a prompt or a conversation a card keeps. */

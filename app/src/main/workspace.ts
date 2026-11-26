@@ -2,9 +2,6 @@ import { lstat, readdir } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { ListedProject, WorkspaceInfo } from '../shared/workspace'
 
-/** A new project's folder while it is being made: hidden, so never listed. */
-export const TEMP_NEW = /^\..+\.pino-new-[0-9a-f]{12}$/
-
 /** Whether this is a plain file, not a link to one: a link could lead out of the project. */
 async function plainFile(path: string): Promise<boolean> {
   return lstat(path).then(

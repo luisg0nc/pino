@@ -62,6 +62,49 @@ it('opens the parent of a project folder on that project, and a workspace folder
   expect([o.workspace()?.root, o.project()]).toEqual([root, undefined])
 })
 
+const HOLDS_HOME = 'holds your home folder, so it cannot be your folder of boards: choose a folder in your home folder, such as ~/boards.'
+
+it('never makes a folder that holds the home folder a workspace, however it is asked for', async () => {
+  const above = temp()
+  home = join(above, 'users', 'me')
+  mkdirSync(home, { recursive: true })
+  const swept: string[] = []
+  for (const root of [join(above, 'users'), above]) {
+    const o = holder({ sweep: (at) => swept.push(at) })
+    await expect(o.openWorkspace(root)).rejects.toThrow(HOLDS_HOME)
+    picked = root
+    await expect(o.pickWorkspace()).rejects.toThrow(HOLDS_HOME)
+    expect([o.workspace(), o.project()]).toEqual([undefined, undefined])
+  }
+  // A project whose folder of boards would hold the home folder: its parent is refused the same way.
+  const o = holder({ sweep: (at) => swept.push(at) })
+  writeFileSync(join(above, 'users', 'brief.md'), '')
+  picked = join(above, 'users')
+  await expect(o.pickWorkspace()).rejects.toThrow(HOLDS_HOME)
+  // Nothing was swept or remembered.
+  expect([swept, config]).toEqual([[], { workspaces: [] }])
+})
+
+it('never opens a listed project whose real folder is the home folder or holds it', async () => {
+  const root = temp()
+  project(root, 'me', 'brief.md')
+  mkdirSync(join(root, 'users', 'me'), { recursive: true })
+  const elsewhere = temp()
+  // The home folder is reached through a link, which comes to point into the workspace once it is open.
+  const link = join(temp(), 'home')
+  symlinkSync(elsewhere, link)
+  home = link
+  const o = holder()
+  await o.openWorkspace(root)
+  rmSync(link)
+  symlinkSync(join(root, 'me'), link)
+  await expect(o.openProject('me')).rejects.toThrow('me is your home folder or holds it: pino does not open it as a board.')
+  rmSync(link)
+  symlinkSync(join(root, 'users', 'me'), link)
+  await expect(o.openProject('users')).rejects.toThrow('users is your home folder or holds it: pino does not open it as a board.')
+  expect([o.project(), opened]).toEqual([undefined, []])
+})
+
 it('remembers the workspace and the project, and another workspace ends the project first', async () => {
   const a = temp()
   const b = temp()

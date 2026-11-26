@@ -33,7 +33,9 @@ paths:
 
 - A **workspace** is one folder of boards; its projects are its direct subfolders that are not hidden and not links
   (`main/workspace.ts`), by name. A board is one that holds `board.py` as a plain file; one with `brief.md` alone has
-  no board yet; one with neither is empty. The home folder and `/` are never a workspace, so they are never listed.
+  no board yet; one with neither is empty. The home folder, `/` and any folder that holds the home folder are never a
+  workspace, and a listed project whose real folder is the home folder or holds it is not opened: an open project is
+  written into.
 - `main/opened.ts` holds the open workspace and its one open project, and every rule of opening and leaving them. The
   window names a project and is given only one the workspace lists. A project is opened by its real path
   (`main/project.ts`), with an id that is a hash of it, so no path reaches a URL.
