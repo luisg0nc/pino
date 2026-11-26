@@ -35,15 +35,21 @@ test('the MCP address answers 404 without the token, 403 to a request from a web
   }
 })
 
-// A new project: Claude looks parts up before it writes board.py, so no build has started an engine.
-test('parts answers in a project with no board', async () => {
+// A new project: Claude asks for the fab's limits and looks parts up before it writes board.py, so no build has started
+// an engine. There is nothing to route yet, and it is told so.
+test('in a project with no board, project gives the default fab limits, parts answers and route says what is missing', async () => {
   const dir = tempProject()
   const { app, page } = await launch({ project: dir, env: { FAKE_KERNEL_SERVE: '3' } })
   try {
     await expect.poll(() => page.evaluate(() => window.__pinoTest!.state().project?.id ?? '')).not.toBe('')
     const id = await page.evaluate(() => window.__pinoTest!.state().project!.id)
     const { url, token } = await app.evaluate((_main, projectId) => (globalThis as unknown as { __pinoMain: { mcpFor(i: string): { url: string; token: string } } }).__pinoMain.mcpFor(projectId), id)
-    const said = await post(url, { 'X-Pino-Session': token }, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'parts', arguments: { lcsc: 'C25804' } } })
+    const call = (name: string, args: Record<string, unknown>) => post(url, { 'X-Pino-Session': token }, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } })
+    expect((await call('route', { action: 'start' })).body).toContain('No built board yet: routing works on a built board.')
+    const limits = await call('project', {})
+    expect(limits.body).toContain("these are the default fab's limits")
+    expect(limits.body).toContain('Fab: JLC standard 2-layer.')
+    const said = await call('parts', { lcsc: 'C25804' })
     expect(said.body).toContain('C25804 · basic')
     expect(said.body).not.toContain('"isError":true')
     expect(existsSync(join(dir, '.pino'))).toBe(false)

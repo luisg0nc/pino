@@ -17,7 +17,8 @@ paths:
 ## The engine
 
 - `pino-kernel serve`, JSON lines (`kernel/README.md`), one for the app, started when a project first has a
-  `board.py` or at Claude's first parts lookup, in a process group of its own, and ended with pino. `PINO_KERNEL_CMD` replaces the command;
+  `board.py`, or at Claude's first parts lookup or `project` call in one without, in a process group of its own, and
+  ended with pino. `PINO_KERNEL_CMD` replaces the command;
   `PINO_KERNEL_DIR` the folder uv runs it from. It gets pino's environment without any session's token.
 - Before main asks it for a build, a route or a trial, `.pino` and the folders it writes must be the project's own
   (`engineMayWrite`). A build's files are read only from its own folder, through no link.
@@ -30,10 +31,12 @@ paths:
   apart by the engine: `withRouteFindings` joins them, once, while the route is current. Which build copper is "from"
   has one rule (`Builds.routedOn`, `BuildState.copperFrom`): the first build seen with it current. A build the engine
   had cached is numbered anew with the same hash, and its `changes` are since another board: compare hashes.
-- An engine that speaks protocol 1 does not route: the route tools answer `ROUTING_UNAVAILABLE`. One below protocol 3
+- An engine that speaks protocol 1 does not route. The route tools refuse with what is missing (`Routing.refusal`):
+  no built board, an engine that did not start (and why), or one too old. One below protocol 3
   has no parts and makes no fab files: `parts` and a release say it is too old, and the window shows no `Fab files…`.
-- A parts lookup needs no board and no build (`fab.ts` `partsEngine` starts and pings the engine itself): Claude looks
-  parts up before it writes `board.py`. A release needs a built board. A refusal says which is missing: no built
+- A parts lookup needs no board and no build (`fab.ts` `lookupEngine` starts and pings the engine itself): Claude looks
+  parts up before it writes `board.py`. With no `board.py`, `project` gives the default fab's limits the same way, and
+  says they are the default's (`defaultProfile`: the engine's profile for `DEFAULT_LAYERS`). A release needs a built board. A refusal says which is missing: no built
   board, an engine that did not start (and why), or one too old (`shared/fab.ts`).
 - Releasing is a job (`fab.ts`, one a project), started only by the person's `Make fab files`: Claude has no release
   tool. `fab_profiles` is asked once for each engine process.

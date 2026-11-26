@@ -123,6 +123,10 @@ export const engineTooOld = (serve: number): string => `The engine is too old fo
 export const engineDidNotStart = (reason: string): string => `The engine did not start: ${reason}`
 export const NO_BUILT_BOARD = 'No built board yet: fab files are made from a build. Save board.py and wait for it to build.'
 
+/** Said before the default fab's limits, which are given while there is no board.py to name one. */
+export const DEFAULT_FAB_NOTE = "No board.py yet, so these are the default fab's limits: what a board that names no fab gets. That is for 2 layers; with layers=4 it gets JLC's 4-layer profile."
+export const fabUnknown = (why: string): string => `The fab's limits are not known: ${why}`
+
 /** Two decimals at least, as the capability page writes small widths: 0.1 is 0.10, 0.125 stays. */
 const fine = (v: number): string => (Math.abs(v * 100 - Math.round(v * 100)) < 1e-9 ? v.toFixed(2) : String(v))
 /** At least one decimal: 1 mm is 1.0 mm. */

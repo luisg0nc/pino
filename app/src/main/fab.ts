@@ -17,6 +17,9 @@ export interface FabDeps {
   pingTimeoutMs?: number
 }
 
+/** The copper layers of a board that says none (the engine's `Board`): its fab is the default, the engine's for them. */
+export const DEFAULT_LAYERS = 2
+
 interface Job {
   done: Promise<ReleaseResult>
   /** The engine's id for it, once it is asked. */
@@ -33,7 +36,7 @@ export class Fab {
   private known: FabProfile[] = []
   private asked: { client: KernelClient; list: Promise<FabProfile[]> } | null = null
 
-  /** What each engine a parts lookup asked has answered to its ping. */
+  /** What each engine asked before any build has answered to its ping. */
   private readonly pongs = new WeakMap<KernelClient, Promise<Pong>>()
 
   constructor(private readonly deps: FabDeps) {}
@@ -53,10 +56,10 @@ export class Fab {
   }
 
   /**
-   * The engine for a parts lookup, which needs no board and no build: started if none runs, and asked what it speaks.
-   * A new project has had no build to start one.
+   * The engine for what needs no board and no build (parts, the default fab): started if none runs, and asked what it
+   * speaks. A new project has had no build to start one.
    */
-  private async partsEngine(): Promise<KernelClient> {
+  private async lookupEngine(): Promise<KernelClient> {
     const client = this.deps.kernel()
     let pong = this.pongs.get(client)
     if (!pong) {
@@ -74,8 +77,17 @@ export class Fab {
 
   /** The engine's fab profiles, asked once for each engine that runs. */
   profiles(): Promise<FabProfile[]> {
-    if (!this.available()) return Promise.resolve([])
-    const client = this.deps.kernel()
+    return this.available() ? this.profilesOf(this.deps.kernel()) : Promise.resolve([])
+  }
+
+  /** The profile a board gets when it names none, as the engine picks it: its first for the board's layers. */
+  async defaultProfile(): Promise<FabProfile> {
+    const found = (await this.profilesOf(await this.lookupEngine())).find((p) => p.layers === DEFAULT_LAYERS)
+    if (!found) throw new Error(`the engine has no fab profile for ${DEFAULT_LAYERS} layers`)
+    return found
+  }
+
+  private profilesOf(client: KernelClient): Promise<FabProfile[]> {
     if (this.asked?.client !== client) {
       const list = client.request<{ profiles: FabProfile[] }>('fab_profiles', {}).then((r) => (this.known = r.profiles))
       this.asked = { client, list }
@@ -158,7 +170,7 @@ export class Fab {
 
   /** One part by its LCSC number, or a search. */
   async parts(p: ProjectInfo, q: PartsQuery): Promise<PartsResult> {
-    const client = await this.partsEngine()
+    const client = await this.lookupEngine()
     await engineMayWrite(p.dir)
     const asked = q.lcsc ? { action: 'get', lcsc: q.lcsc } : { action: 'search', q: q.search, package: q.package, basic: q.basic, limit: q.limit }
     return client.job<PartsResult>('parts', asked, () => {}).done

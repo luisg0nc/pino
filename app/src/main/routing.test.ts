@@ -1,12 +1,11 @@
 // Routing as main runs it, over the engine's stand-in: one job a project, its progress told, a build when it ends.
 
-import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { referenceModel } from '../test/marks'
 import { tempProject } from '../test/fixtures'
 import { routedLoop } from '../test/routing'
-import { ROUTING_UNAVAILABLE } from './routing'
 
 let project: ReturnType<typeof tempProject>
 const done: Array<() => Promise<unknown> | void> = []
@@ -28,12 +27,32 @@ const loop = (env: Record<string, string> = {}) => {
 const edgeNets = new Set(referenceModel().placement!.edges.map((e) => e[0])).size
 
 describe('routing', () => {
-  it('is not there with an engine that speaks protocol 1', async () => {
-    const l = loop({ FAKE_KERNEL_SERVE: '1' })
+  /** Routing refused, in these words, however it is asked for. */
+  const refuses = async (l: ReturnType<typeof loop>, why: string): Promise<void> => {
     await l.built()
-    expect(l.routing.available(l.info.id)).toBe(false)
-    await expect(l.routing.start(l.info)).rejects.toThrow(ROUTING_UNAVAILABLE)
-    await expect(l.routing.trial(l.info, 'keep', { net: 'VBUS' })).rejects.toThrow(ROUTING_UNAVAILABLE)
+    expect(l.routing.refusal(l.info.id)).toBe(why)
+    await expect(l.routing.start(l.info)).rejects.toThrow(why)
+    await expect(l.routing.status(l.info)).rejects.toThrow(why)
+    await expect(l.routing.trial(l.info, 'keep', { net: 'VBUS' })).rejects.toThrow(why)
+  }
+
+  it('says the engine is too old, with one that speaks protocol 1', async () => {
+    await refuses(loop({ FAKE_KERNEL_SERVE: '1' }), "The engine is too old for routing: it speaks protocol 1, and routing needs 2. Update pino's engine (its kernel/ folder).")
+  })
+
+  it('says there is no built board yet, in a project with no board', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    await refuses(loop(), 'No built board yet: routing works on a built board. Save board.py and wait for it to build.')
+  })
+
+  it('says the engine did not start, and why', async () => {
+    await refuses(loop({ FAKE_KERNEL_DIE: 'start' }), 'The engine did not start: fake kernel died at start')
+  })
+
+  it('has no board to route when the only build failed', async () => {
+    const l = loop({ FAKE_KERNEL_FAIL_ON: '1' })
+    await l.built()
+    await expect(l.routing.start(l.info)).rejects.toThrow('No built board yet: routing works on a built board.')
   })
 
   it('starts a route, tells its progress, and builds once it is done', async () => {

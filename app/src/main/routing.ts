@@ -6,7 +6,9 @@ import type { ProjectInfo } from '../shared/project'
 import { engineMayWrite, type Builds } from './builds'
 import type { KernelClient } from './kernel/client'
 
-export const ROUTING_UNAVAILABLE = 'Routing is not available in this engine yet: it comes with the routing stage.'
+// Why routing is refused, in words that say what is missing: Claude reads them and acts on them.
+export const routingTooOld = (serve: number): string => `The engine is too old for routing: it speaks protocol ${serve}, and routing needs 2. Update pino's engine (its kernel/ folder).`
+export const NO_BOARD_TO_ROUTE = 'No built board yet: routing works on a built board. Save board.py and wait for it to build.'
 
 export interface Started {
   job: number
@@ -47,14 +49,21 @@ export class Routing {
     this.now = deps.now ?? Date.now
   }
 
-  /** Whether the engine that answers routes: protocol 2. */
-  available(projectId: string): boolean {
-    const engine = this.deps.builds.state(projectId)?.engine
-    return engine?.state === 'ready' && engine.serve >= 2
+  /**
+   * Why the project cannot be routed or tried, or null when it can: routing is of a built board, by the build loop's
+   * engine, which routes from protocol 2.
+   */
+  refusal(projectId: string): string | null {
+    const state = this.deps.builds.state(projectId)
+    const engine = state?.engine
+    if (engine?.state === 'failed') return engine.reason
+    if (engine?.state === 'ready' && engine.serve < 2) return routingTooOld(engine.serve)
+    return engine?.state === 'ready' && state?.latest ? null : NO_BOARD_TO_ROUTE
   }
 
   private need(p: ProjectInfo): void {
-    if (!this.available(p.id)) throw new Error(ROUTING_UNAVAILABLE)
+    const why = this.refusal(p.id)
+    if (why) throw new Error(why)
   }
 
   start(p: ProjectInfo): Promise<Started> {
@@ -74,7 +83,7 @@ export class Routing {
     this.need(p)
     await engineMayWrite(p.dir)
     const drawn = this.deps.builds.lastGood(p.id)
-    if (!drawn) throw new Error('There is no build to route yet.')
+    if (!drawn) throw new Error(NO_BOARD_TO_ROUTE)
     const startedAt = this.now()
     const asked = this.deps.kernel().job<unknown>('route', { project: p.dir }, (event) => {
       if (job.dropped || !job.progress) return

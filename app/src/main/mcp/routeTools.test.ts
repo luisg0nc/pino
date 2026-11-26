@@ -1,11 +1,10 @@
-import { writeFileSync } from 'node:fs'
+import { rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { tempProject } from '../../test/fixtures'
 import { toolsOver } from '../../test/mcp'
 import { routedLoop } from '../../test/routing'
 import { Models } from '../model'
-import { ROUTING_UNAVAILABLE } from '../routing'
 
 let project: ReturnType<typeof tempProject>
 const done: Array<() => Promise<unknown> | void> = []
@@ -46,10 +45,23 @@ const TRIALS: Array<[string, Record<string, unknown>]> = [
 ]
 
 describe('the route tools', () => {
-  it('say routing is not available when the engine speaks protocol 1', async () => {
-    const t = await tools({ FAKE_KERNEL_SERVE: '1' })
-    for (const action of ['start', 'status', 'cancel']) expect(await t.call('route', { action })).toBe(ROUTING_UNAVAILABLE)
-    for (const [name, args] of TRIALS) expect(await t.call(name, args)).toBe(ROUTING_UNAVAILABLE)
+  /** Every route tool refuses in these words. */
+  const allSay = async (t: Awaited<ReturnType<typeof tools>>, why: string): Promise<void> => {
+    for (const action of ['start', 'status', 'cancel']) expect(await t.call('route', { action })).toBe(why)
+    for (const [name, args] of TRIALS) expect(await t.call(name, args)).toBe(why)
+  }
+
+  it('say the engine is too old when it speaks protocol 1', async () => {
+    await allSay(await tools({ FAKE_KERNEL_SERVE: '1' }), "The engine is too old for routing: it speaks protocol 1, and routing needs 2. Update pino's engine (its kernel/ folder).")
+  })
+
+  it('say there is no built board yet in a project with no board', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    await allSay(await tools(), 'No built board yet: routing works on a built board. Save board.py and wait for it to build.')
+  })
+
+  it('say the engine did not start, and why', async () => {
+    await allSay(await tools({ FAKE_KERNEL_DIE: 'start' }), 'The engine did not start: fake kernel died at start')
   })
 
   it('start a route, say how far it is, and say where the copper stands when it is done', async () => {

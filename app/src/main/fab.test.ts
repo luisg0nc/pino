@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { tempProject } from '../test/fixtures'
 import { routedLoop } from '../test/routing'
 import type { FabState } from '../shared/fab'
-import { Fab } from './fab'
+import { DEFAULT_LAYERS, Fab } from './fab'
 import type { KernelClient } from './kernel/client'
 
 let project: ReturnType<typeof tempProject>
@@ -64,6 +64,12 @@ describe('the fab holder', () => {
     const fab = new Fab({ kernel: () => silent, builds: loop.builds, engine: () => ({ state: 'starting' }), onState: () => {}, pingTimeoutMs: 20 })
     await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow('The engine did not start: it did not answer within 0 s')
     expect(killed).toBe(1)
+  })
+
+  // The engine says which profile a board gets when it names none: the one for the board's layers, 2 unless it says.
+  it("takes the default fab's layers from the engine's Board", () => {
+    const board = readFileSync(join(__dirname, '../../../kernel/src/pino/board.py'), 'utf8')
+    expect(board).toContain(`layers: int = ${DEFAULT_LAYERS}, outline=None, fab=None`)
   })
 
   it('asks for the fab profiles once an engine', async () => {

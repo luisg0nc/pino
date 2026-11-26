@@ -106,4 +106,31 @@ describe('parts', () => {
     const t = await tools({}, { fabProfile: async () => null })
     expect(await t.call('project', {})).not.toContain('Fab:')
   })
+
+  // The limits come before any choice about layers or copper, and those are made before there is a board.py.
+  it("gives the default fab's limits in a project with no board, and says that they are the default", async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const log = join(project.root, 'kernel-log.jsonl')
+    const t = await tools({ FAKE_KERNEL_LOG: log }, { fabProfile: async () => null })
+    const said = await t.call('project', {})
+    expect(said).toContain("No board.py yet, so these are the default fab's limits: what a board that names no fab gets. That is for 2 layers; with layers=4 it gets JLC's 4-layer profile.")
+    expect(said).toContain('Fab: JLC standard 2-layer. Tracks and gaps 0.10 mm or more')
+    await t.call('project', {})
+    const ops = readFileSync(log, 'utf8').trim().split('\n').map((line) => (JSON.parse(line) as { op: string }).op)
+    expect(ops.filter((op) => op === 'fab_profiles')).toHaveLength(1)
+    expect(ops).not.toContain('build')
+    expect(existsSync(join(project.dir, '.pino'))).toBe(false)
+  })
+
+  it("says why the default limits are not known, and still answers", async () => {
+    rmSync(join(project.dir, 'board.py'))
+    for (const [env, why] of [[{ FAKE_KERNEL_DIE: 'start' }, 'The engine did not start: fake kernel died at start'], [{ FAKE_KERNEL_SERVE: '2' }, 'The engine is too old for parts and fab files']] as const) {
+      const t = await tools(env, { fabProfile: async () => null })
+      const answer = await t.result('project', {})
+      expect(answer.isError).toBeFalsy()
+      const said = answer.content.map((c) => c.text).join('\n')
+      expect(said).toContain('board.py: absent')
+      expect(said).toContain(`The fab's limits are not known: ${why}`)
+    }
+  })
 })
