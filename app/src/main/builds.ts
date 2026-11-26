@@ -87,6 +87,8 @@ interface Entry {
   retry?: NodeJS.Timeout
   startedAt?: number
   endedAt?: number
+  /** For each route seen current, the build it was first seen on. */
+  routes: Map<string, number>
   settled: Array<() => void>
 }
 
@@ -118,6 +120,7 @@ export class Builds {
       unwatch: () => {},
       wanted: false,
       running: false,
+      routes: new Map(),
       settled: []
     }
     this.entries.set(project.id, entry)
@@ -162,6 +165,11 @@ export class Builds {
 
   endedAt(projectId: string): number | undefined {
     return this.entries.get(projectId)?.endedAt
+  }
+
+  /** The number of the build a route's copper was made for: the first one seen with it current. */
+  routedOn(projectId: string, routeKey: string): number | undefined {
+    return this.entries.get(projectId)?.routes.get(routeKey)
   }
 
   /** The state once no build runs or waits, or as it stands at `deadline` (a time of `now`). */
@@ -292,6 +300,8 @@ export class Builds {
         return
       }
       this.engineFailedAt = undefined
+      const route = result.routing?.state === 'current' ? result.routing.route_key : null
+      if (route && !entry.routes.has(route)) entry.routes.set(route, result.number)
       this.say(entry, {
         latest: result,
         lastGood: result.hash ? result : entry.state.lastGood,

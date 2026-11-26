@@ -65,6 +65,9 @@ const bridge: PinoBridge = {
     routeFile: (projectId, key, name) => invoke('build:routeFile', projectId, key, name),
     onState: (cb) => subscribe('build:state', cb)
   },
+  view: {
+    tell: (projectId, view) => invoke('view:tell', projectId, view)
+  },
   notices: {
     onNotice: (cb) => subscribe('notice', cb)
   }

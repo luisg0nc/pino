@@ -749,6 +749,8 @@ git commit -m "Route card on a build: On hN, routing, checks by part and pin, bo
 
 ### Task 10: The session domain: the build in every prompt, and Stop holds
 
+> As built: the `Mark` types are in `shared/marks.ts` from this task on; Task 11 adds what they do. Before a Stop is judged, the domain waits the watcher's debounce plus 200 ms. Claude's last save may not have started its build yet, and that Stop must still be held. `Builds.routedOn` says which build a route was made on. The window tells main what it shows (`view:tell`, checked by `main/view.ts`).
+
 **Files:**
 - Create: `app/src/main/domain.ts`
 - Modify: `app/src/main/sessions/domain.ts`, `app/src/main/sessions/manager.ts`, `app/src/main/sessions/claude.ts`, `app/src/main/prompt.ts`, `app/src/main/index.ts`, `shared-from-torno.json` (claude.ts change line)
@@ -765,7 +767,7 @@ git commit -m "Route card on a build: On hN, routing, checks by part and pin, bo
   - `stopAnswer` holds, at most `MOST_HOLDS` times a turn and once per reason: `running` (a build started after the turn began is still running after waiting up to `STOP_WAIT_MS`: "h8, started in this turn, is still building. Wait for it, then call mcp__pino__check."), `failed` (the newest build, started in the turn, failed: the verdict text plus "Fix board.py, or say it is still broken."), `unlooked` (a build started in the turn ended after the last `look` or `check` of the turn and changed the board (`changes` not empty): "h8 was built in this turn and you have not looked at it. Call mcp__pino__look or mcp__pino__check before finishing."). A build that started before the turn holds nothing.
   - `prompt.ts`: the system prompt says what pino is, that the views rebuild on every save, the tools by name, and spec 5.8's rules in plain words (never waive a finding, a waiver is the person's call with a note; numbers from the board file through `measure`, never from pixels; make the picture, look, say what you see and what it does not show; state each job's scope and depth up front and name every step left out; an accepted DRC error gets a measured part-scoped rule, never an exclusion; plain words for every choice, jargon glossed; marks: answer by id, resolve with `resolve_mark` when done).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('tells the verdict, the view and the drafts, and sends the drafts once delivered', async () => {
@@ -790,19 +792,19 @@ it('never holds a third time in a turn', async () => {})
 it('puts the marks the domain sent on the prompt's context item, and calls delivered', async () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/domain.test.ts src/main/sessions/manager.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Change the seam, write the domain and the prompt, wire it in `index.ts`**
+- [x] **Step 3: Change the seam, write the domain and the prompt, wire it in `index.ts`**
 
-- [ ] **Step 4: Run them, turncost included**
+- [x] **Step 4: Run them, turncost included**
 
 Run: `pnpm -C app exec vitest run src/main && pnpm -C app typecheck`
 Expected: PASS (`turncost.test.ts` still holds the system prompt plus server instructions under 12,000).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/main shared-from-torno.json

@@ -1,0 +1,176 @@
+// pino's answers to a session (sessions/domain.ts): what Claude is told with each prompt (the newest build, what the
+// person sees, their new marks), and when a turn may not end yet (its own build still running, failed, or unseen).
+
+import { verdictWords, type BuildResult, type BuildState, type Finding } from '../shared/build'
+import { at } from '../shared/board/coords'
+import type { Mark } from '../shared/marks'
+import type { ProjectInfo } from '../shared/project'
+import { TAB_NAMES, type BoardLook, type Selection, type ViewTab } from '../shared/view'
+import { layerWords } from '../shared/board/refs'
+import { DEBOUNCE_MS, type Builds } from './builds'
+import type { PromptContext, SessionDomain } from './sessions/domain'
+
+/** The most a prompt's added context may be, in characters, and the build's verdict within it. */
+export const CONTEXT_LIMIT = 6000
+export const VERDICT_LIMIT = 1200
+/** The longest a Stop waits for a build that is nearly done (its hook has 25 s). */
+export const STOP_WAIT_MS = 20_000
+/** A turn is held back this many times at most. */
+export const MOST_HOLDS = 2
+const MOST_FINDINGS = 5
+const STOP_LIMIT = 1200
+
+export interface DomainDeps {
+  builds: Pick<Builds, 'state' | 'startedAt' | 'endedAt' | 'whenSettled' | 'routedOn'>
+  marks: {
+    /** The person's marks not yet sent, oldest first. */
+    drafts(project: ProjectInfo): Promise<Mark[]>
+    /** Marks sent and not resolved. */
+    open(project: ProjectInfo): Promise<Mark[]>
+    markSent(project: ProjectInfo, ids: string[]): Promise<void>
+  }
+  /** What the person has on screen, as the window last said. */
+  view(): { tab: ViewTab; look: BoardLook; selection: Selection | null } | null
+  toolName: (tool: string) => string
+  now?: () => number
+  /** How long a Stop waits for a save just made to start its build: the watcher's debounce and a little more. */
+  debounceMs?: number
+}
+
+const cut = (text: string, most: number): string => (text.length <= most ? text : `${text.slice(0, most - 6)} (cut)`)
+
+function findingLine(f: Finding): string {
+  const place = f.at?.space === 'board' && f.at.x !== undefined && f.at.y !== undefined ? ` at ${at({ x: f.at.x, y: f.at.y })} mm` : ''
+  return `- [${f.severity}] ${f.source} ${f.code}: ${f.message}${place}`
+}
+
+function routingLine(r: BuildResult, state: BuildState, routedOn: number | undefined): string | null {
+  const routing = r.routing
+  if (state.route) return `Routing: running, ${state.route.index} of ${state.route.of} nets.`
+  if (!routing || routing.state === 'none') return null
+  if (routing.state === 'current') return `Routing: current, r${routing.number}.`
+  if (routing.state === 'running') return 'Routing: running.'
+  const from = routedOn !== undefined ? `copper from h${routedOn}` : `copper from r${routing.number}`
+  return `Routing: stale (${routing.stale_because.join(', ')}), ${from}.`
+}
+
+/** A failed build in one line: why, where, and what the views still show. */
+function failedLine(r: BuildResult, state: BuildState): string {
+  const finding = r.findings.find((f) => f.severity === 'error')
+  const source = finding?.at?.space === 'source' && finding.at.file ? `, ${finding.at.file}${finding.at.line ? ` line ${finding.at.line}` : ''}` : ''
+  const why = finding ? `${finding.message}${source}` : verdictWords(r).rest
+  const shows = state.lastGood ? ` The views still show h${state.lastGood.number}.` : ''
+  return `h${r.number} failed: ${why}.${shows}`
+}
+
+/** The newest build as Claude is told it, at most VERDICT_LIMIT characters. */
+export function verdictText(r: BuildResult, state: BuildState, routedOn: number | undefined): string {
+  const running = state.building ? state.history.find((e) => e.verdict === 'running') : undefined
+  const after = running ? `Building h${running.number} now.` : null
+  if (r.verdict === 'failed') return cut([failedLine(r, state), after].filter(Boolean).join('\n'), VERDICT_LIMIT)
+  const found = r.findings.filter((f) => f.severity !== 'info').slice(0, MOST_FINDINGS)
+  const lines = [`${verdictWords(r).on}: ${verdictWords(r).rest}.`, ...found.map(findingLine), after, routingLine(r, state, routedOn)]
+  return cut(lines.filter(Boolean).join('\n'), VERDICT_LIMIT)
+}
+
+function viewLine(view: NonNullable<ReturnType<DomainDeps['view']>>): string {
+  const what = view.tab === 'board' ? `${TAB_NAMES.board} tab, ${layerWords(view.look.active)}` : view.tab === '3d' ? '3D tab' : `${TAB_NAMES.schematic} tab`
+  const held = view.selection ? ` Selected: ${view.selection.text}.` : ''
+  return `The person sees the ${what}.${held}`
+}
+
+const markLine = (m: Mark): string => `${m.id} ${m.payload}${m.note ? ` · note: "${m.note}"` : ''}`
+
+/** What became of a stale mark's target, from its payload's last words. */
+const staleWords = (m: Mark): string => / · stale: (.+?), it was at \(/.exec(m.payload)?.[1] ?? 'its target is gone'
+
+interface Turn {
+  startedAt: number
+  holds: number
+  held: Set<string>
+}
+
+export class PinoDomain implements SessionDomain {
+  private readonly turns = new Map<string, Turn>()
+  private readonly lookedAt = new Map<string, number>()
+  private readonly now: () => number
+
+  constructor(private readonly deps: DomainDeps) {
+    this.now = deps.now ?? Date.now
+  }
+
+  /** Claude saw the board (`look`) or its checks (`check`) just now. */
+  looked(projectId: string): void {
+    this.lookedAt.set(projectId, this.now())
+  }
+
+  async promptContext(project: ProjectInfo, _prompt: string): Promise<PromptContext> {
+    this.turns.set(project.id, { startedAt: this.now(), holds: 0, held: new Set() })
+    const state = this.deps.builds.state(project.id)
+    const lines: string[] = []
+    if (state?.engine.state === 'failed') lines.push(`The engine is not running: ${state.engine.reason.slice(state.engine.reason.indexOf(': ') + 2)}.`)
+    else if (state?.latest) lines.push(verdictText(state.latest, state, this.routedOn(project.id, state.latest)))
+
+    const [drafts, open] = await Promise.all([this.deps.marks.drafts(project), this.deps.marks.open(project)])
+    const view = this.deps.view()
+    // With nothing built and nothing marked there is nothing to say of the view either.
+    if (view && (state?.lastGood || drafts.length)) lines.push(viewLine(view))
+    const openLine = open.length ? `Open marks: ${open.map((m) => (m.anchor === 'stale' ? `${m.id} (stale: ${staleWords(m)})` : m.id)).join(', ')}.` : ''
+
+    // Room is kept for the line of open marks and for the count of what does not fit.
+    const room = CONTEXT_LIMIT - cut(openLine, 600).length - 80
+    const sent: string[] = []
+    let length = lines.join('\n').length
+    for (const mark of drafts) {
+      const line = markLine(mark)
+      if (length + line.length + 1 > room) break
+      length += line.length + 1
+      lines.push(line)
+      sent.push(mark.id)
+    }
+    const left = drafts.length - sent.length
+    if (left > 0) lines.push(`and ${left} more mark${left === 1 ? '' : 's'}: call ${this.deps.toolName('marks')}`)
+    if (openLine) lines.push(cut(openLine, 600))
+
+    return {
+      text: cut(lines.join('\n'), CONTEXT_LIMIT),
+      sentMarkIds: sent,
+      ...(sent.length ? { delivered: () => this.deps.marks.markSent(project, sent) } : {})
+    }
+  }
+
+  async stopAnswer(project: ProjectInfo): Promise<{ decision: 'block'; reason: string } | null> {
+    const turn = this.turns.get(project.id)
+    if (!turn || turn.holds >= MOST_HOLDS) return null
+    // A save just made has not started its build yet.
+    const wait = this.deps.debounceMs ?? DEBOUNCE_MS + 200
+    if (wait) await new Promise((r) => setTimeout(r, wait))
+    const ofTurn = () => (this.deps.builds.startedAt(project.id) ?? -Infinity) >= turn.startedAt
+    let state = this.deps.builds.state(project.id)
+    if (!state) return null
+    if (state.building && ofTurn()) state = await this.deps.builds.whenSettled(project.id, this.now() + STOP_WAIT_MS)
+    if (!ofTurn()) return null
+
+    const hold = (kind: string, reason: string) => {
+      if (turn.held.has(kind)) return null
+      turn.held.add(kind)
+      turn.holds += 1
+      return { decision: 'block' as const, reason: cut(reason, STOP_LIMIT) }
+    }
+    if (state.building) {
+      const number = state.history.find((e) => e.verdict === 'running')?.number ?? (state.latest?.number ?? 0) + 1
+      return hold('running', `h${number}, started in this turn, is still building. Wait for it, then call ${this.deps.toolName('check')}.`)
+    }
+    const latest = state.latest
+    if (!latest) return null
+    if (latest.verdict === 'failed') return hold('failed', `${failedLine(latest, state)} Fix board.py, or say it is still broken.`)
+    const seen = (this.lookedAt.get(project.id) ?? -Infinity) >= (this.deps.builds.endedAt(project.id) ?? Infinity)
+    const changed = latest.changes.circuit.length + latest.changes.layout.length > 0
+    if (seen || !changed) return null
+    return hold('unlooked', `h${latest.number} was built in this turn and you have not looked at it. Call ${this.deps.toolName('look')} or ${this.deps.toolName('check')} before finishing.`)
+  }
+
+  private routedOn(projectId: string, r: BuildResult): number | undefined {
+    return r.routing?.route_key ? this.deps.builds.routedOn(projectId, r.routing.route_key) : undefined
+  }
+}

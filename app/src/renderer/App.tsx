@@ -46,6 +46,14 @@ export function App() {
     if (projectId) void window.pino.build.state(projectId).then((s) => s && actions.setBuild(s), () => {})
   }, [projectId])
 
+  // What the person sees is told to main, which tells Claude with the next prompt.
+  const tab = useStore((s) => s.tab)
+  const look = useStore((s) => s.look)
+  const selection = useStore((s) => s.selection)
+  useEffect(() => {
+    if (projectId) void window.pino.view.tell(projectId, { tab, look, selection }).catch(() => {})
+  }, [projectId, tab, look, selection])
+
   // The project main holds open: the one remembered or named at start, and the same one after the window is reloaded.
   useEffect(() => {
     void window.pino.project.current().then(

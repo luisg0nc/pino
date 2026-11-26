@@ -3,6 +3,7 @@
 import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
 import type { ProjectInfo, RecentFolder } from './project'
+import type { BoardLook, Selection, ViewTab } from './view'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
 export type AgentView = 'chat' | 'terminal'
@@ -76,6 +77,10 @@ export interface PinoBridge {
     /** A file of the route with this key, as text. */
     routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>
     onState(cb: (s: BuildState) => void): () => void
+  }
+  view: {
+    /** What the window shows, so that Claude can be told what the person sees. */
+    tell(projectId: string, view: { tab: ViewTab; look: BoardLook; selection: Selection | null }): Promise<void>
   }
   notices: {
     /** Something main has to say that no call asked for: a folder it may not write into. */

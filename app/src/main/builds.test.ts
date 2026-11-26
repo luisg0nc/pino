@@ -229,6 +229,29 @@ describe('the build loop', () => {
   })
 })
 
+describe('the build a route was made on', () => {
+  it('is the first one seen with that route current', async () => {
+    const reference = readJson<BuildResult>(fx('result.json'))
+    const states = ['current', 'current', 'stale']
+    let number = 4
+    const fake = {
+      alive: true,
+      onExit: () => () => {},
+      ping: async () => ({ kernel: 'x', schema: 'pino.build/1', serve: 2 }),
+      build: async () => ({ ...reference, number: ++number, routing: { state: states.shift(), route_key: 'cccccccc00000001' } })
+    } as unknown as KernelClient
+    const builds = new Builds({ kernel: () => fake, watch: () => () => {}, readHistory: async () => [] })
+    builds.open(info())
+    await builds.whenSettled(info().id, Date.now() + 5000)
+    for (let i = 0; i < 2; i++) {
+      builds.rebuild(info().id)
+      await builds.whenSettled(info().id, Date.now() + 5000)
+    }
+    expect(builds.routedOn(info().id, 'cccccccc00000001')).toBe(5)
+    expect(builds.routedOn(info().id, 'cccccccc00000002')).toBeUndefined()
+  })
+})
+
 describe('the history', () => {
   it('reads the history and marks pruned builds as not kept', async () => {
     const pino = join(project.dir, '.pino')

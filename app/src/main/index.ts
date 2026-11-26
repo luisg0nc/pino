@@ -6,6 +6,7 @@ import { APP, envName, toolName } from '../shared/app'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
 import { Builds } from './builds'
+import { PinoDomain } from './domain'
 import { frameOptions, MIN_WINDOW, SURFACE } from './frame'
 import { startHttp } from './http'
 import { broadcast, type Projects, registerIpc } from './ipc'
@@ -18,11 +19,11 @@ import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
 import { type Config, configOf, listed, recentWith } from './recent'
 import { claudeAdapter } from './sessions/claude'
-import { NO_DOMAIN } from './sessions/domain'
 import { Sessions } from './sessions/manager'
 import { KnownModels } from './sessions/models'
 import { makeTestProfile, removeTestProfileAfterExit } from './testProfile'
 import { Trust } from './trust'
+import { ViewHolder } from './view'
 
 // Environment switches:
 //   PINO_TEST=1            the window is created hidden and never shown, the profile is a temporary folder, any number
@@ -111,6 +112,8 @@ const kernel = kernelHolder(() =>
   startKernel(kernelCommand(process.env, app.getAppPath()), { env: process.env, cwd: app.getPath('userData') })
 )
 const builds = new Builds({ kernel: () => kernel.get() })
+/** What the person has on screen, for what Claude is told of it. */
+const views = new ViewHolder()
 
 /** The one project open, and the rules of opening and closing it. */
 function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: string, said: boolean): Promise<void> } {
@@ -302,12 +305,21 @@ void app.whenReady().then(async () => {
   const dataDir = app.getPath('userData')
   const trust = new Trust(join(dataDir, 'trusted.json'))
   const models = new KnownModels(join(dataDir, 'models.json'))
+  const domain = new PinoDomain({
+    builds,
+    marks: { drafts: async () => [], open: async () => [], markSent: async () => {} },
+    view: () => {
+      const open = holder.open()
+      return open ? views.of(open.id) : null
+    },
+    toolName
+  })
   sessions = new Sessions({
     http,
     adapter: claudeAdapter(env('AGENT_CMD')),
     configDir,
     env: process.env,
-    domain: NO_DOMAIN,
+    domain,
     trust,
     models,
     systemPrompt: systemPrompt(toolName),
@@ -316,7 +328,7 @@ void app.whenReady().then(async () => {
   if (isDebug) console.error(`[${APP.name}] listening at ${http.url('/')}`)
   // A folder of a project that pino may not write into is said in the window, once.
   onNotOwn((_dir, message) => broadcast('notice', { text: message }))
-  registerIpc({ projects: holder, sessions, trust, models, builds })
+  registerIpc({ projects: holder, sessions, trust, models, builds, views })
 
   testHooks.mcpFor = (projectId) => ({ url: http.url(`/mcp/${projectId}`), token: http.grant([`/mcp/${projectId}`]) })
   if (isTest) Object.assign(globalThis, { [APP.mainHook]: testHooks })

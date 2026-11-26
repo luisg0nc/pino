@@ -8,13 +8,14 @@ import type { Sessions } from './sessions/manager'
 import type { KnownModels } from './sessions/models'
 import { storedConversation } from './sessions/resume'
 import type { Trust } from './trust'
+import type { ViewHolder } from './view'
 
 // The channels the window may ask on (src/preload/index.ts, `shared/bridge.ts`):
 //   invoked: project:pick, project:open, project:current, project:recent, project:close,
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
-//            build:state, build:rebuild, build:result, build:file, build:routeFile
+//            build:state, build:rebuild, build:result, build:file, build:routeFile, view:tell
 //   sent:    chat:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, notice, window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
@@ -37,6 +38,7 @@ export interface IpcDeps {
   trust: Trust
   models: KnownModels
   builds: Builds
+  views: ViewHolder
 }
 
 /** Sends a message to the window, if there is one to hear it. */
@@ -46,7 +48,7 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ projects, sessions, trust, models, builds }: IpcDeps): void {
+export function registerIpc({ projects, sessions, trust, models, builds, views }: IpcDeps): void {
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -117,6 +119,10 @@ export function registerIpc({ projects, sessions, trust, models, builds }: IpcDe
   })
   handle('build:routeFile', (id: unknown, key: unknown, name: unknown) => readRouteFile(mustBeOpen(id), String(key), name as RouteFile))
   builds.onState((state) => broadcast('build:state', state))
+  handle('view:tell', (id: unknown, view: unknown) => {
+    const project = projectOf(id)
+    if (project) views.tell(project.id, view)
+  })
 
   sessions.on('status', (m) => broadcast('session:status', { sessionId: m.sessionId, status: m.status }))
   sessions.on('item', (m) => broadcast('chat:item', { sessionId: m.sessionId, item: m.item, seq: m.seq }))
