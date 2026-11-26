@@ -54,6 +54,8 @@
     { "pino": "app/src/main/sessions/chatlog.test.ts", "torno": "app/src/main/sessions/chatlog.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "names; the cases of removed fields dropped, one for writes under .pino only" },
     { "pino": "app/src/main/sessions/models.ts", "torno": "app/src/main/sessions/models.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "kept in pino's user data" },
     { "pino": "app/src/main/sessions/models.test.ts", "torno": "app/src/main/sessions/models.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the temp folder's name" },
-    { "pino": ".claude/rules/chat-transcript.md", "torno": ".claude/rules/chat-transcript.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's transcript, without the CAD seams" }
+    { "pino": ".claude/rules/chat-transcript.md", "torno": ".claude/rules/chat-transcript.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's transcript, without the CAD seams" },
+    { "pino": "app/src/main/sessions/manager.ts", "torno": "app/src/main/sessions/manager.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "cut to its plumbing behind SessionDomain: chat only, no builds, holds, notes or undo; start answers refusals; the agent's group ends with the session" },
+    { "pino": ".claude/rules/sessions.md", "torno": ".claude/rules/sessions.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's cut-down manager and its domain seam" }
   ]
 }

@@ -464,6 +464,12 @@ git add -A && git commit -m "Copy torno's chat items, transcript, chat log and m
 
 ### Task 7: Session manager with a domain seam
 
+> **Note from the build:** `manager.test.ts` has more cases than listed, among them: what the agent started ends with the session (the manager now kills the agent's process group when it ends a session; torno only kills it when the agent hangs), a stop while a session is still starting, and a linked `.pino`.
+>
+> **Note from the build:** The stop path also puts the write of `session.json` in the session's line of writes, so nothing lands after `stop` resolves. `killAll` is new, for a quit that will wait no longer.
+>
+> **Note from the build:** Claude Code is looked for on PATH before the trust question: there is nothing to trust a folder for when it cannot start.
+
 **Files:**
 - Create: `app/src/main/sessions/domain.ts`, `app/src/main/sessions/manager.test.ts`
 - Copy adapted: `app/src/main/sessions/manager.ts` (cut down, see below), `.claude/rules/sessions.md`
@@ -509,7 +515,7 @@ Cut from torno's `manager.ts`: node-pty and the terminal view (`write`, `resize`
 
 Kept: one session per project; a token granted for `/mcp/<projectId>` and `/hooks/<sessionId>`, revoked at exit; the MCP config file written in `configDir` and removed at exit; `agentEnv`; `findCommand` before start (refused: `Claude Code was not found on PATH. Install it, or start pino from a terminal where claude runs.`); `Trust.pending` before the first chat (refused with the trust question); `refusalOf` on PreToolUse; `reduceStatus`; the transcript; `appendItems` (redacted) to `.pino/chat/`; `storeConversation` and resume; and stop (end, SIGTERM to the group after 2 s, SIGKILL after 4 s).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `manager.test.ts` uses a real `startHttp()`, `claudeAdapter('node <abs>/test/fake-agent.mjs')`, a temp project, a temp `configDir` and a `Trust(null, tempHome)`. It never spawns the real CLI.
 
@@ -526,19 +532,19 @@ it('writes only under .pino: the chat log, the session file and .pino/.gitignore
 it('resumes the stored conversation with --resume', ...)
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/sessions/manager.test.ts`
 Expected: FAIL, `Sessions` missing.
 
-- [ ] **Step 3: Write `domain.ts`; copy `manager.ts`, cut it as listed, wire the seam; copy and adapt the rule**
+- [x] **Step 3: Write `domain.ts`; copy `manager.ts`, cut it as listed, wire the seam; copy and adapt the rule**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS, with no stand-in left running (`pgrep -f fake-agent.mjs` shows none in the temp folders).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Cut torno's session manager to its plumbing behind a SessionDomain seam"
