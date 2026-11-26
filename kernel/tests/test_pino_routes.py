@@ -123,3 +123,10 @@ def test_fixed_via_too_small(fixture_libs):
     b.fixed_via("GND", at=(1, 2), diameter=0.4, drill=0.2)
     with pytest.raises(CircuitError, match="below the fab's"):
         b.validate()
+
+
+def test_net_names_cannot_start_with_a_dash(fixture_libs):
+    from helpers import SMALL_BOARD_PY
+
+    with pytest.raises(CircuitError, match="cannot start with -"):
+        board_from_text(SMALL_BOARD_PY.replace('b.net("STATUS"', 'b.net("-STATUS"'))

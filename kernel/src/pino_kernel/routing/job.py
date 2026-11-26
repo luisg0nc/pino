@@ -93,7 +93,7 @@ def _footprint_refs(pcb_text: str) -> dict[str, str]:
 
 
 def _drc_into(kicad: KicadCli, folder: Path, board_text: str, project_files: Mapping[str, Path], out: Path,
-              *, parity: bool) -> tuple[dict | None, str, str | None]:
+              *, parity: bool, cancel: threading.Event | None = None) -> tuple[dict | None, str, str | None]:
     """(report, the saved board text, problem): the board refilled and checked in `folder` with pino's files."""
     folder.mkdir(parents=True, exist_ok=True)
     for name, src in project_files.items():
@@ -101,9 +101,11 @@ def _drc_into(kicad: KicadCli, folder: Path, board_text: str, project_files: Map
             shutil.copy(src, folder / name)
     pcb = folder / "board.kicad_pcb"
     pcb.write_text(board_text, encoding="utf-8")
-    run = kicad.drc(pcb, out, refill=True, save=True, parity=parity)
+    run = kicad.drc(pcb, out, refill=True, save=True, parity=parity, cancel=cancel)
     for extra in folder.glob("*.kicad_prl"):
         extra.unlink()
+    if run.returncode == -15:
+        return None, board_text, "cancelled"
     if not run.ok or not out.is_file():
         return None, board_text, f"kicad-cli DRC failed: {run.last_line() or f'exit code {run.returncode}'}"
     try:
@@ -145,9 +147,12 @@ def route_board(work: Path, board_text: str, pro_text: str, dru_text: str | None
 
     def refill(text: str, name: str):
         merged = merge_copper(board_text, rewrite_uuids(copper_nodes(text)))
-        return _drc_into(kicad, work / name, merged, project_files, work / name / "drc.json", parity=False)
+        return _drc_into(kicad, work / name, merged, project_files, work / name / "drc.json", parity=False,
+                         cancel=cancel)
 
     report, refilled, problem = clock.run("refill", refill, result.board_text, "refill")
+    if cancel.is_set():
+        return outcome("cancelled", steps)
     if problem:
         findings.append(Finding("kicad", "kicad_cli_failed", "error", problem))
         return outcome("failed", steps, problem)
@@ -171,6 +176,8 @@ def route_board(work: Path, board_text: str, pro_text: str, dru_text: str | None
         finish_seconds = time.monotonic() - t0
         if hr.stopped:
             return outcome(hr.stopped, steps)
+        if cancel.is_set():
+            return outcome("cancelled", steps)
         if problem:
             findings.append(Finding("kicad", "kicad_cli_failed", "error", problem))
             return outcome("failed", steps, problem)
@@ -182,7 +189,9 @@ def route_board(work: Path, board_text: str, pro_text: str, dru_text: str | None
 
     final = clock.run("cleanup", clean)
     report, filled, problem = clock.run("drc", _drc_into, kicad, work / "filled", final, project_files,
-                                        work / "drc.json", parity=True)
+                                        work / "drc.json", parity=True, cancel=cancel)
+    if cancel.is_set():
+        return outcome("cancelled", steps)
     if problem:
         findings.append(Finding("kicad", "kicad_cli_failed", "error", problem))
         return outcome("failed", steps, problem, text=final)
@@ -287,7 +296,11 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                   cancel: threading.Event) -> RouteResult:
     routes = project / ".pino" / "routes"
     history = RouteHistory(project)
+    # we hold the job lock: a temp folder or a running entry left now is from a route that was killed
+    for stale in routes.glob("*.tmp-*"):
+        shutil.rmtree(stale, ignore_errors=True)
     number = history.next_number()
+    history.fail_running(except_number=number)
     started = time.monotonic()
     clock = _Clock()
 
@@ -308,115 +321,125 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                            False, empty_counts(), share, kept, truncated, list(steps), clock.times, {}, False)
 
     try:
-        krt = clock.run("router", ensure, allow_install=options.install,
-                        on_line=lambda s: events({"event": "log", "step": "router install", "line": s[:300]}))
-    except RouterMissing as e:
-        return failed("failed", "KiCadRoutingTools missing: run pino-kernel router install", [e.finding])
-    build_hash = build or latest_build(project)
-    build_dir = project / ".pino" / "build" / (build_hash or "")
-    if not build_hash or not (build_dir / "board.kicad_pcb").is_file():
-        return failed("failed", "no build yet: save board.py first", [
-            Finding("route", "no_build", "error", "there is no finished build of board.py to route; save board.py "
-                                                  "first")])
-    t0 = time.perf_counter()
-    plan = plan_for_build(build_dir)
-    board_text = (build_dir / "board.kicad_pcb").read_text(encoding="utf-8")
-    pro_text = (build_dir / "board.kicad_pro").read_text(encoding="utf-8")
-    dru_path = build_dir / "board.kicad_dru"
-    dru_text = dru_path.read_text(encoding="utf-8") if dru_path.is_file() else None
-    key = route_key(board_text, pro_text, dru_text, plan)
-    plan_seconds = time.perf_counter() - t0
-    note_lock(key.key)
-    final = routes / key.key
-    build_number = _build_number(project, build_hash)
-
-    if options.cache and (final / "route.json").is_file():
         try:
-            stored = RouteResult.from_json((final / "route.json").read_text(encoding="utf-8"))
-        except (ValueError, KeyError, json.JSONDecodeError):
-            stored = None
-        if stored is not None and stored.state == "done":
-            stored.number, stored.build, stored.cached = number, build_hash, True
-            stored.headline = route_headline(number, build_number, "done", stored.counts, stored.share, None)
-            stored.timings = clock.times + [Timing("plan", plan_seconds)] + \
-                [Timing(t.step, t.seconds, True) for t in stored.timings if t.step not in ("router", "plan")]
-            history.record(number, key.key, build_hash, "done", stored.complete)
-            return stored
+            krt = clock.run("router", ensure, allow_install=options.install, cancel=cancel,
+                            on_line=lambda s: events({"event": "log", "step": "router install", "line": s[:300]}))
+        except RouterMissing as e:
+            if cancel.is_set():
+                return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", [e.finding])
+            return failed("failed", "KiCadRoutingTools missing: run pino-kernel router install", [e.finding])
+        build_hash = build or latest_build(project)
+        build_dir = project / ".pino" / "build" / (build_hash or "")
+        if not build_hash or not (build_dir / "board.kicad_pcb").is_file():
+            return failed("failed", "no build yet: save board.py first", [
+                Finding("route", "no_build", "error", "there is no finished build of board.py to route; save board.py "
+                                                      "first")])
+        t0 = time.perf_counter()
+        plan = plan_for_build(build_dir)
+        board_text = (build_dir / "board.kicad_pcb").read_text(encoding="utf-8")
+        pro_text = (build_dir / "board.kicad_pro").read_text(encoding="utf-8")
+        dru_path = build_dir / "board.kicad_dru"
+        dru_text = dru_path.read_text(encoding="utf-8") if dru_path.is_file() else None
+        key = route_key(board_text, pro_text, dru_text, plan)
+        plan_seconds = time.perf_counter() - t0
+        note_lock(key.key)
+        final = routes / key.key
+        build_number = _build_number(project, build_hash)
 
-    try:
-        libs = discover()
-    except LibrariesNotFound as e:
-        return failed("failed", "KiCad's libraries were not found", [
-            Finding("kernel", "libraries_not_found", "error", str(e))], key.key, build_hash)
-    argv = KicadCli.find()
-    if not argv:
-        return failed("failed", "kicad-cli not found: install KiCad 10 to route", [
-            Finding("kernel", "kicad_cli_missing", "error", "routing refills zones and runs DRC with kicad-cli, "
-                                                            "which was not found; install KiCad 10 or set "
-                                                            "PINO_KICAD_CLI")], key.key, build_hash)
-    kicad = KicadCli(libs, project / ".pino" / "kicad", argv)
-    tmp = routes / f"{key.key}.tmp-{os.getpid()}-{threading.get_ident()}"
-    shutil.rmtree(tmp, ignore_errors=True)
-    tmp.mkdir(parents=True)
-    try:
-        project_files = {name: build_dir / name for name in PROJECT_FILES}
-        baseline = None
-        if (build_dir / "drc.json").is_file():
+        if options.cache and (final / "route.json").is_file():
             try:
-                baseline = json.loads((build_dir / "drc.json").read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                baseline = None
-        if baseline is None:
-            filled_src = build_dir / "filled" / "board.kicad_pcb"
-            text = filled_src.read_text(encoding="utf-8") if filled_src.is_file() else board_text
-            baseline, _, _ = _drc_into(kicad, tmp / "baseline", text, project_files, tmp / "baseline" / "drc.json",
-                                       parity=False)
-        outcome = route_board(tmp / "work", board_text, pro_text, dru_text, plan, kicad=kicad, krt=krt,
-                              project_files=project_files, baseline=baseline, options=options, events=events,
-                              cancel=cancel)
-        timings = clock.times + [Timing("plan", plan_seconds + sum(t.seconds for t in outcome.timings
-                                                                   if t.step == "plan"))] + \
-            [t for t in outcome.timings if t.step != "plan"]
-        clock.times = timings
-        if outcome.stopped:
-            seconds = time.monotonic() - started
-            problem = {"cancelled": f"cancelled after {seconds:.0f} s",
-                       "timed_out": f"timed out after {seconds:.0f} s"}.get(outcome.stopped, outcome.problem)
-            return failed(outcome.stopped, problem or "the route failed", outcome.findings, key.key, build_hash,
-                          outcome.steps)
-        drc_found = [f for f in outcome.findings if f.source == "drc"]
-        copper_found = [f for f in outcome.findings if f.source == "copper"]
-        counts = _counts(outcome, drc_found, copper_found)
-        kept, truncated = sort_and_cap(outcome.findings)
-        complete = counts["unrouted"] == 0
-        verdict = "errors" if counts["unrouted"] or any(f.severity == "error" for f in outcome.findings) else "ok"
-        share = outcome.share.to_json()
-        rel = lambda name: (final / name).relative_to(project).as_posix()
-        artifacts = {"folder": final.relative_to(project).as_posix(), "board": rel("board.kicad_pcb"),
-                     "filled": rel("filled/board.kicad_pcb"), "copper": rel("copper.json"), "drc": rel("drc.json"),
-                     "plan": rel("plan.json"), "key": rel("key.json"), "log": rel("log.txt")}
-        headline = route_headline(number, build_number, "done", counts, share, None)
-        result = RouteResult(SCHEMA, __version__, dict(ROUTER), key.key, build_hash, number, "done", verdict, headline,
-                             complete, counts, share, kept, truncated, outcome.steps, timings, artifacts, False)
-        (tmp / "key.json").write_text(key.to_json(), encoding="utf-8")
-        (tmp / "plan.json").write_text(plan.to_json(), encoding="utf-8")
-        (tmp / "board.kicad_pcb").write_text(outcome.board_text, encoding="utf-8")
-        (tmp / "copper.json").write_text(copper_json(outcome.copper), encoding="utf-8")
-        shutil.copytree(tmp / "work" / "filled", tmp / "filled")
-        shutil.copy(tmp / "work" / "drc.json", tmp / "drc.json")
-        normalize(tmp / "drc.json")
-        _write_log(tmp, outcome.steps, tmp / "work")
-        (tmp / "route.json").write_text(result.to_json(), encoding="utf-8")
-        if options.keep_steps:
-            (tmp / "work").rename(tmp / "steps")
-        else:
-            shutil.rmtree(tmp / "work", ignore_errors=True)
-        shutil.rmtree(tmp / "baseline", ignore_errors=True)
-        if final.exists():
-            shutil.rmtree(final, ignore_errors=True)
-        tmp.rename(final)
-        history.record(number, key.key, build_hash, "done", complete)
-        _prune(project, history, KEEP_ROUTES)
-        return result
-    finally:
+                stored = RouteResult.from_json((final / "route.json").read_text(encoding="utf-8"))
+            except (ValueError, KeyError, json.JSONDecodeError):
+                stored = None
+            if stored is not None and stored.state == "done":
+                stored.number, stored.build, stored.cached = number, build_hash, True
+                stored.headline = route_headline(number, build_number, "done", stored.counts, stored.share, None)
+                stored.timings = clock.times + [Timing("plan", plan_seconds)] + \
+                    [Timing(t.step, t.seconds, True) for t in stored.timings if t.step not in ("router", "plan")]
+                history.record(number, key.key, build_hash, "done", stored.complete)
+                return stored
+
+        try:
+            libs = discover()
+        except LibrariesNotFound as e:
+            return failed("failed", "KiCad's libraries were not found", [
+                Finding("kernel", "libraries_not_found", "error", str(e))], key.key, build_hash)
+        argv = KicadCli.find()
+        if not argv:
+            return failed("failed", "kicad-cli not found: install KiCad 10 to route", [
+                Finding("kernel", "kicad_cli_missing", "error", "routing refills zones and runs DRC with kicad-cli, "
+                                                                "which was not found; install KiCad 10 or set "
+                                                                "PINO_KICAD_CLI")], key.key, build_hash)
+        kicad = KicadCli(libs, project / ".pino" / "kicad", argv)
+        tmp = routes / f"{key.key}.tmp-{os.getpid()}-{threading.get_ident()}"
         shutil.rmtree(tmp, ignore_errors=True)
+        tmp.mkdir(parents=True)
+        try:
+            project_files = {name: build_dir / name for name in PROJECT_FILES}
+            baseline = None
+            if (build_dir / "drc.json").is_file():
+                try:
+                    baseline = json.loads((build_dir / "drc.json").read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    baseline = None
+            if baseline is None:
+                filled_src = build_dir / "filled" / "board.kicad_pcb"
+                text = filled_src.read_text(encoding="utf-8") if filled_src.is_file() else board_text
+                baseline, _, _ = _drc_into(kicad, tmp / "baseline", text, project_files, tmp / "baseline" / "drc.json",
+                                           parity=False, cancel=cancel)
+            outcome = route_board(tmp / "work", board_text, pro_text, dru_text, plan, kicad=kicad, krt=krt,
+                                  project_files=project_files, baseline=baseline, options=options, events=events,
+                                  cancel=cancel)
+            timings = clock.times + [Timing("plan", plan_seconds + sum(t.seconds for t in outcome.timings
+                                                                       if t.step == "plan"))] + \
+                [t for t in outcome.timings if t.step != "plan"]
+            clock.times = timings
+            if outcome.stopped:
+                seconds = time.monotonic() - started
+                problem = {"cancelled": f"cancelled after {seconds:.0f} s",
+                           "timed_out": f"timed out after {seconds:.0f} s"}.get(outcome.stopped, outcome.problem)
+                return failed(outcome.stopped, problem or "the route failed", outcome.findings, key.key, build_hash,
+                              outcome.steps)
+            drc_found = [f for f in outcome.findings if f.source == "drc"]
+            copper_found = [f for f in outcome.findings if f.source == "copper"]
+            counts = _counts(outcome, drc_found, copper_found)
+            kept, truncated = sort_and_cap(outcome.findings)
+            complete = counts["unrouted"] == 0
+            verdict = "errors" if counts["unrouted"] or any(f.severity == "error" for f in outcome.findings) else "ok"
+            share = outcome.share.to_json()
+            rel = lambda name: (final / name).relative_to(project).as_posix()
+            artifacts = {"folder": final.relative_to(project).as_posix(), "board": rel("board.kicad_pcb"),
+                         "filled": rel("filled/board.kicad_pcb"), "copper": rel("copper.json"), "drc": rel("drc.json"),
+                         "plan": rel("plan.json"), "key": rel("key.json"), "log": rel("log.txt")}
+            headline = route_headline(number, build_number, "done", counts, share, None)
+            result = RouteResult(SCHEMA, __version__, dict(ROUTER), key.key, build_hash, number, "done", verdict, headline,
+                                 complete, counts, share, kept, truncated, outcome.steps, timings, artifacts, False)
+            (tmp / "key.json").write_text(key.to_json(), encoding="utf-8")
+            (tmp / "plan.json").write_text(plan.to_json(), encoding="utf-8")
+            (tmp / "board.kicad_pcb").write_text(outcome.board_text, encoding="utf-8")
+            (tmp / "copper.json").write_text(copper_json(outcome.copper), encoding="utf-8")
+            shutil.copytree(tmp / "work" / "filled", tmp / "filled")
+            shutil.copy(tmp / "work" / "drc.json", tmp / "drc.json")
+            normalize(tmp / "drc.json")
+            _write_log(tmp, outcome.steps, tmp / "work")
+            (tmp / "route.json").write_text(result.to_json(), encoding="utf-8")
+            if options.keep_steps:
+                (tmp / "work").rename(tmp / "steps")
+            else:
+                shutil.rmtree(tmp / "work", ignore_errors=True)
+            shutil.rmtree(tmp / "baseline", ignore_errors=True)
+            if final.exists():
+                shutil.rmtree(final, ignore_errors=True)
+            tmp.rename(final)
+            history.record(number, key.key, build_hash, "done", complete)
+            _prune(project, history, KEEP_ROUTES)
+            return result
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    except Exception as e:  # noqa: BLE001 - any engine fault is a failed route, never a traceback
+        import sys as _sys
+        import traceback
+
+        traceback.print_exc(file=_sys.stderr)
+        return failed("failed", "the route failed inside the engine", [
+            Finding("kernel", "internal_error", "error", f"{type(e).__name__}: {e}"[:300])])

@@ -178,9 +178,10 @@ def main(argv: list[str] | None = None) -> int:
     rn.add_argument("project", type=Path)
     rn.add_argument("--net", required=True)
     rn.add_argument("--region", default=None, help="x0,y0,x1,y1 in mm (write --region=-5,-5,5,5)")
-    rn.add_argument("--layers", nargs="+", default=None)
+    rn.add_argument("--layers", nargs="+", action="extend", default=None)
     rn.add_argument("--corridor", action="append", default=None, help="x,y in mm, once per point (--corridor=0,0)")
-    rn.add_argument("--rip", nargs="+", default=None, help="nets (or patterns) the router may move")
+    rn.add_argument("--rip", nargs="+", action="extend", default=None,
+                    help="nets (or patterns) the router may move; write --rip=-5V for a name that starts with -")
     rn.add_argument("--events", action="store_true")
     nd = sub.add_parser("nudge", help="try a part somewhere else and print a place line")
     nd.add_argument("project", type=Path)

@@ -211,20 +211,20 @@ def check(krt: Krt) -> list[Finding]:
 
 
 def ensure(env: Mapping[str, str] = os.environ, *, allow_install: bool = True,
-           on_line: Callable[[str], None] = lambda s: None) -> Krt:
+           on_line: Callable[[str], None] = lambda s: None, cancel: threading.Event | None = None) -> Krt:
     try:
         return locate(env)
     except RouterMissing as e:
         if not allow_install or e.finding.code != "router_missing" or env.get("PINO_KRT_DIR"):
             raise
-    return install(env, on_line=on_line)
+    return install(env, on_line=on_line, cancel=cancel)
 
 
 # --- install ------------------------------------------------------------------------------------------------
 
 
 def _step(what: str, argv: Sequence[str], *, cwd: Path, env: Mapping[str, str], timeout: float,
-          on_line: Callable[[str], None]) -> None:
+          on_line: Callable[[str], None], cancel: threading.Event | None = None) -> None:
     """Run one install command; raise RouterMissing naming `what` when it fails."""
     tail: deque[str] = deque(maxlen=20)
     try:
@@ -234,6 +234,15 @@ def _step(what: str, argv: Sequence[str], *, cwd: Path, env: Mapping[str, str], 
         raise _missing(f"could not {what}: {e}. {_retry_hint()}") from None
     timer = threading.Timer(timeout, lambda: _kill_group(proc, signal.SIGKILL))
     timer.start()
+    stopped = threading.Event()
+
+    def watch() -> None:  # a cancel stops the install step's own group
+        while not stopped.wait(0.2):
+            if cancel is not None and cancel.is_set():
+                _kill_group(proc, signal.SIGKILL)
+                return
+
+    threading.Thread(target=watch, daemon=True).start()
     try:
         assert proc.stdout is not None
         for line in proc.stdout:
@@ -244,6 +253,9 @@ def _step(what: str, argv: Sequence[str], *, cwd: Path, env: Mapping[str, str], 
         proc.wait()
     finally:
         timer.cancel()
+        stopped.set()
+    if cancel is not None and cancel.is_set():
+        raise _missing(f"the router install was cancelled; {INSTALL_HINT} to finish it.")
     if proc.returncode != 0:
         last = tail[-1] if tail else f"exit code {proc.returncode}"
         raise _missing(f"could not {what}: {last[:200]}. {_retry_hint()}")
@@ -275,7 +287,7 @@ def _download_core(dest: Path, on_line: Callable[[str], None]) -> None:
 
 
 def install(env: Mapping[str, str] = os.environ, *, on_line: Callable[[str], None] = lambda s: None,
-            timeout: float = 900.0) -> Krt:
+            timeout: float = 900.0, cancel: threading.Event | None = None) -> Krt:
     krt_dir = cache_root(env) / "krt"
     krt_dir.mkdir(parents=True, exist_ok=True)
     name = KRT_COMMIT[:12]
@@ -293,7 +305,7 @@ def install(env: Mapping[str, str] = os.environ, *, on_line: Callable[[str], Non
         tmp = krt_dir / f"{name}.tmp-{os.getpid()}"
         tmp.mkdir()
         try:
-            krt = _install_into(tmp, env, krt_dir, deadline, on_line)
+            krt = _install_into(tmp, env, krt_dir, deadline, on_line, cancel)
             if final.exists():
                 shutil.rmtree(final)
             tmp.rename(final)
@@ -306,7 +318,7 @@ def install(env: Mapping[str, str] = os.environ, *, on_line: Callable[[str], Non
 
 
 def _install_into(tmp: Path, env: Mapping[str, str], krt_dir: Path, deadline: float,
-                  on_line: Callable[[str], None]) -> Krt:
+                  on_line: Callable[[str], None], cancel: threading.Event | None = None) -> Krt:
     repo = env.get("PINO_KRT_REPO") or KRT_REPO
     base = {k: v for k, v in env.items() if k not in ("DISPLAY", "WAYLAND_DISPLAY", "VIRTUAL_ENV", "PYTHONPATH")}
     # Everything the install writes stays under <cache>/krt: uv's and pip's caches, and a Python uv downloads.
@@ -322,12 +334,12 @@ def _install_into(tmp: Path, env: Mapping[str, str], krt_dir: Path, deadline: fl
     if git is None:
         raise _missing(f"could not fetch KiCadRoutingTools from {repo}: git is not installed. {_retry_hint()}")
     _step(f"fetch KiCadRoutingTools from {repo}", [git, "init", "-q", str(src)], cwd=tmp, env=base, timeout=left(),
-          on_line=on_line)
+          on_line=on_line, cancel=cancel)
     _step(f"fetch KiCadRoutingTools from {repo}", [git, "-C", str(src), "fetch", "-q", "--depth", "1", repo,
-                                                     KRT_COMMIT], cwd=tmp, env=base, timeout=left(), on_line=on_line)
+                                                     KRT_COMMIT], cwd=tmp, env=base, timeout=left(), on_line=on_line, cancel=cancel)
     _step(f"fetch KiCadRoutingTools from {repo}", [git, "-C", str(src), "-c", "advice.detachedHead=false",
                                                      "checkout", "-q", "FETCH_HEAD"], cwd=tmp, env=base,
-          timeout=left(), on_line=on_line)
+          timeout=left(), on_line=on_line, cancel=cancel)
     found = _read_version(src)
     if found != KRT_VERSION:
         raise _version_refused(src, found or "unknown")
@@ -337,20 +349,20 @@ def _install_into(tmp: Path, env: Mapping[str, str], krt_dir: Path, deadline: fl
     if uv:
         _step(f"make a Python {KRT_PYTHON} environment for KiCadRoutingTools",
               [uv, "venv", "-q", "--python", KRT_PYTHON, str(venv)], cwd=tmp, env=base, timeout=left(),
-              on_line=on_line)
+              on_line=on_line, cancel=cancel)
         _step("install numpy, scipy and shapely for KiCadRoutingTools",
               [uv, "pip", "install", "-q", "--python", str(py), *KRT_DEPS], cwd=tmp, env=base, timeout=left(),
-              on_line=on_line)
+              on_line=on_line, cancel=cancel)
     else:
         python = shutil.which(f"python{KRT_PYTHON}", path=env.get("PATH"))
         if python is None:
             raise _missing(f"could not make a Python {KRT_PYTHON} environment for KiCadRoutingTools: neither uv nor "
                            f"python{KRT_PYTHON} is on PATH. Install one of them, then {INSTALL_HINT} again.")
         _step(f"make a Python {KRT_PYTHON} environment for KiCadRoutingTools", [python, "-m", "venv", str(venv)],
-              cwd=tmp, env=base, timeout=left(), on_line=on_line)
+              cwd=tmp, env=base, timeout=left(), on_line=on_line, cancel=cancel)
         _step("install numpy, scipy and shapely for KiCadRoutingTools",
               [str(py), "-m", "pip", "install", "-q", *KRT_DEPS], cwd=tmp, env=base, timeout=left(),
-              on_line=on_line)
+              on_line=on_line, cancel=cancel)
     _download_core(src / "rust_router" / "grid_router.so", on_line)
     krt = Krt(src, py, found, KRT_COMMIT, {})
     problems = check(krt)

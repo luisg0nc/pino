@@ -56,6 +56,18 @@ class RouteHistory:
             self._write(routes)
             return number
 
+    def fail_running(self, except_number: int) -> None:
+        """Mark every running entry but one as failed (call it while holding the project's job lock)."""
+        with self._locked():
+            routes = self._read()
+            changed = False
+            for r in routes:
+                if r.get("state") == "running" and r.get("number") != except_number:
+                    r["state"] = "failed"
+                    changed = True
+            if changed:
+                self._write(routes)
+
     def record(self, number: int, key: str | None, build: str | None, state: str, complete: bool | None) -> None:
         with self._locked():
             routes = [r for r in self._read() if r.get("number") != number]

@@ -324,15 +324,15 @@ def route_net_argv(req: dict, project: Path) -> list[str]:
     net = req.get("net")
     if not isinstance(net, str) or not net:
         raise ValueError("route_net needs a net")
-    argv = ["route-net", str(project), "--net", net]
+    argv = ["route-net", str(project), f"--net={net}"]
     if req.get("region") is not None:
         argv.append("--region=" + ",".join(str(v) for v in _floats(req["region"], 4, "region")))
     if req.get("layers"):
-        argv += ["--layers", *[str(x) for x in req["layers"]]]
+        argv += [f"--layers={x}" for x in req["layers"]]
     if req.get("corridor"):
         argv += [f"--corridor={x},{y}" for x, y in (_floats(p, 2, "corridor") for p in req["corridor"])]
     if req.get("rip"):
-        argv += ["--rip", *[str(x) for x in req["rip"]]]
+        argv += [f"--rip={x}" for x in req["rip"]]
     return argv
 
 
@@ -340,7 +340,7 @@ def nudge_argv(req: dict, project: Path) -> list[str]:
     part = req.get("part")
     if not isinstance(part, str) or not part:
         raise ValueError("nudge needs a part")
-    argv = ["nudge", str(project), "--part", part]
+    argv = ["nudge", str(project), f"--part={part}"]
     if req.get("by") is not None:
         dx, dy = _floats(req["by"], 2, "by")
         argv.append(f"--by={dx},{dy}")

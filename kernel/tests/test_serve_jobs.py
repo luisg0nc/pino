@@ -147,3 +147,18 @@ def test_ping_says_serve_2():
 
     out = serve([{"id": 1, "op": "ping"}])
     assert out[0]["pong"] == {"kernel": __version__, "schema": "pino.build/1", "serve": 2, "route_schema": "pino.route/1"}
+
+
+def test_an_engine_fault_in_an_inline_op_keeps_serve_alive(routed_project, monkeypatch, tmp_path):
+    monkeypatch.setenv("PINO_KICAD_FOOTPRINT_DIR", str(tmp_path / "nowhere"))
+    out = serve([{"id": 1, "op": "nudge", "project": str(routed_project), "part": "R1", "by": [1, 0]},
+                 {"id": 2, "op": "ping"}])
+    assert out[0]["id"] == 1 and out[0]["ok"] is False and "the engine failed" in out[0]["error"]
+    assert out[1]["id"] == 2 and out[1]["ok"] is True and serve.code == 0
+
+
+def test_route_net_argv_keeps_a_dash_net_as_a_value(tmp_path):
+    from pino_kernel.routing.trials import route_net_argv
+
+    argv = route_net_argv({"net": "N1", "rip": ["-X"]}, tmp_path)
+    assert "--net=N1" in argv and "--rip=-X" in argv

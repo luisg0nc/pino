@@ -238,3 +238,43 @@ def test_old_routes_are_pruned(built_project, monkeypatch):
     folders = [d for d in (p / ".pino/routes").iterdir() if d.is_dir()]
     latest = RouteHistory(p).latest_done()["key"]
     assert len(folders) == 2 and latest in {d.name for d in folders}
+
+
+def test_cancel_during_drc_kills_kicad_and_cleans_up(routed_project, monkeypatch, tmp_path):
+    monkeypatch.setenv("FAKE_KICAD_SLOW", "30")
+    monkeypatch.setenv("FAKE_KICAD_PIDFILE", str(tmp_path / "kpid"))
+    cancel = threading.Event()
+
+    def cancel_when_drc_runs():
+        end = time.monotonic() + 20
+        while not (tmp_path / "kpid").exists() and time.monotonic() < end:
+            time.sleep(0.05)
+        cancel.set()
+
+    threading.Thread(target=cancel_when_drc_runs, daemon=True).start()
+    started = time.monotonic()
+    r = route_project(routed_project, cancel=cancel)
+    assert r.state == "cancelled" and time.monotonic() - started < 20
+    assert not list((routed_project / ".pino/routes").glob("*.tmp-*"))
+    assert gone(int((tmp_path / "kpid").read_text()))
+
+
+def test_leftovers_of_a_killed_route_are_cleared(routed_project):
+    routes = routed_project / ".pino/routes"
+    (routes / "0123456789ab.tmp-999-1").mkdir(parents=True)
+    h = RouteHistory(routed_project)
+    stuck = h.next_number()
+    r = route_project(routed_project)
+    assert r.state == "done" and not list(routes.glob("*.tmp-*"))
+    assert next(e for e in h.entries() if e["number"] == stuck)["state"] == "failed"
+
+
+def test_an_engine_fault_is_a_failed_route(routed_project, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr(job, "route_board", boom)
+    r = route_project(routed_project)
+    assert r.state == "failed" and r.findings[0].code == "internal_error" and "kaboom" in r.findings[0].message
+    assert all(e["state"] != "running" for e in RouteHistory(routed_project).entries())
+    assert not list((routed_project / ".pino/routes").glob("*.tmp-*"))

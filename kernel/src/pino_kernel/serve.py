@@ -256,6 +256,9 @@ class Server:
             return handler(req), False
         except (TypeError, ValueError) as e:
             return {"id": rid, "ok": False, "error": str(e)[:MAX_ERROR]}, False
+        except Exception as e:  # noqa: BLE001 - the loop must survive an engine fault
+            print(f"pino-kernel: {op} failed inside the engine: {e!r}", file=sys.stderr)
+            return {"id": rid, "ok": False, "error": f"the engine failed: {type(e).__name__}: {e}"[:MAX_ERROR]}, False
 
     def stop_jobs(self) -> None:
         for id in self.jobs.ids():

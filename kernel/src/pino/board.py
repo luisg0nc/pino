@@ -270,6 +270,9 @@ class Board:
 
     def _connect(self, name, kind, items, symbol="", external=False, where=None) -> NetSpec:
         where = where or _caller()
+        if isinstance(name, str) and name.startswith("-"):
+            raise _fail(f"net name {name!r} cannot start with - (the router reads it as an option); "
+                        f"name it like NEG{name[1:]} or {name[1:]}_N", where)
         if not isinstance(name, str) or not NET_RE.match(name) or name.startswith(("Net-(", "unconnected-(")):
             raise _fail(f"net name {name!r} cannot be used: letters, digits and _ + . - only, "
                         "and not starting with Net-( or unconnected-(", where)

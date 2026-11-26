@@ -60,6 +60,11 @@ def auto_report(board_path):
             "source": "board.kicad_pcb", "violations": [], "unconnected_items": unconnected, "schematic_parity": []}
 
 
+if args[:2] == ["pcb", "drc"] and os.environ.get("FAKE_KICAD_SLOW"):
+    if os.environ.get("FAKE_KICAD_PIDFILE"):
+        with open(os.environ["FAKE_KICAD_PIDFILE"], "w") as f:
+            f.write(str(os.getpid()))
+    time.sleep(float(os.environ["FAKE_KICAD_SLOW"]))
 if args[:2] == ["pcb", "drc"] and os.environ.get("FAKE_KICAD_DRC") and "-o" in args:
     if os.environ["FAKE_KICAD_DRC"] == "auto":
         with open(args[args.index("-o") + 1], "w", encoding="utf-8") as f:
