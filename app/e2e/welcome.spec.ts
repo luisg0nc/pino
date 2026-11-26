@@ -5,7 +5,7 @@ import { launch, tempFolder, tempProject } from './launch'
 
 const state = (page: Page) => page.evaluate(() => window.__pinoTest!.state())
 const pickWill = (app: Awaited<ReturnType<typeof launch>>['app'], dir: string | null) =>
-  app.evaluate((_electron, folder) => {
+  app.evaluate((_main, folder) => {
     ;(globalThis as unknown as { __pinoMain: { pickFolder: string | null } }).__pinoMain.pickFolder = folder
   }, dir)
 const picks = (app: Awaited<ReturnType<typeof launch>>['app']) => app.evaluate(() => (globalThis as unknown as { __pinoMain: { picks: number } }).__pinoMain.picks)
