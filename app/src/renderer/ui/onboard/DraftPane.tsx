@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { PromptPreview } from '../../../shared/bridge'
 import { MOST_IMAGES } from '../../../shared/projectName'
 import { type Draft, useOnboard } from '../../state/onboard'
 import { numbered } from '../numbered'
+import { previewDraft } from './make'
 
 /** The text in pieces, those that are the person's own words (`mine`) and those pino wrote around them. */
 export function promptPieces(text: string, words: string[]): Array<{ text: string; mine: boolean }> {
@@ -192,11 +193,26 @@ export const wordsOf = (d: Draft): string[] => [
   ...d.parts.flatMap((p) => [p.what, p.note])
 ]
 
-/** The same, of the draft being made. */
+/** The same, of the draft being made: asked of main again 300 ms after each change. */
 export function DraftPaneLive({ make, children }: { make: Make; children?: ReactNode }) {
   const draft = useOnboard((s) => s.draft)
+  const [preview, setPreview] = useState<PromptPreview | null>(null)
+  const asked = useRef(0)
+  useEffect(() => {
+    const mine = ++asked.current
+    const timer = setTimeout(() => {
+      window.pino.project.previewPrompt(draft.name, previewDraft(draft)).then(
+        (p) => mine === asked.current && setPreview(p),
+        () => {}
+      )
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [draft])
+  const files = previewDraft(draft).items
+  const urls = [...draft.photos.map((p) => p.url), ...draft.doodles.map((d) => d.url)]
+  const thumbs = files.map((f, i): PaneThumb => ({ file: f.file, url: urls[i], attached: preview?.attached[i] ?? null, hasPicture: f.hasImage }))
   return (
-    <DraftPane preview={undefined} words={wordsOf(draft)} thumbs={[]} make={make} blank={draft.description.trim() === ''}>
+    <DraftPane preview={preview} words={wordsOf(draft)} thumbs={thumbs} make={make} blank={draft.description.trim() === ''}>
       {children}
     </DraftPane>
   )

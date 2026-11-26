@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChatItem } from '../../../shared/chat'
 import type { ProjectInfo } from '../../../shared/project'
+import { heldSaid, onboarding, useOnboard } from '../../state/onboard'
 import { ago } from './ago'
 import { ChatItems } from './Items'
 import { ChatPlace } from './place'
@@ -11,6 +12,7 @@ import { ChatPlace } from './place'
  */
 export function StartChat({ project, resumable, starting, onStart }: { project: ProjectInfo; resumable: boolean; starting: boolean; onStart: (resume: boolean) => void }) {
   const [last, setLast] = useState<{ items: ChatItem[]; at: string | null } | null>(null)
+  const held = useOnboard((s) => s.held[project.id])
   const place = useMemo(() => ({ dir: project.dir, home: window.pino.home || undefined }), [project.dir])
 
   // The end of the last conversation, asked of main when there is one to go on with.
@@ -47,6 +49,17 @@ export function StartChat({ project, resumable, starting, onStart }: { project: 
         <p className="chat-empty">
           Claude Code runs here, in the folder of <span className="num">{project.name}</span>, and works on it with you.
         </p>
+        {held && !held.taken && (
+          <div className="session-held" role="status">
+            <p>{heldSaid(held)}</p>
+            {/* With nothing to send, the reason is only to be read. */}
+            {held.text === '' && (
+              <button type="button" className="button button-quiet" onClick={() => onboarding.dismiss(project.id)}>
+                Dismiss
+              </button>
+            )}
+          </div>
+        )}
         <div className="session-actions">
           <button type="button" className="button button-primary" disabled={starting} onClick={() => onStart(false)}>
             New session

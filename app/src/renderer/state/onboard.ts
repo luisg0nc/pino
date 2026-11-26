@@ -118,7 +118,7 @@ export interface Held {
 /** What the notice of a held entry says, above the pane of the session. */
 export function heldSaid(held: Held): string {
   const why = held.reason.replace(/\.$/, '')
-  return `The first prompt of this project was not sent: ${why}. ${held.taken ? 'It was sent since.' : held.text !== '' ? 'It is kept: it goes when you start a session.' : 'What was given is in brief.md, reference/ and the Brief.'}`
+  return `The first prompt of this project was not sent: ${why}. ${held.text !== '' ? 'The first prompt is kept: it goes when you start a session.' : 'What was given is in brief.md, reference/ and the Brief.'}`
 }
 
 interface OnboardState {

@@ -1102,7 +1102,7 @@ git commit -m "The PCB slots: power, connections, parts checked against JLC as t
     - `Check every part you mean to use with <parts>, basic parts first. Then, before you write board.py, write what you settled as cards of yours with <add_card>, one per topic: a requirement, a decision with its reason, an open question with what waits on it, each part by LCSC number, and the power budget of each rail. With fab and assembly given, set layers in Board(...) of board.py to what they asked; pino picks the fab profile for that layer count. Your reply lists what you assumed.`
   - `StartChat.tsx`: with a first prompt held for the project (`onboard.held[projectId]`), the start buttons read `New session` as now and the line `The first prompt is kept: it goes when you start a session.`; starting sends it as text with `chat.send`.
 
-- [ ] **Step 1: Copy `onboard.ts` and its test, adapt the input, then write the failing tests**
+- [x] **Step 1: Copy `onboard.ts` and its test, adapt the input, then write the failing tests**
 
 ```ts
 // main/onboard.test.ts
@@ -1138,21 +1138,21 @@ test('with no Claude Code, Start makes the project and keeps the first prompt fo
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/onboard.test.ts && pnpm test:e2e -- onboard.spec.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Write the prompt, `onboardProject` and `previewPrompt`; wire Start, the preview and the held prompt**
+- [x] **Step 3: Write the prompt, `onboardProject` and `previewPrompt`; wire Start, the preview and the held prompt**
 
 `onboardProject` checks the draft whole (the checks of Task 9, the pictures by `checkedImage`, at most `MOST_IMAGES`), refuses a project that is not the open one or that has a session (`sessions.current`), one onboarding at a time per project (a set entered before anything is done, freed in `finally`), starts the session on the draft's choice, calls `markTold` with what `cardsLine` would tell, then `sendBlocks`. A part's reading in the prompt comes from `deps.readings`, never from the draft. `DraftPane` asks `project:previewPrompt` 300 ms after the draft last changed and shows the text with the person's words marked, as torno's.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `pnpm test && pnpm -C app typecheck && bash .claude/hooks/guard-bash.test.sh && pnpm test:e2e`
 Expected: PASS
 
-- [ ] **Step 5: Write `.claude/rules/new-project.md` (paths: `app/src/main/onboard.ts`, `app/src/main/onboard.test.ts`, `app/src/main/projects/**`, `app/src/shared/slots.ts`, `app/src/shared/projectName.ts`, `app/src/renderer/state/onboard.ts`, `app/src/renderer/ui/onboard/**`, `app/src/renderer/ui/ink/**`, `app/e2e/onboard.spec.ts`), name it in `CLAUDE.md`, and commit**
+- [x] **Step 5: Write `.claude/rules/new-project.md` (paths: `app/src/main/onboard.ts`, `app/src/main/onboard.test.ts`, `app/src/main/projects/**`, `app/src/shared/slots.ts`, `app/src/shared/projectName.ts`, `app/src/renderer/state/onboard.ts`, `app/src/renderer/ui/onboard/**`, `app/src/renderer/ui/ink/**`, `app/e2e/onboard.spec.ts`), name it in `CLAUDE.md`, and commit**
 
 ```bash
 git add -A app/src app/e2e .claude/rules CLAUDE.md shared-from-torno.json

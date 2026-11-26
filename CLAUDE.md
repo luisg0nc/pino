@@ -106,4 +106,5 @@ read one by hand before work its globs miss. Paths in a rule are written from `a
 - The board: `views` (the three views and what is drawn), `marks`, `engine-client` (the engine, the build loop,
   routing, Claude's tools).
 - The Brief: `brief` (the cards, the page, Claude's card tools).
+- A new project: `new-project` (the New project page, the folder, the first prompt).
 - Files and shipping: `workspace-writes` (what pino writes in a project), `launcher-and-packaging`.

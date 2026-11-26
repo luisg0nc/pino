@@ -57,7 +57,7 @@ test('an empty workspace opens on the New project page, and nothing is written b
     await addPhoto(run)
     await expect(newPage(page).getByRole('complementary', { name: 'The first prompt' })).toContainText('blinky/')
     await expect(makeIt(page)).toBeEnabled()
-    await expect(newPage(page).getByRole('button', { name: 'Start: make the project and ask Claude' })).toBeDisabled()
+    await expect(newPage(page).getByRole('button', { name: 'Start: make the project and ask Claude' })).toBeEnabled()
     expect(readdirSync(root)).toEqual([])
     // Escape leaves the page and keeps the draft; Discard asks, then empties it.
     await name(page).press('Escape')
@@ -227,6 +227,93 @@ test('every PCB slot becomes cards of the person, in frames', async () => {
     for (const said of ['USB-C, 5 V, 0.5 A', 'SHT40 sensor over I2C, JST-SH 4-pin', 'You asked for 4 layers, 1.6 mm, JLC assembles it, 5 boards']) await expect(brief).toContainText(said)
     const cards = cardsIn(join(root, 'blinky'))
     expect(cards.find((c) => c.kind === 'part')?.part).toMatchObject({ lcsc: 'C25804', reading: { class: 'basic', stock: 1234567 } })
+  } finally {
+    await app.close()
+  }
+})
+
+const start = (page: Page) => newPage(page).getByRole('button', { name: 'Start: make the project and ask Claude' })
+const dock = (page: Page) => page.locator('[data-region="session"]')
+
+test('Start makes the project, opens it on the Brief and sends the first prompt with its picture', async () => {
+  const run = await onEmpty({ agent: true })
+  const { app, page, root } = run
+  try {
+    await name(page).fill('blinky')
+    await what(page).fill('Blinks an LED.')
+    await addPhoto(run)
+    await open(page, 'Rules')
+    await newPage(page).getByRole('textbox', { name: 'Rules' }).fill('hand-solderable')
+    await expect(start(page)).toBeEnabled()
+    await start(page).click()
+    await expect(page.getByRole('button', { name: 'Project blinky' })).toBeVisible()
+    expect((await state(page)).tab).toBe('brief')
+    const prompt = dock(page).locator('.chat-user').first()
+    await expect(prompt).toContainText('This is a new board, blinky, made in pino just now.')
+    await expect(prompt).toContainText('(attached: picture 1)')
+    // The picture went with it: the transcript's item holds it, with the file it is.
+    const pictures = await page.evaluate(async () => {
+      const history = await window.pino.chat.history(window.__pinoTest!.state().session!.sessionId)
+      return history.items.flatMap((item) => (item.kind === 'user' ? item.images : []))
+    })
+    expect(pictures).toHaveLength(1)
+    // What pino added to the prompt counts the Brief as told: the prompt has just said it all.
+    await dock(page).locator('.chat-added').first().getByRole('button', { name: 'Show text' }).click()
+    await expect(dock(page).locator('.chat-added-text').first()).toContainText('Brief: 1 card (0 new).')
+    await expect.poll(() => agentsIn(join(root, 'blinky'))).toHaveLength(1)
+  } finally {
+    await app.close()
+  }
+})
+
+test('the right pane shows the first prompt as main writes it, as the slots fill', async () => {
+  const { app, page, root } = await onEmpty()
+  try {
+    const pane = newPage(page).getByRole('complementary', { name: 'The first prompt' })
+    await expect(pane).toContainText('What the board does, in your words, goes here.')
+    await name(page).fill('blinky')
+    await what(page).fill('Blinks an LED.')
+    await expect(pane).toContainText('This is a new board, blinky, made in pino just now.')
+    await open(page, 'Power')
+    await slot(page, 'Power').getByRole('button', { name: 'Add a power source' }).click()
+    await slot(page, 'Power').getByRole('textbox', { name: 'Voltage of power 1' }).fill('5')
+    await expect(pane).toContainText('Power:\n- USB-C, 5 V', { useInnerText: true })
+    await expect(pane).toContainText('Before you write board.py, settle')
+    expect(readdirSync(root)).toEqual([])
+  } finally {
+    await app.close()
+  }
+})
+
+test('with no Claude Code, Start makes the project and keeps the first prompt for later', async () => {
+  const { app, page, root } = await onEmpty()
+  try {
+    await name(page).fill('blinky')
+    await what(page).fill('Blinks an LED.')
+    await start(page).click()
+    await expect(page.getByRole('button', { name: 'Project blinky' })).toBeVisible()
+    await expect(dock(page)).toContainText('The first prompt of this project was not sent: Claude Code was not found')
+    await expect(dock(page)).toContainText('The first prompt is kept: it goes when you start a session.')
+    expect(files(join(root, 'blinky'))).toContain('brief.md')
+  } finally {
+    await app.close()
+  }
+})
+
+test('a first prompt that was kept goes when a session is started', async () => {
+  // The agent's command is not there yet when Start is pressed, as before Claude Code is installed.
+  const command = join(tempFolder('bin'), 'agent')
+  const { app, page, root } = await onEmpty({ env: { PINO_AGENT_CMD: command } })
+  try {
+    await name(page).fill('blinky')
+    await what(page).fill('Blinks an LED.')
+    await start(page).click()
+    await expect(dock(page)).toContainText('The first prompt is kept: it goes when you start a session.')
+    expect(agentsIn(join(root, 'blinky'))).toEqual([])
+    writeFileSync(command, `#!/bin/sh\nexec node '${join(__dirname, '..', 'test', 'fake-agent.mjs')}' "$@"\n`, { mode: 0o755 })
+    await dock(page).getByRole('button', { name: 'New session' }).click()
+    await expect(dock(page).locator('.chat-user').first()).toContainText('This is a new board, blinky, made in pino just now.')
+    await expect(dock(page)).not.toContainText('The first prompt is kept')
   } finally {
     await app.close()
   }

@@ -42,7 +42,9 @@ const bridge: PinoBridge = {
     pickPdf: () => invoke('project:pickPdf'),
     readPhoto: (path) => invoke('project:readPhoto', path),
     pathOf: (file) => webUtils.getPathForFile(file),
-    taken: () => invoke('project:taken')
+    taken: () => invoke('project:taken'),
+    onboard: (projectId, draft) => invoke('project:onboard', projectId, draft),
+    previewPrompt: (name, draft) => invoke('project:previewPrompt', name, draft)
   },
   parts: {
     lookup: (lcsc) => invoke('parts:lookup', lcsc)

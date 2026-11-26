@@ -17,7 +17,9 @@ import type { Routing } from './routing'
 import type { Fab } from './fab'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { CreateRequest } from '../shared/bridge'
+import { toolName } from '../shared/app'
+import type { CreateRequest, OnboardDraft, PromptPreviewDraft } from '../shared/bridge'
+import { onboardProject, previewPrompt } from './onboard'
 import { createProject, readPhoto } from './projects/create'
 import { Offered } from './projects/offered'
 import { lookupPart, makeReadings } from './projects/readings'
@@ -39,7 +41,7 @@ import { takeAnswer, type ViewHolder } from './view'
 //            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder, cards:read, cards:change,
 //            cards:brief, cards:references, cards:reference, cards:openLink, cards:seen, cards:markSeen,
 //            cards:restock, chat:prompts, project:create, project:pickPhotos, project:pickPdf, project:readPhoto,
-//            project:taken, parts:lookup
+//            project:taken, parts:lookup, project:onboard, project:previewPrompt
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
 //            fab:state, cards:changed, cards:briefChanged (index.ts),
@@ -152,6 +154,9 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
     return readPhoto(path)
   })
   handle('parts:lookup', (lcsc: unknown) => lookupPart(lcsc, (q) => fab.lookup(q), readings))
+  // The first prompt of a new project, sent once it is made and open, and the same text as the page is filled.
+  handle('project:onboard', (id: unknown, draft: unknown) => onboardProject({ project: projectOf, sessions, cards, readings, toolName }, String(id), draft as OnboardDraft))
+  handle('project:previewPrompt', (name: unknown, draft: unknown) => previewPrompt(String(name), draft as PromptPreviewDraft, toolName, readings))
 
   handle('session:current', (id: unknown) => {
     const project = projectOf(id)

@@ -167,7 +167,7 @@ describe('the draft of a new project', () => {
 
   it('words the notice of a first prompt that was not sent', () => {
     expect(heldSaid({ text: '', reason: 'No agent.' })).toBe('The first prompt of this project was not sent: No agent. What was given is in brief.md, reference/ and the Brief.')
-    expect(heldSaid({ text: 'p', reason: 'No agent.' })).toBe('The first prompt of this project was not sent: No agent. It is kept: it goes when you start a session.')
+    expect(heldSaid({ text: 'p', reason: 'No agent.' })).toBe('The first prompt of this project was not sent: No agent. The first prompt is kept: it goes when you start a session.')
   })
 
   it('holds the prompt that was not sent for the object, once', () => {

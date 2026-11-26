@@ -12,8 +12,16 @@ export function liveMakeDeps(onShow: (project: ProjectInfo) => void): MakeDeps {
   const show = async (project: ProjectInfo): Promise<void> => onShow(project)
   return {
     create: (req) => window.pino.project.create(req),
-    // The first prompt is sent by Start, which is not on yet.
-    onboard: () => Promise.reject(new Error('Start is not here yet')),
+    onboard: async (id, draft) => {
+      const told = await window.pino.project.onboard(id, draft)
+      // The session was started by main: this window learns of it as it does when it is asked for one.
+      if (told.sessionId !== null) {
+        const info = await window.pino.session.current(id).catch(() => null)
+        const s = store.getState()
+        if (info?.running && s.project?.id === id && s.session === null) actions.setSession(info.running)
+      }
+      return told
+    },
     listed: async () => {
       const info = await window.pino.workspace.list()
       actions.setWorkspace(info)

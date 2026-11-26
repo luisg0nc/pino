@@ -123,6 +123,14 @@ export interface PinoBridge {
     pathOf(file: File): string
     /** Every name in the open workspace's folder, which a new project's name is checked against. */
     taken(): Promise<string[]>
+    /**
+     * Starts the chat session of the open project, made just now, and sends its first prompt (text and up to 6
+     * pictures). Rejects for a project that is not open or has a session. A session that cannot be started is not a
+     * rejection: `sessionId` is null and the prompt comes back to be kept.
+     */
+    onboard(projectId: string, draft: OnboardDraft): Promise<Onboarded>
+    /** The first prompt `onboard` would send for this draft, with the project named `name`; writes and starts nothing. */
+    previewPrompt(name: string, draft: PromptPreviewDraft): Promise<PromptPreview>
     /** The picture on file of a project the open workspace lists, as a PNG's bytes; null when there is none. */
     thumb(name: string): Promise<Uint8Array | null>
     /** A picture of the open project's newest good build, by its hash, which main keeps. Anything else is dropped. */

@@ -26,7 +26,7 @@ test('with no workspace, the window is the first screen on the green dye, with t
     await expect(page.locator('.welcome-ways').getByRole('button')).toHaveText(['Use ~/boards', 'Choose folder…'])
     await expect(page.getByRole('heading', { name: 'Choose a folder for your boards' })).toBeVisible()
     await expect(page.locator('.welcome-side')).toContainText('Each board is a folder in it. Nothing is written there until you start a board.')
-    await expect(page.locator('.welcome-foot')).toHaveText("pino writes only into a .pino folder inside each board, and makes a board's folder when you start one.")
+    await expect(page.locator('.welcome-foot')).toHaveText("pino writes into each board's .pino folder, and into its fab/ folder when you make fab files. It makes a board's folder when you start one, and ~/boards when you press Use ~/boards.")
     // The plate is the dye itself.
     expect(await plate.evaluate((el) => getComputedStyle(el).backgroundColor)).toMatch(/^rgb\((23, 102, 58|18, 61, 37)\)$/)
     expect((await state(page)).page).toBe('first')

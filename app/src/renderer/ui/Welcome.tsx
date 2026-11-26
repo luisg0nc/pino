@@ -100,7 +100,7 @@ export function Welcome({ busy, onPick, onSuggested, onOpen }: { busy: boolean; 
           </p>
         )}
         <p className="welcome-foot">
-          pino writes only into a <span className="num">.pino</span> folder inside each board, and makes a board&apos;s folder when you start one.
+          pino writes into each board&apos;s <span className="num">.pino</span> folder, and into its <span className="num">fab/</span> folder when you make fab files. It makes a board&apos;s folder when you start one, and <span className="num">~/boards</span> when you press Use ~/boards.
         </p>
       </div>
     </main>

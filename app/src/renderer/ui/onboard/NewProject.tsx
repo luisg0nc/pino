@@ -454,8 +454,7 @@ export function NewProject({ onShow }: { onShow: (project: ProjectInfo) => void 
               </p>
             )}
             <SessionChoice choice={choice} disabled={working} onChange={onboarding.setChoice} />
-            {/* On once the first prompt is written (`main/onboard.ts`). */}
-            <button type="button" className="button button-primary new-start" disabled onClick={() => void create(true)}>
+            <button type="button" className="button button-primary new-start" disabled={!ready || working || reading > 0} onClick={() => void create(true)}>
               {busy === 'start' ? 'Starting…' : 'Start: make the project and ask Claude'}
             </button>
             <button type="button" className="button button-quiet new-make" disabled={!ready || working || reading > 0} onClick={() => void create(false)}>
