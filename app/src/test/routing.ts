@@ -17,6 +17,7 @@ export function routedLoop(project: ReturnType<typeof tempProject>, env: Record<
   builds.open(info)
   return {
     info,
+    kernel: () => holder.get(),
     builds,
     routing,
     states,

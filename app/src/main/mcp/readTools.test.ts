@@ -29,6 +29,22 @@ async function tools(model: BuildModel | null = ref, over: Partial<ToolDeps> = {
 }
 
 describe('check', () => {
+  const released = (hash: string) => ({
+    state: () => ({ projectId: 'p1', running: false, step: null, readiness: null, error: null, result: { state: 'released', build: { number: 1, hash }, findings: [{ source: 'release', code: 'rotation_unchecked', severity: 'info', message: "Check U2's rotation in JLC's preview: its rule was never checked there", refs: ['U2'] }] } })
+  }) as never
+
+  it('lists the newest release findings of the shown build under a Release row', async () => {
+    const t = await tools(ref, { fab: released(ref.result.hash!) })
+    expect(await t.call('check')).toContain('Release: note')
+    expect(await t.call('check', { source: 'release' })).toContain("[info] release rotation_unchecked · Check U2's rotation")
+  })
+
+  it('leaves out a release of another build', async () => {
+    const t = await tools(ref, { fab: released('000000000000') })
+    expect(await t.call('check')).not.toContain('Release')
+    expect(await t.call('check', { source: 'release' })).toContain('No finding matches.')
+  })
+
   it('lists the rows and the findings with positions, capped', async () => {
     const t = await tools()
     const said = await t.call('check')

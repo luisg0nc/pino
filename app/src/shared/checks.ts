@@ -6,6 +6,7 @@ import { mm } from './board/coords'
 import { naturalCompare, trackLength } from './board/nets'
 import type { BuildResult, Finding, RoutingState } from './build'
 import type { Circuit, Placement } from './circuit'
+import type { FabState } from './fab'
 
 export interface CheckRow {
   label: string
@@ -38,8 +39,10 @@ export const CHECK_ROWS: ReadonlyArray<RowRule> = [
   { label: 'Courtyards, fit in outline', sources: ['courtyard', 'fit'] },
   { label: 'Placement', sources: ['placement'] },
   { label: 'Reads left to right', sources: ['lint'] },
+  { label: 'Parts at JLC', sources: ['parts'] },
   { label: 'Copper', sources: ['copper'] },
   { label: 'Routing', sources: ['route', 'router'] },
+  { label: 'Release', sources: ['release'], quiet: true },
   { label: '3D models', sources: ['model3d'], quiet: true },
   { label: 'Engine', sources: ['kernel', 'board.py'], quiet: true }
 ]
@@ -70,6 +73,12 @@ export function withRouteFindings(r: BuildResult, routeFindings: readonly Findin
   const held = new Set(r.findings.map((f) => JSON.stringify(f)))
   const added = routeFindings.filter((f) => !held.has(JSON.stringify(f)))
   return added.length ? { ...r, findings: [...r.findings, ...added] } : r
+}
+
+/** The newest release's findings, while the build on show is the one it was made from. */
+export function releaseFindings(fab: FabState | null, r: BuildResult | null): Finding[] {
+  const result = fab?.result
+  return result && r?.hash && result.build?.hash === r.hash ? result.findings : []
 }
 
 export function checkRows(r: BuildResult): CheckRow[] {

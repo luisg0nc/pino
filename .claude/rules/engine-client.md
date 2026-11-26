@@ -30,9 +30,13 @@ paths:
   apart by the engine: `withRouteFindings` joins them, once, while the route is current. Which build copper is "from"
   has one rule (`Builds.routedOn`, `BuildState.copperFrom`): the first build seen with it current. A build the engine
   had cached is numbered anew with the same hash, and its `changes` are since another board: compare hashes.
-- An engine that speaks protocol 1 does not route: the route tools answer `ROUTING_UNAVAILABLE`.
+- An engine that speaks protocol 1 does not route: the route tools answer `ROUTING_UNAVAILABLE`. One below protocol 3
+  has no parts and makes no fab files: `parts` answers `FAB_UNAVAILABLE` and the window shows no `Fab files…`.
+- Releasing is a job (`fab.ts`, one a project), started only by the person's `Make fab files`: Claude has no release
+  tool. `fab_profiles` is asked once for each engine process.
 - Every test runs the stand-in, `app/test/fake-kernel.mjs`, whose header lists its switches. It writes only under
-  `.pino/`, in the engine's shapes: change it with the protocol. `e2e/real-kernel.spec.ts` alone runs the real one.
+  `.pino/` (and `fab/v1.0.0/` on a release, as the engine does), in the engine's shapes: change it with the protocol.
+  `e2e/real-kernel.spec.ts` alone runs the real one.
 
 ## What a Stop waits for
 
@@ -43,8 +47,9 @@ folds that prompt into it.
 
 ## Claude's tools (`main/mcp/`)
 
-- Fifteen: `project`, `look`, `check`, `measure`, `nets`, `point`, `marks`, `resolve_mark` and `route` are loaded up
-  front; `trace`, `ratsnest`, `diff`, `route_net`, `nudge` and `keep` are loaded when needed.
+- Sixteen: `project`, `look`, `check`, `measure`, `nets`, `parts`, `point`, `marks`, `resolve_mark` and `route` are
+  loaded up front; `trace`, `ratsnest`, `diff`, `route_net`, `nudge` and `keep` are loaded when needed. `project` ends
+  with the fab's limits, and `check` adds the newest release's findings while the build on show is the one it released.
 - Every turn pays for the descriptions, the schemas, the server's instructions and the system prompt, and every call
   for its answer: `turncost.test.ts` holds their sizes. A text is capped (`TOOL_TEXT_LIMIT`, `MOST_LINES`) and says
   how to narrow it. `look` returns one picture.

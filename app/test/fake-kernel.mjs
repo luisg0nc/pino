@@ -12,9 +12,18 @@
 //                       .pino/routes/<key>/ (the build's filled board plus one F.Cu segment per ratsnest edge) and
 //                       answers a pino.route/1 result; builds answer `routing`, current until a part moves
 //   route_status, route_cancel, route_net, nudge, keep   canned, in the engine's shapes
+// With FAKE_KERNEL_SERVE=3 it also does parts and fab files (the fab stage); `cancel` is `route_cancel`:
+//   fab_profiles        the profiles in fixtures/fab-profiles.json (the engine's own, to_json)
+//   parts               canned pino.parts/1: C25804 (maps to Device:R), C51118 (no KiCad part); a search finds two
+//   release_status      ready for 1.0.0, or blocked by release_not_routed (FAKE_KERNEL_RELEASE=refused)
+//   release             the steps gates, parts, gerbers, write, then `released` with fab/v1.0.0/README.md written in
+//                       the project (a release writes outside .pino/ there, and only there)
 //
 // Switches:
-//   FAKE_KERNEL_SERVE=1|2        the protocol it speaks (1: no routing, and no `serve` in the pong)
+//   FAKE_KERNEL_SERVE=1|2|3      the protocol it speaks (1: no routing, and no `serve` in the pong; 3: fab files)
+//   FAKE_KERNEL_RELEASE=refused|unchanged|broken   how a release ends, instead of `released`
+//   FAKE_KERNEL_RELEASE_MS=<ms>  between two steps of a release
+//   FAKE_KERNEL_PARTS=offline    parts answer from a cache of 2026-11-20, saying jlcsearch was not reached
 //   FAKE_KERNEL_DELAY_MS=<ms>    how long a build takes
 //   FAKE_KERNEL_FAIL_ON=<n>      build n fails: board.py, "invalid syntax", line 12
 //   FAKE_KERNEL_DIE=start|build  exits 1 with a line on stderr, at start or at the first build
@@ -35,7 +44,8 @@ const FIXTURE = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 're
 const FILES = ['board.kicad_pcb', 'filled/board.kicad_pcb', 'schematic.svg', 'sheet.json', 'circuit.json', 'placement.json', 'drc.json', 'board.glb']
 const VERSION = '0.1.1-fake'
 const env = process.env
-const SERVE = env.FAKE_KERNEL_SERVE === '2' ? 2 : 1
+const SERVE = env.FAKE_KERNEL_SERVE === '3' ? 3 : env.FAKE_KERNEL_SERVE === '2' ? 2 : 1
+const PROFILES = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'fab-profiles.json')
 
 const fixture = (name) => readFileSync(join(FIXTURE, name), 'utf8')
 const reference = () => JSON.parse(fixture('result.json'))
@@ -122,7 +132,8 @@ function routingOf(memory, isMoved, running) {
   return { ...of, state: 'stale', stale_because: ['parts moved'] }
 }
 
-const running = new Map() // job id -> { cancelled }
+const running = new Map() // job id -> { project, op, cancelled }
+const routingNow = (project) => [...running.values()].some((j) => j.op === 'route' && j.project === project && !j.cancelled)
 
 async function build(project) {
   if (env.FAKE_KERNEL_DIE === 'build') die('died during a build')
@@ -170,12 +181,12 @@ async function build(project) {
   result.changes = !previous
     ? { circuit: ['first build'], layout: [] }
     : { circuit: [], layout: previous.moved !== isMoved ? [`moves 1 part: ${move.ref}`] : [] }
-  if (SERVE === 2) {
-    result.routing = routingOf(memory, isMoved, [...running.values()].some((j) => j.project === project && !j.cancelled))
+  if (SERVE >= 2) {
+    result.routing = routingOf(memory, isMoved, routingNow(project))
     if (result.routing.state === 'current') result.counts.unrouted = 0
     result.waiting = result.routing.state === 'current' ? [] : [result.routing.state === 'stale' ? 'routing: stale (parts moved)' : result.routing.state === 'running' ? 'routing: running' : 'routing: not started']
   }
-  const clause = SERVE === 2 && result.routing.state === 'current' ? `; routed r${result.routing.number}, 0 left, DRC clean` : SERVE === 2 && result.routing.state === 'stale' ? '; copper stale (parts moved)' : ''
+  const clause = SERVE >= 2 && result.routing.state === 'current' ? `; routed r${result.routing.number}, 0 left, DRC clean` : SERVE >= 2 && result.routing.state === 'stale' ? '; copper stale (parts moved)' : ''
   const { errors, warnings, unrouted } = result.counts
   result.headline = `On h${number}: ${errors} errors, ${warnings} warnings${unrouted ? `, ${unrouted} unrouted` : ''}${clause}`
   memory.builds.push({ number, hash, moved: isMoved })
@@ -254,6 +265,83 @@ async function route(id, project) {
   return { ok: true, result }
 }
 
+const FAKE_PARTS = {
+  C25804: { lcsc: 'C25804', mfr: '0603WAF1002T5E', package: '0603', description: '10kΩ 100mW Thick Film Resistor ±1% 0603 Chip Resistor - Surface Mount ROHS', stock: 1234567, price: 0.0024, class: 'basic', checked_at: '2026-11-26T05:00:00.000Z', fetched_at: '2026-11-26T06:00:00+00:00' },
+  C51118: { lcsc: 'C51118', mfr: 'AP2112K-3.3TRG1', package: 'SOT-25-5', description: '3.3V 600mA Linear Voltage Regulator', stock: null, price: 0.09, class: 'extended', checked_at: '2026-11-03T22:33:00.000Z', fetched_at: '2026-11-26T06:00:00+00:00' }
+}
+
+function parts(req) {
+  const offline = env.FAKE_KERNEL_PARTS === 'offline'
+  const found = req.action === 'search' ? Object.values(FAKE_PARTS).slice(0, req.limit ?? 8) : [FAKE_PARTS[String(req.lcsc).toUpperCase()]].filter(Boolean)
+  const shown = offline ? found.map((p) => ({ ...p, checked_at: null, fetched_at: '2026-11-20T06:00:00+00:00' })) : found
+  const resolved = req.action === 'search' ? [] : shown.map((p) => (p.lcsc === 'C25804' ? { lcsc: p.lcsc, how: 'kicad-rule', symbol: 'Device:R', footprint: 'Resistor_SMD:R_0603_1608Metric', notes: [] } : { lcsc: p.lcsc, how: null, symbol: null, footprint: null, notes: ['no KiCad mapping: pass symbol= and footprint= in board.py'] }))
+  const first = shown[0]
+  const headline = offline
+    ? 'Parts: jlcsearch could not be reached; stock from 2026-11-20'
+    : req.action === 'search'
+      ? `Parts: ${shown.length} found for ${req.q}${req.basic ? ' (basic only)' : ''}, stock from jlcsearch now`
+      : first
+        ? `Parts: ${first.lcsc} is ${first.class}, ${first.package}`
+        : `Parts: JLC has no part ${req.lcsc}`
+  return { ok: true, result: { schema: 'pino.parts/1', kind: req.action, query: {}, parts: shown, resolved, findings: [], source: { url: 'https://jlcsearch.tscircuit.com', fresh: !offline, fetched_at: first?.fetched_at ?? null }, headline } }
+}
+
+const releaseGate = (code, message) => ({ source: 'release', code, severity: 'error', message })
+
+function readinessOf(project) {
+  const memory = memoryOf(project)
+  const last = memory.builds.at(-1)
+  const build = last ? { number: last.number ?? memory.builds.length, hash: last.hash } : null
+  if (env.FAKE_KERNEL_RELEASE === 'refused') {
+    return { ready: false, build, route: null, blockers: [releaseGate('release_not_routed', 'the board is not routed: route it first')], warnings: [], next_version: null, bump: null, why: [] }
+  }
+  return { ready: true, build, route: { number: 1, key: 'cccccccc00000001' }, blockers: [], warnings: [], next_version: '1.0.0', bump: null, why: ['first release'] }
+}
+
+function releaseResult(state, project, extra) {
+  const { build } = readinessOf(project)
+  return {
+    schema: 'pino.release/1', kernel_version: VERSION, state, version: null, previous: null, bump: null, why: [], build, route: { number: 1, key: 'cccccccc00000001' }, folder: null, files: [],
+    counts: { assembled: 20, bom_lines: 12, hand_fit: 1, dnp: 1, basic: 9, preferred: 0, extended: 3, easyeda: 0, gerbers: 9, drills: 2 },
+    findings: [], truncated: 0, headline: '', timings: [], ...extra
+  }
+}
+
+/** A finding at a part of the fixture's placement, so that a release's findings have somewhere to be pinned. */
+function atPart(ref, code, severity, message) {
+  const pose = JSON.parse(fixture('placement.json')).poses[ref]
+  return { source: 'release', code, severity, message, at: { space: 'board', x: pose.x, y: pose.y, layer: 'F.Cu' }, refs: [ref] }
+}
+
+async function release(id, project) {
+  const job = running.get(id)
+  const wait = Number(env.FAKE_KERNEL_RELEASE_MS ?? 0) || 1
+  for (const step of ['gates', 'parts', 'gerbers', 'write']) {
+    send({ id, event: { event: 'step', step } })
+    await sleep(wait)
+    if (job.cancelled) break
+  }
+  running.delete(id)
+  if (job.cancelled) return { ok: true, result: releaseResult('cancelled', project, { headline: 'Release cancelled: nothing was written' }) }
+  const how = env.FAKE_KERNEL_RELEASE
+  if (how === 'broken') return { ok: false, error: 'release job stopped: the release job broke' }
+  if (how === 'refused') {
+    return { ok: true, result: releaseResult('refused', project, { headline: 'Release refused: 1 error (U2 has no LCSC number)', findings: [atPart('U2', 'part_no_lcsc', 'error', 'U2 has no LCSC number, so JLC cannot place it: add lcsc=, or hand_fit=True')] }) }
+  }
+  if (how === 'unchanged') return { ok: true, result: releaseResult('unchanged', project, { why: ['the same files as v1.0.0'], headline: 'Nothing to release: h1 makes the same files as v1.0.0' }) }
+  const readme = '# fake v1.0.0, fab files for JLCPCB\n'
+  write(join(project, 'fab', 'v1.0.0', 'README.md'), readme)
+  return {
+    ok: true,
+    result: releaseResult('released', project, {
+      version: '1.0.0', why: ['first release'], folder: 'fab/v1.0.0',
+      headline: 'Release v1.0.0 (h1, r1): JLC places 20 parts in 12 BOM lines, 1 by hand: fab/v1.0.0/',
+      files: [{ path: 'fab/v1.0.0/README.md', bytes: Buffer.byteLength(readme), sha256: createHash('sha256').update(readme).digest('hex') }, { path: 'fab/v1.0.0/fake-v1.0.0-gerbers.zip', bytes: 26322, sha256: '0'.repeat(64) }],
+      findings: [atPart('U2', 'rotation_unchecked', 'info', "Check U2's rotation in JLC's preview: its rule was never checked there"), { source: 'release', code: 'part_stock_unknown', severity: 'warning', message: 'stock of C51118 not known: last checked 2026-11-03 (U2)', refs: ['U2'] }]
+    })
+  }
+}
+
 function trial(kind, req) {
   const subject = kind === 'nudge' ? req.part : req.net
   const snippet =
@@ -272,7 +360,7 @@ function trial(kind, req) {
 async function answer(req) {
   switch (req.op) {
     case 'ping':
-      return { ok: true, pong: { kernel: VERSION, schema: 'pino.build/1', ...(SERVE === 2 ? { serve: 2, route_schema: 'pino.route/1' } : {}) } }
+      return { ok: true, pong: { kernel: VERSION, schema: 'pino.build/1', ...(SERVE >= 2 ? { serve: SERVE, route_schema: 'pino.route/1' } : {}), ...(SERVE >= 3 ? { parts_schema: 'pino.parts/1', release_schema: 'pino.release/1' } : {}) } }
     case 'build':
       return build(req.project)
     case 'diff':
@@ -280,11 +368,16 @@ async function answer(req) {
     default:
       break
   }
-  if (SERVE === 2) {
+  if (SERVE >= 3) {
+    if (req.op === 'fab_profiles') return { ok: true, profiles: JSON.parse(readFileSync(PROFILES, 'utf8')) }
+    if (req.op === 'release_status') return { ok: true, status: readinessOf(req.project) }
+    if (req.op === 'parts') return parts(req)
+  }
+  if (SERVE >= 2) {
     if (req.op === 'route_status') {
       const memory = memoryOf(req.project)
       const isMoved = memory.builds.at(-1)?.moved ?? false
-      return { ok: true, status: routingOf(memory, isMoved, [...running.values()].some((j) => j.project === req.project)) }
+      return { ok: true, status: routingOf(memory, isMoved, routingNow(req.project)) }
     }
     if (req.op === 'keep' || req.op === 'nudge' || req.op === 'route_net') return { ok: true, result: trial(req.op, req) }
   }
@@ -312,16 +405,16 @@ function serve() {
       send({ id: null, ok: false, error: `that line is not JSON: ${error.message}` })
       return
     }
-    if (SERVE === 2 && req.op === 'route_cancel') {
+    if ((SERVE >= 2 && req.op === 'route_cancel') || (SERVE >= 3 && req.op === 'cancel')) {
       const job = running.get(req.job)
       if (job) job.cancelled = true
       send({ id: req.id, ok: true, cancelled: !!job })
       return
     }
-    if (SERVE === 2 && req.op === 'route') {
-      running.set(req.id, { project: req.project, cancelled: false })
+    if ((SERVE >= 2 && req.op === 'route') || (SERVE >= 3 && req.op === 'release')) {
+      running.set(req.id, { project: req.project, op: req.op, cancelled: false })
       queue = queue.then(() => {
-        const done = route(req.id, req.project).then((reply) => send({ id: req.id, ...reply }))
+        const done = (req.op === 'route' ? route : release)(req.id, req.project).then((reply) => send({ id: req.id, ...reply }))
         jobs.add(done)
         void done.finally(() => jobs.delete(done))
       })

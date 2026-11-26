@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readBoard } from './board/board'
 import type { BuildResult, Finding, RoutingState } from './build'
 import { circuitOf, placementOf } from './circuit'
-import { boardFacts, buildSeconds, checkRows, checksSummary, netGauge, netVerdict, openNets, waitingWords, withRouteFindings, cellsRouted, clock, headSaid, underHead } from './checks'
+import { boardFacts, buildSeconds, checkRows, checksSummary, netGauge, netVerdict, openNets, waitingWords, withRouteFindings, cellsRouted, clock, headSaid, underHead, releaseFindings } from './checks'
 import { fx, read, readJson } from '../test/fixtures'
 
 const ref = readJson<BuildResult>(fx('result.json'))
@@ -24,6 +24,7 @@ describe("the card's checks", () => {
       'Courtyards, fit in outline',
       'Placement',
       'Reads left to right',
+      'Parts at JLC',
       'Copper',
       'Routing',
       '3D models',
@@ -71,8 +72,31 @@ describe("the card's checks", () => {
   })
 
   it('counts the checks that ran, and those with a word against them', () => {
-    expect(checksSummary(checkRows(ref))).toBe('9, 2 warn')
-    expect(checksSummary(checkRows(withFinding(ref, finding('erc', 'e', 'error'))))).toBe('9, 1 fail, 2 warn')
+    expect(checksSummary(checkRows(ref))).toBe('10, 2 warn')
+    expect(checksSummary(checkRows(withFinding(ref, finding('erc', 'e', 'error'))))).toBe('10, 1 fail, 2 warn')
+  })
+})
+
+describe('parts and release in the checks', () => {
+  it('puts parts findings in their own row', () => {
+    const rows = checkRows(withFinding(ref, finding('parts', 'part_extended', 'warning')))
+    expect(rows.find((r) => r.label === 'Parts at JLC')!.word).toBe('warn')
+  })
+
+  it("shows a release row only when release has something to say", () => {
+    expect(checkRows(ref).map((r) => r.label)).not.toContain('Release')
+    const rows = checkRows(withFinding(ref, finding('release', 'rotation_unchecked', 'info')))
+    expect(rows.map((r) => r.label).indexOf('Release')).toBe(rows.map((r) => r.label).indexOf('Routing') + 1)
+    expect(row(withFinding(ref, finding('release', 'part_no_stock', 'error')), 'Release')!.word).toBe('fail')
+  })
+
+  it('pins release findings only on the build they were made from', () => {
+    const f = finding('release', 'rotation_unchecked', 'info')
+    const state = (hash: string) => ({ projectId: 'p', running: false, step: null, readiness: null, error: null, result: { build: { number: 1, hash }, findings: [f] } as never })
+    expect(releaseFindings(state(ref.hash!), ref)).toEqual([f])
+    expect(releaseFindings(state('other'), ref)).toEqual([])
+    expect(releaseFindings(null, ref)).toEqual([])
+    expect(releaseFindings(state(ref.hash!), null)).toEqual([])
   })
 })
 

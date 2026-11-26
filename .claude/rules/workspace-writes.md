@@ -16,9 +16,10 @@ paths:
 
 ## Global Constraints (root `CLAUDE.md`)
 
-- Never write inside a project folder except under `<project>/.pino/`. This stage has no exceptions. A later stage
-  that adds one (a new project's folder, the fab output folder, `board.py` written by the agent itself) says it here
-  in the same commit.
+- Never write inside a project folder except under `<project>/.pino/`. One exception: the engine writes a new
+  `<project>/fab/v<version>/` on release, and only then (the person's `Make fab files`, or `pino-kernel release`). It
+  never touches a folder that is there, and refuses a `fab` that is a link. A later stage that adds another exception
+  (a new project's folder, `board.py` written by the agent itself) says it here in the same commit.
 - Whatever the agent writes in the project folder is the agent's own write, asked of the person by Claude Code's
   permissions; pino does not make it.
 
@@ -27,9 +28,10 @@ paths:
 - **pino's main** writes, besides the chat's files, one file in a project: `.pino/marks/marks.json` (`marks/file.ts`),
   through `ownFolder` and `writeFileAtomic`, and it is its only writer (`marks/store.ts` takes one change at a time).
   A file there that cannot be read is renamed `marks.json.bad-<n>` and said; it is never overwritten.
-- **The engine** writes `.pino/build/`, `.pino/routes/`, `.pino/trials/`, `.pino/kicad/`, `builds.json` and
-  `routes.json` itself. Before main asks it to build, `.pino` and those folders must be the project's own
-  (`builds.ts`, `whyNotOwn`): through a link it would write outside the project.
+- **The engine** writes `.pino/build/`, `.pino/routes/`, `.pino/trials/`, `.pino/release/`, `.pino/kicad/`,
+  `builds.json` and `routes.json` itself, and `fab/v<version>/` on release. Before main asks it to build, `.pino` and
+  those folders must be the project's own (`builds.ts`, `whyNotOwn`): through a link it would write outside the
+  project. Main writes nothing of a release; `Show in folder` only opens the file manager there.
 - A build's files are read only from inside its own folder, through no link (`artifacts.ts`).
 
 ## The write guard (`app/src/main`)

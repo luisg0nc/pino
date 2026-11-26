@@ -10,7 +10,7 @@ import { systemPrompt } from './prompt'
 /** What a picture costs: one token for each 28 px square of it, counted by rows and columns. */
 const pictureTokens = (width: number, height: number): number => Math.ceil(width / 28) * Math.ceil(height / 28)
 
-const UP_FRONT = ['check', 'look', 'marks', 'measure', 'nets', 'point', 'project', 'resolve_mark', 'route']
+const UP_FRONT = ['check', 'look', 'marks', 'measure', 'nets', 'parts', 'point', 'project', 'resolve_mark', 'route']
 const DEFERRED = ['trace', 'ratsnest', 'diff', 'route_net', 'nudge', 'keep']
 const listed = async () => (await toolsOver({})).list()
 
@@ -25,14 +25,14 @@ describe('what a turn costs', () => {
     expect(6 * pictureTokens(DEFAULT_SIZE, (DEFAULT_SIZE * 3) / 4)).toBeLessThan(10_000)
   })
 
-  it('the tools loaded up front are the nine the prompt relies on, in at most 33,000 characters', async () => {
+  it('the tools loaded up front are the ten the prompt relies on, in at most 33,000 characters', async () => {
     const tools = await listed()
     const loaded = tools.filter((t) => (t._meta as Record<string, unknown> | undefined)?.['anthropic/alwaysLoad'] === true)
     expect(loaded.map((t) => t.name).sort()).toEqual(UP_FRONT)
     const chars = loaded.reduce((sum, t) => sum + JSON.stringify({ name: t.name, description: t.description, inputSchema: t.inputSchema }).length, 0)
     expect(chars).toBeLessThan(33_000)
     expect(tools.map((t) => t.name).sort()).toEqual([...UP_FRONT, ...DEFERRED].sort())
-    expect(tools).toHaveLength(15)
+    expect(tools).toHaveLength(16)
   })
 
   it('each tool says what it does in plain words, in under 700 characters', async () => {
@@ -46,6 +46,12 @@ describe('what a turn costs', () => {
     expect(systemPrompt(toolName).length + SERVER_INSTRUCTIONS.length).toBeLessThan(12_000)
     for (const t of [...UP_FRONT, ...DEFERRED]) expect([t, SERVER_INSTRUCTIONS.includes(t)]).toEqual([t, true])
     for (const t of UP_FRONT) expect([t, systemPrompt(toolName).includes(toolName(t))]).toEqual([t, true])
+  })
+
+  it('the prompt asks for the fab limits before a choice, and for JLC parts basic first', () => {
+    const prompt = systemPrompt(toolName)
+    expect(prompt).toContain(`Before you offer a choice about layers, copper weight, thickness, holes, vias or track sizes, give the fab's limits from ${toolName('project')}, and offer nothing the fab cannot build.`)
+    expect(prompt).toContain(`Use JLC parts by LCSC number: basic first; an extended part needs why= in board.py. Check stock with ${toolName('parts')}.`)
   })
 
   it("a prompt's context, a verdict and a tool's text are capped", () => {

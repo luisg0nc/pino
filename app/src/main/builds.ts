@@ -21,7 +21,7 @@ const PING_TIMEOUT_MS = 120_000
 /** Where the engine, tools and the person keep what is no part of the board. */
 const IGNORED_FOLDERS = new Set([APP.folder, '__pycache__', '.venv', 'node_modules', '.git', 'fab', 'reference'])
 /** The folders of .pino the engine writes: each must be the project's own before it is asked to build. */
-const ENGINE_FOLDERS = ['build', 'routes', 'trials', 'kicad']
+const ENGINE_FOLDERS = ['build', 'routes', 'trials', 'release', 'kicad']
 
 /**
  * The engine writes under .pino: it is asked to only while those folders are the project's own. Whoever asks says why

@@ -8,7 +8,7 @@ import { measure, type Measure } from '../../shared/board/measure'
 import { copperGroups, naturalCompare } from '../../shared/board/nets'
 import { centreOf, netMembers, type Target } from '../../shared/board/refs'
 import { verdictWords, type BuildResult, type Finding } from '../../shared/build'
-import { checkRows, withRouteFindings } from '../../shared/checks'
+import { checkRows, releaseFindings, withRouteFindings } from '../../shared/checks'
 import type { Circuit } from '../../shared/circuit'
 import type { LookRequest } from '../../shared/view'
 import type { BuildModel } from '../model'
@@ -209,7 +209,9 @@ export function registerReadTools(server: McpServer, deps: ToolDeps, onProject: 
       const latest: BuildResult | null = deps.state(project.id)?.latest ?? null
       if (!latest) return refused(NOTHING_BUILT)
       const model = await deps.model(project)
-      const result = withRouteFindings(latest, model?.routeFindings ?? null)
+      const routed = withRouteFindings(latest, model?.routeFindings ?? null)
+      const released = releaseFindings(deps.fab?.state(project.id) ?? null, latest)
+      const result = released.length ? { ...routed, findings: [...routed.findings, ...released] } : routed
       let found = result.findings
       if (input.source) found = found.filter((f) => f.source === input.source)
       if (input.severity) found = found.filter((f) => f.severity === input.severity)

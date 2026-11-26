@@ -39,6 +39,8 @@ export interface CircuitExpect {
 export interface Circuit {
   name: string
   layers: number
+  /** The fab profile the board is built for, by name. */
+  fab?: string
   parts: CircuitPart[]
   nets: CircuitNet[]
   blocks: Array<{ key: string; title: string; parts: string[] }>

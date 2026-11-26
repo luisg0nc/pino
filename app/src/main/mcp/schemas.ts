@@ -23,17 +23,18 @@ export function capText(text: string, limit: number = TOOL_TEXT_LIMIT): string {
 
 export const SERVER_INSTRUCTIONS = [
   "This server is pino's: the printed circuit board of the project open in pino. pino builds board.py on every save; the tools read the newest build, in the board's own frame: millimetres, origin at the outline centre, x right, y up. Name a thing as U1 (a part), U1.3 (a pad), net:VBUS, track:<uuid> or via:<uuid>.",
-  'See: project (the folder and the newest build), look (a picture of the views, with the marks), check (every check, and each finding with its place), measure (numbers from the board file), nets (nets by part and pin).',
+  "See: project (the folder, the newest build and the fab's limits), look (a picture of the views, with the marks), check (every check, and each finding with its place), measure (numbers from the board file), nets (nets by part and pin).",
+  'Parts: parts (JLC parts by LCSC number or words: stock, price, basic or extended, and how board.py names them). The person makes the fab files with Fab files… in pino, from a routed board with no errors.',
   'Marks: point (show the person what you mean, in orange), marks (the marks and their exact lines), resolve_mark (when you have done what a mark asks).',
   'Routing: route (start, follow or cancel the router, which runs in the background).',
   'More, to load when needed: trace (where a pin leads and what copper joins it), ratsnest (the placement score and the open connections), diff (what changed between two builds), route_net (try one net), nudge (try a part moved), keep (a routed net as lines for board.py). route_net, nudge and keep change nothing: they answer with lines for you to write into board.py.'
 ].join('\n')
 
-export const PROJECT_DESCRIPTION = 'The project open in pino: its name, its folder, whether board.py and brief.md are there, and the newest build in a line.'
+export const PROJECT_DESCRIPTION = "The project open in pino: its name, its folder, whether board.py and brief.md are there, the newest build in a line, and the limits of the fab it is built for."
 
 export const DESCRIPTIONS = {
   look: 'One picture of what the person sees: the schematic, the board or the 3D view of the build on show, with the marks drawn and labelled by id. Without tab, the tab the person is on. layers chooses copper layers, the first on top; window crops the board or sheet to a box in millimetres. Take numbers from measure, never from the picture.',
-  check: 'The newest build by its checks: each check with its verdict, then the findings with their places and parts. Narrow with source (erc, drc, netlist, expect, courtyard, fit, placement, lint, copper, route, kernel, board.py), severity, or near (a part, pad or net).',
+  check: 'The newest build by its checks: each check with its verdict, then the findings with their places and parts. Narrow with source (erc, drc, netlist, expect, courtyard, fit, placement, lint, parts, copper, route, release, kernel, board.py), severity, or near (a part, pad or net).',
   measure: 'A number from the board file: gap (copper edge to copper edge between a and b), distance (centre to centre), edge (a to the board edge), length, width, area (of a net; area may take a layer such as F.Cu) or vias (all, or of a net). Names: U1, U1.3, net:VBUS, track:<uuid>, via:<uuid>.',
   nets: "The circuit's nets by part and pin: net names one net and lists its pins with their names; part lists a part's pins with their nets; neither lists every net with its size.",
   trace: 'Where a pin leads: its net, the other pins on it, and which of them copper joins already (groups of pins joined by tracks, vias or a pour). pin is written U1.3.',
@@ -45,7 +46,8 @@ export const DESCRIPTIONS = {
   route: "The autorouter, in the background on the newest build. start begins it (minutes; the view shows its progress), status says how it stands and which nets are open, cancel stops it.",
   route_net: 'Try routing one net on the routed board (or the unrouted one), with a region, layers, a corridor or nets to rip up. Changes nothing: the answer says what it would do, and gives the line to write into board.py when you want it.',
   nudge: "Try one part moved or turned: what it does to the courtyards, the fit and the ratsnest (and, with route, to the router's share). Changes nothing: the answer gives the line to write into board.py.",
-  keep: "A routed net's copper as keep_route lines for board.py, so that the next route keeps it as it is. Changes nothing until you write them."
+  keep: "A routed net's copper as keep_route lines for board.py, so that the next route keeps it as it is. Changes nothing until you write them.",
+  parts: "JLC parts: lcsc gives one part by its LCSC number (such as C25804) with how board.py names it; search looks parts up by words (package and basic narrow it). Each answer line says basic, preferred or extended, package, stock and price. Text search leaves out parts whose stock is not known, so look a known number up by lcsc."
 } as const
 
 export const noInput = z.strictObject({})
@@ -91,3 +93,4 @@ export const routeNetInput = z.strictObject({
 })
 export const nudgeInput = z.strictObject({ part: z.string(), by: z.tuple([z.number(), z.number()]).optional(), rot: z.number().optional(), back: z.boolean().optional(), route: z.boolean().optional() })
 export const keepInput = z.strictObject({ net: z.string() })
+export const partsInput = z.strictObject({ lcsc: z.string().optional(), search: z.string().optional(), package: z.string().optional(), basic: z.boolean().optional(), limit: z.number().int().min(1).max(20).optional() })

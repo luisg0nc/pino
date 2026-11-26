@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme, shell } from 'electron'
 import { APP, envName, toolName } from '../shared/app'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
@@ -26,6 +26,7 @@ import type { EngineInfo } from '../shared/ready'
 import { agentEnv } from './sessions/agentEnv'
 import { findCommand } from './sessions/choice'
 import { Routing } from './routing'
+import { Fab } from './fab'
 import { type Config, configOf, listed, recentWith } from './recent'
 import { claudeAdapter } from './sessions/claude'
 import { Sessions } from './sessions/manager'
@@ -122,6 +123,17 @@ const kernel = kernelHolder(() =>
 )
 const builds = new Builds({ kernel: () => kernel.get() })
 const routing = new Routing({ kernel: () => kernel.get(), builds })
+/** The project on show, once there is a holder of it: the fab's engine state is that project's build loop's. */
+let openProjectId: () => string | undefined = () => undefined
+const fab = new Fab({
+  kernel: () => kernel.get(),
+  builds,
+  engine: () => {
+    const id = openProjectId()
+    return (id ? builds.state(id)?.engine : undefined) ?? { state: 'starting' }
+  },
+  onState: (state) => broadcast('fab:state', state)
+})
 /** What the person has on screen, for what Claude is told of it. */
 const views = new ViewHolder()
 /** Each build as main reads it, and the marks, made on the newest board that was drawn. */
@@ -151,6 +163,7 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
       if (open && open.id !== next.id) {
         // No start is taken for the old project from here on, and `stopAll` waits for one under way.
         routing.drop(open.id)
+        fab.drop(open.id)
         builds.close(open.id)
         open = undefined
         await sessions().stopAll()
@@ -196,6 +209,7 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
       inTurn(async () => {
         if (open) {
           routing.drop(open.id)
+          fab.drop(open.id)
           builds.close(open.id)
         }
         open = undefined
@@ -320,6 +334,7 @@ void app.whenReady().then(async () => {
   // What the agent's CLI talks to: its hooks, and the MCP server through which it asks pino.
   const http = await startHttp()
   const holder = (projects = projectHolder(() => sessions!))
+  openProjectId = () => holder.open()?.id
   // The files an agent is given by path (its MCP server's, which holds no secret): what a pino that crashed left is of no use.
   const configDir = join(app.getPath('userData'), 'agent')
   rmSync(configDir, { recursive: true, force: true })
@@ -348,7 +363,13 @@ void app.whenReady().then(async () => {
       const win = BrowserWindow.getAllWindows()[0]
       return win ? askWindow<LookResult>(win, 'look', request) : Promise.reject(new NoAnswer('there is no window'))
     },
-    looked: (id) => domain.looked(id)
+    looked: (id) => domain.looked(id),
+    fab,
+    fabProfile: async (project) => {
+      const model = await drawnModel(project)
+      await fab.profiles()
+      return fab.profileOf(model?.circuit?.fab)
+    }
   })
   sessions = new Sessions({
     http,
@@ -371,9 +392,10 @@ void app.whenReady().then(async () => {
       ...said,
       claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
     })))
-  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing, engineInfo })
+  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path) })
   // Every build that drew something has the marks found again on it.
   builds.onResult((projectId, result) => {
+    fab.buildLanded(projectId)
     const project = holder.open()
     if (!project || project.id !== projectId || !result.hash) return
     void buildModels

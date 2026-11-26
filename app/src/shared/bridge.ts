@@ -2,6 +2,7 @@
 
 import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
+import type { FabProfile, FabState, Readiness } from './fab'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
 import type { EngineInfo } from './ready'
@@ -93,6 +94,20 @@ export interface PinoBridge {
     /** The band's "Route again": routes the newest build in the background. */
     start(projectId: string): Promise<void>
     cancel(projectId: string): Promise<void>
+  }
+  fab: {
+    /** The release of the open project as main holds it; null for a project that is not open. */
+    state(projectId: string): Promise<FabState | null>
+    /** Whether a release would go through, and what it would be called. */
+    readiness(projectId: string): Promise<Readiness>
+    /** The status line's "Make fab files": its steps and its end come through onState. */
+    release(projectId: string): Promise<void>
+    cancel(projectId: string): Promise<void>
+    /** The fab's limits for every profile the engine builds; none from an engine without fab files. */
+    profiles(): Promise<FabProfile[]>
+    /** Shows the newest release's folder in the file manager. */
+    showFolder(projectId: string): Promise<void>
+    onState(cb: (s: FabState) => void): () => void
   }
   marks: {
     list(projectId: string): Promise<Mark[]>

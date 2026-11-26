@@ -1,16 +1,20 @@
 // The tools of the MCP server an agent working on a project is given: the one list of them, and what they need of
-// pino. Those that read are in readTools.ts, the marks' in markTools.ts, routing's in routeTools.ts.
+// pino. Those that read are in readTools.ts, the marks' in markTools.ts, routing's in routeTools.ts, JLC's parts in
+// partsTools.ts.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { statSync } from 'node:fs'
 import { join } from 'node:path'
 import { verdictWords, type BuildResult, type BuildState } from '../../shared/build'
+import { fabLine, type FabProfile } from '../../shared/fab'
 import type { ProjectInfo } from '../../shared/project'
 import type { LookRequest, LookResult } from '../../shared/view'
+import type { Fab } from '../fab'
 import type { MarkStore } from '../marks/store'
 import type { BuildModel } from '../model'
 import type { Routing } from '../routing'
 import { registerMarkTools } from './markTools'
+import { registerPartsTools } from './partsTools'
 import { registerReadTools } from './readTools'
 import { refused, text, type Reply } from './reply'
 import { registerRouteTools } from './routeTools'
@@ -36,6 +40,10 @@ export interface ToolDeps {
   routing: Pick<Routing, 'available' | 'start' | 'cancel' | 'progress' | 'lastWords' | 'trial'>
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
+  /** Parts at JLC, and the release's state. */
+  fab: Pick<Fab, 'available' | 'parts' | 'state'>
+  /** The limits of the fab the newest drawn board is built for. */
+  fabProfile(project: ProjectInfo): Promise<FabProfile | null>
 }
 
 /** Runs a tool on the open project, or says there is none. */
@@ -63,15 +71,18 @@ export function registerTools(server: McpServer, deps: ToolDeps, projectId: stri
   }
 
   server.registerTool('project', { description: PROJECT_DESCRIPTION, inputSchema: noInput, _meta: ALWAYS }, () =>
-    onProject((project) => {
+    onProject(async (project) => {
       const there = (name: string): string => `${name}: ${isFile(join(project.dir, name)) ? 'present' : 'absent'}`
       const latest = deps.state(project.id)?.latest
       const build = latest ? `The newest build: ${verdictWords(latest).on}: ${verdictWords(latest).rest}.` : 'Nothing has been built yet.'
-      return text(`Project ${project.name} in ${project.dir}. ${there('board.py')}. ${there('brief.md')}. ${build}`)
+      // The limits come before any choice: Claude offers nothing the fab cannot build.
+      const profile = (await deps.fabProfile?.(project).catch(() => null)) ?? null
+      return text([`Project ${project.name} in ${project.dir}. ${there('board.py')}. ${there('brief.md')}. ${build}`, profile && fabLine(profile)].filter(Boolean).join('\n'))
     })
   )
 
   registerReadTools(server, deps, onProject)
   registerMarkTools(server, deps, onProject)
   registerRouteTools(server, deps, onProject)
+  registerPartsTools(server, deps, onProject)
 }

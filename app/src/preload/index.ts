@@ -75,6 +75,15 @@ const bridge: PinoBridge = {
     start: (projectId) => invoke('route:start', projectId),
     cancel: (projectId) => invoke('route:cancel', projectId)
   },
+  fab: {
+    state: (projectId) => invoke('fab:state', projectId),
+    readiness: (projectId) => invoke('fab:readiness', projectId),
+    release: (projectId) => invoke('fab:release', projectId),
+    cancel: (projectId) => invoke('fab:cancel', projectId),
+    profiles: () => invoke('fab:profiles'),
+    showFolder: (projectId) => invoke('fab:showFolder', projectId),
+    onState: (cb) => subscribe('fab:state', cb)
+  },
   marks: {
     list: (projectId) => invoke('marks:list', projectId),
     add: (projectId, mark) => invoke('marks:add', projectId, mark),
