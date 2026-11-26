@@ -631,8 +631,8 @@ describe('what the CLI says of itself (#116)', () => {
 
   it('warns once when pino\'s plugin is not among the plugins, and says the skills are missing', () => {
     const t = new Transcript({ plugin: PLUGIN })
-    t.message(init({ plugins: [{ name: 'superpowers' }], skills: ['humanizer'] }))
-    t.message(init({ plugins: [{ name: 'superpowers' }], skills: ['humanizer'] }))
+    t.message(init({ plugins: [{ name: 'superpowers' }], skills: ['example-skill'] }))
+    t.message(init({ plugins: [{ name: 'superpowers' }], skills: ['example-skill'] }))
     expect(t.meta().pluginLoaded).toBe(false)
     expect(of(t, 'note')).toMatchObject([{ tone: 'warn', text: "pino's skills did not load: the agent is told to read skills it does not have" }])
   })
@@ -666,13 +666,13 @@ describe('what the CLI says of itself (#116)', () => {
     d.message(init({ ...loaded, skills: ['superpowers:brainstorming', 'pino-model', 'build123d', 'scans', 'dimensions'] }))
     expect(d.meta().pluginLoaded).toBe(true)
     const e = new Transcript({ plugin: PLUGIN })
-    e.message(init({ ...loaded, skills: ['humanizer'] }))
+    e.message(init({ ...loaded, skills: ['example-skill'] }))
     expect(e.meta().pluginLoaded).toBe(true)
     expect(of(e, 'note')).toEqual([])
   })
 
   it('takes an error as pino\'s only when it names pino, not when a path or another plugin\'s message holds the word', () => {
-    const other = [{ plugin: 'superpowers', error: 'cannot read /srv/work/pino/x/plugin.json' }, { name: 'agent-deck', message: 'pino is not installed' }, 'agent-deck@x: pino failed']
+    const other = [{ plugin: 'superpowers', error: 'cannot read /srv/work/pino/x/plugin.json' }, { name: 'example-plugin', message: 'pino is not installed' }, 'example-plugin@x: pino failed']
     const t = new Transcript({ plugin: PLUGIN })
     t.message(init({ ...loaded, plugin_errors: other, mcp_servers: [{ name: 'pino', status: 'failed' }], mcp_server_errors: other }))
     expect(t.meta().pluginLoaded).toBe(true)
