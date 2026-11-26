@@ -37,6 +37,16 @@ const ROWS = [
   row('view.prev', ['Left'], 'On a tab of the views: the view before', 'Everywhere', 'tabs'),
   row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
 
+  row('chat.send', ['Enter'], 'Chat: send the prompt', 'Session', 'composer'),
+  row('chat.newline', ['Shift+Enter'], 'Chat: a new line in the prompt, not a send', 'Session', 'composer'),
+  row('chat.stop', ['Esc', 'Ctrl+C'], 'Chat: stop the turn while Claude Code works (Ctrl+C with nothing selected in the box)', 'Session', 'composer'),
+  row('chat.allow', ['Enter'], 'Chat: allow what the card in focus asks (in its reason field, Enter denies)', 'Session', 'ask'),
+  row('ask.option', ['1', '2', '3', '4', '5', '6', '7', '8', '9'], 'Ask: the option of that number picks or toggles it on a question Claude Code asks', 'Session', 'ask'),
+
+  row('field.keep', ['Enter'], 'Field: keep what was typed', 'In a field, a menu or a sheet', 'field'),
+  row('field.leave', ['Esc'], 'Field: leave it as it was', 'In a field, a menu or a sheet', 'field'),
+  row('sheet.close', ['Esc'], 'Sheet or question: put it away', 'In a field, a menu or a sheet', 'sheet'),
+
   row('menu.next', ['Down', 'Right'], 'Menu: the next item', 'In a field, a menu or a sheet', 'menu'),
   row('menu.previous', ['Up', 'Left'], 'Menu: the one before', 'In a field, a menu or a sheet', 'menu'),
   row('menu.ends', ['Home', 'End'], 'Menu: the first or the last', 'In a field, a menu or a sheet', 'menu'),

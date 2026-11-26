@@ -47,6 +47,18 @@ it('has Left and Right for a focused view tab, in a scope of its own', () => {
   expect(KEYS.filter((r) => r.id.startsWith('view.')).map((r) => r.scope)).toEqual(['tabs', 'tabs'])
 })
 
+it("has the chat's keys where the chat listens: the box, a card that asks, a field and a popover", () => {
+  expect(KEYS.filter((r) => r.scope === 'composer').map((r) => r.id)).toEqual(['chat.send', 'chat.newline', 'chat.stop'])
+  expect(pressed({ key: 'Enter' }, 'chat.send')).toBe(true)
+  expect(pressed({ key: 'Enter', shiftKey: true }, 'chat.send')).toBe(false)
+  expect(pressed({ key: 'Enter', shiftKey: true }, 'chat.newline')).toBe(true)
+  expect(pressed({ key: 'c', code: 'KeyC', ctrlKey: true }, 'chat.stop')).toBe(true)
+  expect(pressed({ key: 'Escape' }, 'chat.stop')).toBe(true)
+  expect(pressed({ key: 'Enter' }, 'chat.allow')).toBe(true)
+  expect(which({ key: '3' }, 'ask.option')).toBe(2)
+  expect([pressed({ key: 'Enter' }, 'field.keep'), pressed({ key: 'Escape' }, 'field.leave'), pressed({ key: 'Escape' }, 'sheet.close')]).toEqual([true, true, true])
+})
+
 it('says which key of a row was pressed', () => {
   expect(which({ key: 'ArrowDown' }, 'menu.next')).toBe(0)
   expect(which({ key: 'ArrowRight' }, 'menu.next')).toBe(1)

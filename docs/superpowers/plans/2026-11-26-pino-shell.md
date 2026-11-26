@@ -888,6 +888,12 @@ git add -A && git commit -m "Add the project grid: route card with an empty Brie
 
 ### Task 13: Chat pieces
 
+> **Note from the build:** `fold.ts`, `fold.test.ts`, `taskList.test.ts` and `ask.test.ts` are adapted, not as-is: they use torno's item field and tool names. `app/src/test/plainText.ts` is copied too: `Diff.test.ts` imports it.
+>
+> **Note from the build:** `chat.complete` is not added: Task 14 drops slash completion, so nothing would listen to it. `ask.option` is added: the question card of `AskCard.tsx` reads it.
+>
+> **Note from the build:** `chat.stop` is Esc and Ctrl+C: Task 14 asks for Esc, and torno's key is Ctrl+C.
+
 **Files:**
 - Copy as-is: `app/src/renderer/ui/Popover.tsx`, `ui/popoverPlace.ts`, `ui/popoverPlace.test.ts`, `ui/numbered.tsx`, `ui/numbered.test.ts`, `ui/typing.ts`, and in `ui/chat/`: `Diff.tsx`, `Diff.test.ts`, `lineDiff.ts`, `lineDiff.test.ts`, `fold.ts`, `fold.test.ts`, `taskList.ts`, `taskList.test.ts`, `Tasks.tsx`, `ask.ts`, `ask.test.ts`, `place.ts`, `typing.ts`, `typing.test.ts`, `ago.ts`, `ago.test.ts`, `modelWords.ts`, `AskTakeover.tsx`
 - Copy adapted:
@@ -906,23 +912,23 @@ git add -A && git commit -m "Add the project grid: route card with an empty Brie
 - Consumes: `ChatItem` and friends (Task 6), `PinoBridge.chat` (Task 8), `pressed`, `which`, `hint` (Task 12).
 - Produces: `chatStore`, `useChat(sessionId)`, `chatActions`, `connectChat(): () => void`, `Markdown`, `ToolCard`, `AskCard`, `AskSession`, `ModelButton`, `Popover`, `foldRuns`, `TasksCard`, with torno's props minus the dropped ones.
 
-- [ ] **Step 1: Copy the tests (as-is and adapted)**
+- [x] **Step 1: Copy the tests (as-is and adapted)**
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy the modules and adapt as named**
+- [x] **Step 3: Copy the modules and adapt as named**
 
 As-is files must pass unchanged. One that needs an edit becomes adapted, with the reason in `change`.
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's chat pieces: store, markdown, diffs, tool and ask cards, model menus"
