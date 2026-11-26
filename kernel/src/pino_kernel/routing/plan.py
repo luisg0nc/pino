@@ -232,6 +232,18 @@ def _footprints(root) -> list[_Fp]:
     return out
 
 
+def _min_pitch(fp: _Fp) -> float:
+    """The smallest centre distance between two SMD pads of a footprint."""
+    pads = sorted(fp.smd)
+    best = math.inf
+    for i, a in enumerate(pads):
+        for b in pads[i + 1:]:
+            if b[0] - a[0] >= best:
+                break
+            best = min(best, math.hypot(b[0] - a[0], b[1] - a[1]))
+    return best
+
+
 def _fanout(fp: _Fp, rules: RouterRules) -> FanoutStep | None:
     if len(fp.smd) < FANOUT_MIN_PADS:
         return None
@@ -435,8 +447,10 @@ def plan_route(board_text: str, pro_text: str, dru_text: str | None, *, pairs: S
             f"routed vias are {num(rules.via_diameter)} mm across, not {num(raw['via_diameter'])} mm, so each hole "
             f"keeps the board's {num(rules.hole_clearance)} mm hole clearance (the router keeps copper clearance only)"))
 
-    fanout = [s for s in (_fanout(fp, rules) for fp in sorted(_footprints(root), key=lambda f: f.ref)) if s]
-    grid = 0.05 if any(s.pitch <= FINE_PITCH + 1e-9 for s in fanout) else 0.1
+    footprints = sorted(_footprints(root), key=lambda f: f.ref)
+    fanout = [s for s in (_fanout(fp, rules) for fp in footprints) if s]
+    # pads 0.5 mm apart sit between the points of a 0.1 mm grid: the router needs 0.05 mm to reach them
+    grid = 0.05 if any(_min_pitch(fp) <= FINE_PITCH + 1e-9 for fp in footprints) else 0.1
 
     counts = _pad_counts(copper)
     routable = {n for n, c in counts.items() if c >= 2}

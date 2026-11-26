@@ -5,7 +5,8 @@ are set, then acts by $FAKE_KRT_MODE:
 
 - copy (default): the output is the input; route.py and route_diff.py also add one F.Cu segment per --nets net,
   from its first pad centre to its second, except nets named in $FAKE_KRT_FAIL (comma separated).
-  $FAKE_KRT_SLOW (seconds) makes route.py wait before it writes.
+  $FAKE_KRT_SLOW (seconds) makes route.py wait before it writes. $FAKE_KRT_PAIR_DEFER makes route_diff.py route
+  nothing and name its nets as single-ended follow-ups, as the real one does when a pair cannot couple.
 - sleep: sleep 60 s.
 - crash: exit 1 without output (only the script named in $FAKE_KRT_CRASH, when that is set).
 - env: print the environment as one JSON line.
@@ -86,7 +87,10 @@ def _copy(script: str, argv: list[str]) -> int:
     with open(src, encoding="utf-8") as f:
         root = parse(f.read())
     routed, failed = 0, []
-    if script in ("route.py", "route_diff.py"):
+    followup = []
+    if script == "route_diff.py" and os.environ.get("FAKE_KRT_PAIR_DEFER"):
+        followup = _values(argv, "--nets")
+    elif script in ("route.py", "route_diff.py"):
         nets = _values(argv, "--nets")
         fail = set(filter(None, os.environ.get("FAKE_KRT_FAIL", "").split(",")))
         widths = _values(argv, "--track-width") or ["0.2"]
@@ -113,6 +117,8 @@ def _copy(script: str, argv: list[str]) -> int:
             f.write(dump(root) + "\n")
     summary = {"successful": routed, "failed": len(failed), "failed_single": failed, "total_time": 0.01,
                "total_vias": 0}
+    if script == "route_diff.py":
+        summary["single_ended_followup_nets"] = followup
     print("JSON_SUMMARY: " + json.dumps(summary), flush=True)
     return 0
 

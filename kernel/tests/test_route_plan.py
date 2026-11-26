@@ -117,3 +117,9 @@ def test_plan_json_round_trip():
                    hints=[RouteHint("SDA", (-5, -5, 5, 5), ["F.Cu"], [(0.0, 0.0), (1.0, 1.0)], ["SC*"], 9)])
     assert RoutePlan.from_json(p.to_json()) == p and RoutePlan.from_json(p.to_json()).to_json() == p.to_json()
     assert json.loads(p.to_json())["grid_step"] == p.grid_step
+
+
+def test_fine_grid_for_any_fine_pitch_row():
+    # a USB-C receptacle's pads are 0.5 mm apart: off the 0.1 mm grid, so the router needs 0.05 mm
+    p = plan_route(board_with(USB, SOT), PRO_2L, DRU_2L)
+    assert p.fanout == [] and p.grid_step == 0.05

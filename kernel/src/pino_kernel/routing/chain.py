@@ -40,6 +40,7 @@ class ChainStep:
     args: list[str]  # with the placeholders {IN}, {OUT}, {FAB}
     keepouts: list[RouterKeepout] = field(default_factory=list)
     corridor: list[Point] | None = None
+    takes_followups: bool = False  # the signals step: pair nets a pair step left single-ended join its --nets
 
 
 @dataclass
@@ -112,7 +113,7 @@ def chain_steps(plan: RoutePlan, krt: Krt) -> list[ChainStep]:
         steps.append(ChainStep(f"pair {p.name}", s, ["{IN}", "{OUT}", "--nets", p.positive, p.negative,
                                                      "--track-width", _n(p.width), "--diff-pair-gap", _n(p.gap),
                                                      "--no-gnd-vias", *R, *_fn(krt, s)]))
-    if plan.signals:
+    if plan.signals or plan.pairs:
         s = "route.py"
         power = []
         if plan.power:
@@ -120,7 +121,7 @@ def chain_steps(plan: RoutePlan, krt: Krt) -> list[ChainStep]:
                      *[_n(p.width) for p in plan.power]]
         steps.append(ChainStep("signals", s, ["{IN}", "{OUT}", "--nets", *plan.signals, "--track-width",
                                               _n(r.track_width), "--hole-to-hole-clearance", _n(r.hole_to_hole),
-                                              *power, *R, *_fn(krt, s)]))
+                                              *power, *R, *_fn(krt, s)], takes_followups=True))
     if plan.planes:
         s = "route_disconnected_planes.py"
         layers = [n for n in plan.layers if any(n in p.layers for p in plan.planes)]
@@ -149,6 +150,25 @@ def hint_steps(plan: RoutePlan, krt: Krt, board_box) -> list[ChainStep]:
     return out
 
 
+def _nets_of(args: Sequence[str]) -> list[str]:
+    i = args.index("--nets") + 1
+    out = []
+    while i < len(args) and not args[i].startswith("--"):
+        out.append(args[i])
+        i += 1
+    return out
+
+
+def _with_nets(args: Sequence[str], extra: Sequence[str]) -> list[str]:
+    """`args` with --nets holding its nets and `extra`, sorted, each once."""
+    i = list(args).index("--nets") + 1
+    j = i
+    while j < len(args) and not args[j].startswith("--"):
+        j += 1
+    nets = sorted(set(args[i:j]) | set(extra))
+    return [*args[:i], *nets, *args[j:]]
+
+
 def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "step"
 
@@ -165,7 +185,14 @@ def run_steps(krt: Krt, steps: Sequence[ChainStep], board_text: str, pro_text: s
     runs: list[StepRun] = []
     stopped = None
     of = total if total is not None else index0 + len(steps)
+    followups: list[str] = []  # pair nets a pair step left for single-ended routing
     for i, step in enumerate(steps):
+        if step.takes_followups and followups:
+            step = ChainStep(step.name, step.script, _with_nets(step.args, followups), step.keepouts, step.corridor,
+                             True)
+        if step.takes_followups and not _nets_of(step.args):
+            runs.append(StepRun(step.name, step.script, 0.0, 0, 0, [], "nothing left to route, skipped", ""))
+            continue
         index = index0 + i + 1
         folder = f"{index:02d}-{_slug(step.name)}"
         d = work / folder
@@ -218,6 +245,11 @@ def run_steps(krt: Krt, steps: Sequence[ChainStep], board_text: str, pro_text: s
         if note:
             with open(d / "log.txt", "a", encoding="utf-8") as fh:
                 fh.write(f"pino: {step.script} {note}\n")
+        if step.script == "route_diff.py" and r.returncode not in (-9, -15):
+            if note:
+                followups += _nets_of(step.args)
+            else:
+                followups += [str(n) for n in summary.get("single_ended_followup_nets", []) or []]
         run_ = StepRun(step.name, step.script, r.seconds, r.returncode, int(summary.get("successful", 0) or 0),
                        [str(n) for n in summary.get("failed_single", []) or []], note, folder)
         runs.append(run_)

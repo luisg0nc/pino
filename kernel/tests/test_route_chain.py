@@ -134,3 +134,31 @@ def test_rip_is_explicit(fake_krt, tmp_path, argv_log):
     rip = argv[argv.index("--rip-existing-nets") + 1:]
     assert rip[0] == "B" and "*" not in argv
     assert argv[argv.index("--layers") + 1] == "B.Cu" and argv[argv.index("--nets") + 1] == "A"
+
+
+def test_pair_left_single_ended_goes_to_the_signals_step(fake_krt, tmp_path, monkeypatch, argv_log):
+    monkeypatch.setenv("FAKE_KRT_PAIR_DEFER", "1")
+    r = run_chain_for(BOARD4, tmp_path / "work", pairs=[USB_PAIR])
+    sig = next(c for c in argv_log() if c["script"] == "route.py")["argv"]
+    nets = sig[sig.index("--nets") + 1:sig.index("--track-width")]
+    assert {"USB_D+", "USB_D-"} <= set(nets) and nets == sorted(nets)
+    assert {t.net for t in read_copper(r.board_text).tracks} >= {"USB_D+", "USB_D-"}
+
+
+def test_failed_pair_step_goes_single_ended(fake_krt, tmp_path, monkeypatch, argv_log):
+    monkeypatch.setenv("FAKE_KRT_MODE", "crash")
+    monkeypatch.setenv("FAKE_KRT_CRASH", "route_diff.py")
+    run_chain_for(BOARD4, tmp_path / "work", pairs=[USB_PAIR])
+    sig = next(c for c in argv_log() if c["script"] == "route.py")["argv"]
+    assert {"USB_D+", "USB_D-"} <= set(sig[sig.index("--nets") + 1:sig.index("--track-width")])
+
+
+def test_only_a_pair_still_gets_a_signals_step(fake_krt, tmp_path, monkeypatch, argv_log):
+    monkeypatch.setenv("FAKE_KRT_PAIR_DEFER", "1")
+    pair_only = board(footprints=[fp("R1", (-5, 0, 0), R0603, nets={"1": "USB_D+", "2": "USB_D-"}),
+                                  fp("R2", (5, 0, 0), R0603, nets={"1": "USB_D+", "2": "USB_D-"})])
+    r = run_chain_for(pair_only, tmp_path / "work", pairs=[USB_PAIR])
+    assert [s.step for s in r.steps] == ["pair USB_D", "signals"]
+    monkeypatch.delenv("FAKE_KRT_PAIR_DEFER")
+    r = run_chain_for(pair_only, tmp_path / "work2", pairs=[USB_PAIR])
+    assert [s.step for s in r.steps] == ["pair USB_D", "signals"] and "nothing left" in r.steps[1].note
