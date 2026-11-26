@@ -1,9 +1,54 @@
 import { describe, expect, it } from 'vitest'
 import { type Card, linksIn, type PartReading } from './cards'
-import { briefSpine, briefWords, freshCards, handOf, promptsSaid, seenHash, seenOf, whenSaid, linkLabel, sizeSource, sizeValue, spineSaid, topicOf } from './brief'
+import { briefSections, referenceNotes, sizeAgainst, briefSpine, briefWords, freshCards, handOf, promptsSaid, seenHash, seenOf, whenSaid, linkLabel, sizeSource, sizeValue, spineSaid, topicOf } from './brief'
 import type { PromptRow } from './chat'
 
 const card = (id: string, extra: Partial<Card>): Card => ({ id, kind: 'note', by: 'person', ...extra })
+
+describe('briefSections', () => {
+  it("sorts the cards into the page: the person's by frame, every size and rule, and what was asked of the fab", () => {
+    const sections = briefSections({
+      next: 20,
+      cards: [
+        card('C1', { kind: 'frame', name: 'Power' }),
+        card('C2', { kind: 'power', frame: 'C1', text: 'USB-C, 5 V' }),
+        card('C3', { kind: 'frame', name: 'Rules' }),
+        card('C4', { kind: 'rule', frame: 'C3', text: '0603 or larger' }),
+        card('C5', { kind: 'size', size: { what: 'Board width', value: '50', unit: 'mm', source: 'a guess' } }),
+        card('C6', { kind: 'fab', fab: { layers: 2, thickness: 1.6, assembly: 'jlc', boards: 5 } }),
+        card('C7', { kind: 'note', text: 'loose' }),
+        card('C8', { kind: 'decision', by: 'agent', text: "Claude's" }),
+        card('C9', { kind: 'rule', by: 'agent', text: "Claude's rule" }),
+        card('C10', { kind: 'note', text: 'adopted', from: { by: 'agent' } })
+      ]
+    })
+    // A frame with nothing of its own left to show here has no heading.
+    expect(sections.yours.map((g) => [g.frame?.name ?? null, g.cards.map((c) => c.id)])).toEqual([
+      ['Power', ['C2']],
+      [null, ['C7']]
+    ])
+    expect([sections.sizes.map((c) => c.id), sections.rules.map((c) => c.id), sections.fab?.id]).toEqual([['C5'], ['C4', 'C9'], 'C6'])
+  })
+})
+
+describe('the board beside what was asked', () => {
+  it("reads the notes of the reference files from brief.md's References", () => {
+    expect([...referenceNotes('# a\n\nwords\n\n## References\n\n- reference/photo-1.jpg: the old board\n- reference/doodle-1.png\n')]).toEqual([['reference/photo-1.jpg', 'the old board'], ['reference/doodle-1.png', '']])
+    expect([...referenceNotes('# a\n\n- reference/photo-1.jpg: in the words, not the list\n')]).toEqual([])
+  })
+
+  it("sets the board's width beside a size of that name, and marks a difference", () => {
+    const size = (what: string, value: string): Card => card('C1', { kind: 'size', size: { what, value, unit: 'mm', source: 'measured' } })
+    expect(sizeAgainst(size('Board width', '50'), { w: 56, h: 44 })).toEqual({ built: 56, differs: true })
+    expect(sizeAgainst(size('board height', '44'), { w: 56, h: 44 })).toEqual({ built: 44, differs: false })
+    expect(sizeAgainst(size('USB-C offset', '3'), { w: 56, h: 44 })).toBeNull()
+    expect(sizeAgainst(size('Board width', '56.04'), { w: 56.0000001, h: 44 })).toEqual({ built: 56, differs: false })
+    expect(sizeAgainst(size('Board width', '56.1'), { w: 56, h: 44 })?.differs).toBe(true)
+    // A value that is no one number is not compared, nor is anything with no board.
+    expect(sizeAgainst(size('Board width', 'about 50'), { w: 56, h: 44 })).toBeNull()
+    expect(sizeAgainst(size('Board width', '50'), null)).toBeNull()
+  })
+})
 
 describe('what the ledger says of a size', () => {
   const size = (value: string, over = {}) => ({ what: 'w', value, unit: 'mm' as const, source: 'measured' as const, ...over })

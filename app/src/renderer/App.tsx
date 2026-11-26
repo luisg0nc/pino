@@ -4,6 +4,7 @@ import type { ProjectInfo } from '../shared/project'
 import type { WorkspaceInfo } from '../shared/workspace'
 import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
+import { connectCards } from './state/cards'
 import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
 import { useKeepThumb } from './state/keepThumb'
 import { actions, store, useStore } from './state/store'
@@ -113,6 +114,8 @@ export function App() {
 
   // Claude's pictures are drawn here, when main asks.
   useEffect(() => answerLooks(), [])
+  // The Brief of the project on show, as main tells it.
+  useEffect(() => connectCards(), [])
   // And the picture of the open project's card, for the page of projects.
   useKeepThumb()
 
@@ -193,7 +196,13 @@ export function App() {
     })
   const useSuggested = (): Promise<void> => change('The folder', async () => showWorkspace(await window.pino.workspace.useSuggested()))
   const openWorkspace = (root: string): Promise<void> => change(nameOf(root), async () => showWorkspace(await window.pino.workspace.open(root)))
-  const openProject = (name: string): Promise<void> => change(name, async () => showProject(await window.pino.project.open(name)))
+  const openProject = (name: string): Promise<void> =>
+    change(name, async () => {
+      const next = await window.pino.project.open(name)
+      // What is in the folder may have changed since the workspace was listed, and it says which tab to open on.
+      await window.pino.workspace.list().then(actions.setWorkspace, () => {})
+      showProject(next)
+    })
   const allProjects = (): Promise<void> =>
     change('The page of projects', async () => {
       await window.pino.project.close()

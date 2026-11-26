@@ -1,16 +1,39 @@
 // What the window shows, apart from the chats (`state/chat.ts`). Nothing here changes per frame.
 import { useStore as useZustand } from 'zustand'
 import { createStore, type StoreApi } from 'zustand/vanilla'
+import { APP } from '../../shared/app'
 import type { MarkTool } from '../board/marks/tools'
 import type { SessionStatus } from '../../shared/bridge'
 import type { BuildState } from '../../shared/build'
 import type { FabProfile, FabState } from '../../shared/fab'
 import type { Mark } from '../../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../../shared/project'
-import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../../shared/view'
+import { DEFAULT_LOOK, firstTab, PANE_TABS, type BoardLook, type PaneTab, type Selection } from '../../shared/view'
 import type { WorkspaceInfo } from '../../shared/workspace'
+import { windowStorage } from './dock'
 
-export type { ViewTab }
+export type { PaneTab }
+
+/** The key the tab a project was left on is kept under, in the window's own storage. */
+const TAB_KEY = `${APP.name}.tab:`
+
+/** The tab this project was left on; null for none, or a storage that cannot be read. */
+function leftOn(projectId: string): PaneTab | null {
+  try {
+    const kept = windowStorage()?.getItem(TAB_KEY + projectId)
+    return PANE_TABS.includes(kept as PaneTab) ? (kept as PaneTab) : null
+  } catch {
+    return null
+  }
+}
+
+function keepTab(projectId: string, tab: PaneTab): void {
+  try {
+    windowStorage()?.setItem(TAB_KEY + projectId, tab)
+  } catch {
+    // A storage that refuses: the next visit opens as a first one.
+  }
+}
 
 export interface PinoState {
   /** The first screen with no workspace, the page of projects with no project open, or the project. */
@@ -20,7 +43,7 @@ export interface PinoState {
   project: ProjectInfo | null
   /** The workspaces opened lately. */
   recent: RecentFolder[]
-  tab: ViewTab
+  tab: PaneTab
   /** The build loop of the open project, as main last told it. */
   build: BuildState | null
   /** The number of an older build chosen in the strip, which the views then show; null shows the latest. */
@@ -78,7 +101,8 @@ export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
   openProject(project: ProjectInfo): void {
     const other = store.getState().project?.id !== project.id
-    store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab: 'schematic' as const, ...NO_VIEW } : {}) })
+    const tab = firstTab(store.getState().workspace?.projects.find((p) => p.dir === project.dir), leftOn(project.id))
+    store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab, ...NO_VIEW } : {}) })
   },
   closeProject(): void {
     store.setState({ page: 'projects', project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
@@ -86,7 +110,9 @@ export const actions = {
   setRecent(recent: RecentFolder[]): void {
     store.setState({ recent })
   },
-  setTab(tab: ViewTab): void {
+  setTab(tab: PaneTab): void {
+    const id = store.getState().project?.id
+    if (id !== undefined) keepTab(id, tab)
     store.setState({ tab })
   },
   /** What main says of a build loop: heard only for the project on show. */

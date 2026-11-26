@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react'
 import { pressed } from '../../shared/keys'
-import { emptyWords, TAB_NAMES, tabLabel, type ViewTab } from '../../shared/view'
+import { emptyWords, PANE_NAMES, PANE_TABS, tabLabel, type PaneTab, type ViewTab } from '../../shared/view'
+import { BriefPage } from './brief/BriefPage'
 import { BoardView } from '../board/BoardView'
 import { SheetView } from '../sheet/SheetView'
 import { ThreeView } from '../three/ThreeView'
@@ -10,25 +11,23 @@ import { numbered } from './numbered'
 import { Plate } from './plate/Plate'
 import { ViewBand } from './view/Band'
 
-const TABS: readonly ViewTab[] = ['schematic', 'board', '3d']
-
 /**
- * The middle of the window: the three views over one build of the board, with their tabs floating at the top left and
- * what is true of the whole view in a band at its foot. With nothing built, the view is the dye and says why. One
- * view's tab is in the tab order; Left and Right on it choose the one beside it.
+ * The middle of the window: the project's Brief and the three views over one build of its board, with their tabs
+ * floating at the top left and what is true of a whole view in a band at its foot. With nothing built, a view is the dye
+ * and says why. One tab is in the tab order; Left and Right on it choose the one beside it.
  */
 export function ViewPane() {
   const chosen = useStore((s) => s.tab)
   const selection = useStore((s) => s.selection)
   const build = useStore((s) => s.build)
   const { model } = useViewModel()
-  const tabs = useRef<Partial<Record<ViewTab, HTMLButtonElement | null>>>({})
+  const tabs = useRef<Partial<Record<PaneTab, HTMLButtonElement | null>>>({})
 
   const onKeyDown = (e: KeyboardEvent): void => {
     const way = pressed(e, 'view.next') ? 1 : pressed(e, 'view.prev') ? -1 : 0
     if (way === 0) return
     e.preventDefault()
-    const next = TABS[(TABS.indexOf(chosen) + way + TABS.length) % TABS.length]
+    const next = PANE_TABS[(PANE_TABS.indexOf(chosen) + way + PANE_TABS.length) % PANE_TABS.length]
     actions.setTab(next)
     tabs.current[next]?.focus()
   }
@@ -36,7 +35,7 @@ export function ViewPane() {
   return (
     <main className="viewport views" data-region="viewport">
       <div className="views-tabs" role="tablist" aria-label="Views" onKeyDown={onKeyDown} data-tag-avoid="">
-        {TABS.map((tab) => (
+        {PANE_TABS.map((tab) => (
           <button
             key={tab}
             ref={(el) => {
@@ -48,13 +47,13 @@ export function ViewPane() {
             className="views-tab"
             aria-selected={tab === chosen}
             aria-controls="view-panel"
-            aria-label={TAB_NAMES[tab]}
+            aria-label={PANE_NAMES[tab]}
             tabIndex={tab === chosen ? 0 : -1}
             onClick={() => actions.setTab(tab)}
           >
-            {TAB_NAMES[tab]}
-            {/* On a tab not chosen, what is selected (`tabLabel`): switching to it is seen to keep it. */}
-            {tabLabel(tab, chosen, selection) !== TAB_NAMES[tab] && selection && (
+            {PANE_NAMES[tab]}
+            {/* On a view's tab not chosen, what is selected (`tabLabel`): switching to it is seen to keep it. */}
+            {tabLabel(tab, chosen, selection) !== PANE_NAMES[tab] && selection && (
               <>
                 {' · '}
                 <span className="num">{selection.label}</span>
@@ -64,10 +63,10 @@ export function ViewPane() {
         ))}
       </div>
       <div className="views-panel" role="tabpanel" id="view-panel" aria-labelledby={`view-tab-${chosen}`} data-view={chosen}>
-        {model ? <Drawn tab={chosen} model={model} /> : <Empty />}
+        {chosen === 'brief' ? <BriefPage /> : model ? <Drawn tab={chosen} model={model} /> : <Empty />}
       </div>
       {/* Which build the copper is from, as Claude is told it; else (a run begun with it stale) the build the route names. */}
-      {model && <ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
+      {model && chosen !== 'brief' && <ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
     </main>
   )
 }

@@ -6,6 +6,10 @@ import type { Opened } from './opened'
 import { BUILD_HASH, readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
 import { saveThumbnail, thumbnailOnFile, thumbnailRefusal } from './thumb'
 import type { Builds } from './builds'
+import type { PersonChange } from '../shared/cards'
+import { linkOf, listReferences, readReference } from './cards/references'
+import type { CardStore } from './cards/store'
+import { readBrief } from './cards/text'
 import type { EngineInfo } from '../shared/ready'
 import type { MarkStore } from './marks/store'
 import type { Routing } from './routing'
@@ -26,10 +30,11 @@ import { takeAnswer, type ViewHolder } from './view'
 //            chat:setEffort, chat:models,
 //            build:state, build:rebuild, build:result, build:file, build:routeFile, build:engineInfo, view:tell,
 //            route:start, route:cancel, marks:list, marks:add, marks:update, marks:remove, marks:resolve,
-//            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder
+//            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder, cards:read, cards:change,
+//            cards:brief, cards:references, cards:reference, cards:openLink
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
-//            fab:state,
+//            fab:state, cards:changed, cards:briefChanged (index.ts),
 //            view:ask (view.ts), window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
 
@@ -46,6 +51,10 @@ export interface IpcDeps {
   fab: Fab
   /** Shows a release's README in the file manager; does nothing under test. */
   showFolder: (path: string) => void
+  /** The cards of the open project's Brief. */
+  cards: CardStore
+  /** Opens a web address in the browser; does nothing under test. */
+  openExternal: (url: string) => void
   /** Whether what pino needs is on this machine. */
   engineInfo: () => Promise<EngineInfo>
 }
@@ -57,7 +66,7 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ opened, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo }: IpcDeps): void {
+export function registerIpc({ opened, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo, cards, openExternal }: IpcDeps): void {
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -178,6 +187,19 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
   handle('marks:remove', (id: unknown, markId: unknown) => marks.remove(mustBeOpen(id), String(markId)))
   handle('marks:resolve', (id: unknown, markId: unknown, note: unknown) => marks.resolve(mustBeOpen(id), String(markId), String(note ?? ''), 'user'))
   marks.onChange((projectId, list) => broadcast('marks:changed', { projectId, marks: list }))
+  handle('cards:read', (id: unknown) => cards.read(mustBeOpen(id).id))
+  // What the window asks is checked whole by the store, which takes no id, author or reading from it.
+  handle('cards:change', (id: unknown, change: unknown) => cards.person(mustBeOpen(id).id, (change ?? {}) as PersonChange))
+  handle('cards:brief', async (id: unknown) => (await readBrief(mustBeOpen(id).dir)) ?? null)
+  handle('cards:references', (id: unknown) => listReferences(mustBeOpen(id).dir))
+  handle('cards:reference', (id: unknown, file: unknown) => readReference(mustBeOpen(id).dir, String(file)))
+  // The window names a card and a place in it, never an address: it is read from main's own file.
+  handle('cards:openLink', async (id: unknown, from: unknown, nth: unknown) => {
+    const project = mustBeOpen(id)
+    const url = linkOf(await cards.read(project.id), await readBrief(project.dir), String(from), Number.isInteger(nth) ? (nth as number) : 0)
+    if (url === null) throw new Error('There is no web address to open there.')
+    openExternal(url)
+  })
   handle('view:tell', (id: unknown, view: unknown) => {
     const project = projectOf(id)
     if (project) views.tell(project.id, view)

@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import type { BuildState } from './build'
 import type { Placement } from './circuit'
-import { bandFor, DEFAULT_LOOK, emptyWords, ratsFor, tabLabel, type Selection } from './view'
+import { bandFor, DEFAULT_LOOK, emptyWords, firstTab, lookTab, PANE_NAMES, PANE_TABS, ratsFor, tabLabel, type Selection } from './view'
+
+describe('the tabs of the middle of the window', () => {
+  it('are the Brief, then the three views', () => {
+    expect(PANE_TABS.map((t) => PANE_NAMES[t])).toEqual(['Brief', 'Schematic', 'Board', '3D'])
+  })
+
+  it('opens a project with no board.py on the Brief, and one with a board where it was left', () => {
+    expect(firstTab({ name: 'a', dir: '/w/a', board: false, brief: true, empty: false }, 'board')).toBe('brief')
+    expect(firstTab({ name: 'a', dir: '/w/a', board: true, brief: true, empty: false }, '3d')).toBe('3d')
+    expect(firstTab({ name: 'a', dir: '/w/a', board: true, brief: false, empty: false }, null)).toBe('schematic')
+    // A project the listing in hand does not have is not known to be without a board.
+    expect(firstTab(undefined, 'board')).toBe('board')
+  })
+
+  it("Claude's look on the Brief draws the board unless it asks for a tab", () => {
+    expect([lookTab(undefined, 'brief'), lookTab('schematic', 'brief'), lookTab(undefined, '3d')]).toEqual(['board', 'schematic', '3d'])
+  })
+})
 
 const selection = { tab: 'schematic', label: 'J1' } as Selection
 

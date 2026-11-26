@@ -4,7 +4,7 @@
 // Each picture is a launch of its own: a hidden window's `capturePage()` gives one picture, and the next call never
 // returns (torno found the same).
 
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { capture, clickTarget, markScene, markTrack, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
@@ -81,6 +81,27 @@ const onProjects = async (run: Launched, project: string): Promise<void> => {
   await run.page.mouse.move(5, 5)
 }
 
+/** The Brief of a board in use: the person's words and cards, a size the board differs from, rules and the fab. */
+const onBrief = async (run: Launched, project: string): Promise<void> => {
+  await tab(run, 'Brief').click()
+  writeFileSync(join(project, 'brief.md'), '# reference\n\nA USB-C board with an ESP32 and a 3.3 V regulator, for a sensor in the workshop.\n\n- It powers from 5 V and draws under 0.5 A\n- One SHT40 sensor over I2C\n\nThe datasheet is at https://example.org/datasheets/AP2112K.pdf\n')
+  mkdirSync(join(project, '.pino', 'brief'), { recursive: true })
+  const cards = [
+    { id: 'C1', kind: 'frame', by: 'person', name: 'Power' },
+    { id: 'C2', kind: 'power', by: 'person', frame: 'C1', text: 'USB-C, 5 V, 0.5 A' },
+    { id: 'C3', kind: 'frame', by: 'person', name: 'Parts I have' },
+    { id: 'C4', kind: 'part', by: 'person', frame: 'C3', text: 'pull-up', part: { lcsc: 'C25804', reading: { class: 'basic', package: '0603', stock: 1234567, price: 0.0024, checkedAt: '2026-11-26T05:00:00.000Z', fresh: true } } },
+    { id: 'C5', kind: 'size', by: 'person', size: { what: 'Board width', value: '50', unit: 'mm', source: 'a guess' } },
+    { id: 'C6', kind: 'size', by: 'agent', size: { what: 'Board height', value: '44', unit: 'mm', source: 'from Claude' } },
+    { id: 'C7', kind: 'rule', by: 'person', text: 'Hand-solderable, 0805 or larger' },
+    { id: 'C8', kind: 'fab', by: 'person', fab: { layers: 2, thickness: 1.6, assembly: 'jlc', boards: 5 } }
+  ]
+  writeFileSync(join(project, '.pino', 'brief', 'cards.json'), JSON.stringify({ next: 9, cards }))
+  await expect(run.page.locator('[data-card="C7"]')).toBeVisible()
+  await expect(run.page.locator('.brief-words')).toContainText('USB-C board')
+  await run.page.mouse.move(5, 5)
+}
+
 /** An engine that makes fab files. */
 const FABBED = { FAKE_KERNEL_SERVE: '3' }
 
@@ -98,6 +119,16 @@ const fabPopover = (release: boolean) => async (run: Launched): Promise<void> =>
 }
 
 const SHOTS: Record<string, Shot> = {
+  brief: { env: FABBED, at: onBrief },
+  'brief-dark': { env: FABBED, dark: true, at: onBrief },
+  // The page below its first screenful: the sizes, the rules and the fab.
+  'brief-foot': {
+    env: FABBED,
+    at: async (run, project) => {
+      await onBrief(run, project)
+      await run.page.locator('.brief-page').evaluate((el) => el.scrollTo(0, el.scrollHeight))
+    }
+  },
   'fab-ready': { env: FABBED, at: fabPopover(false) },
   'fab-ready-dark': { env: FABBED, dark: true, at: fabPopover(false) },
   'fab-released': { env: FABBED, at: fabPopover(true) },

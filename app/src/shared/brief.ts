@@ -1,10 +1,71 @@
-import { AGENT_KINDS, type AgentKind, type Card, type CardTurn } from './cards'
+import { AGENT_KINDS, type AgentKind, type Card, type CardsFile, type CardTurn, readingOrder } from './cards'
 import type { PromptRow } from './chat'
 import { type SizeFact, parseSize } from './size'
 
 // The Brief page's reading of a project's cards (`.pino/brief/cards.json`) and of `brief.md`: what Claude wrote down
 // on a spine of the prompts that wrote it, whose each card is, and what is new since the person looked. Nothing here
 // changes a file.
+
+export interface BriefSections {
+  /** The person's own cards that no table holds, grouped by their frame in reading order; the cards of no frame last. */
+  yours: Array<{ frame: Card | null; cards: Card[] }>
+  /** Every size, and every rule, whoever wrote it. */
+  sizes: Card[]
+  rules: Card[]
+  /** What the person asked of the fab: the newest such card, or none. */
+  fab: Card | null
+}
+
+export function briefSections(file: CardsFile): BriefSections {
+  const cards = readingOrder(file.cards)
+  const frames = new Map(cards.filter((c) => c.kind === 'frame').map((c) => [c.id, c]))
+  const yours: BriefSections['yours'] = []
+  for (const card of cards) {
+    // What Claude wrote, made the person's since or not, stands on the spine.
+    if (card.kind === 'frame' || card.kind === 'size' || card.kind === 'rule' || card.kind === 'fab' || claudeWrote(card)) continue
+    const frame = card.frame === undefined ? null : (frames.get(card.frame) ?? null)
+    const group = yours.at(-1)
+    if (group && group.frame === frame) group.cards.push(card)
+    else yours.push({ frame, cards: [card] })
+  }
+  return {
+    yours,
+    sizes: cards.filter((c) => c.kind === 'size' && c.size !== undefined),
+    rules: cards.filter((c) => c.kind === 'rule'),
+    fab: file.cards.filter((c) => c.kind === 'fab').at(-1) ?? null
+  }
+}
+
+/** The names of the sizes that are set beside the built board's own. */
+export const BOARD_SIZE: Record<'width' | 'height', RegExp> = { width: /^board width$/i, height: /^board height$/i }
+
+/** How far apart a size asked for and the board's may be and be the same, mm. */
+const SAME_MM = 0.05
+
+/**
+ * What the board on show measures where a size is of its width or its height, and whether the two differ. Null for any
+ * other size, one whose value is not one number of millimetres, and with no board.
+ */
+export function sizeAgainst(card: Card, box: { w: number; h: number } | null): { built: number; differs: boolean } | null {
+  const size = card.size
+  if (!size || !box || size.unit !== 'mm') return null
+  const side = BOARD_SIZE.width.test(size.what.trim()) ? box.w : BOARD_SIZE.height.test(size.what.trim()) ? box.h : null
+  const asked = parseSize(size.value, size.unit)
+  if (side === null || !Number.isFinite(side) || !asked || asked.mark !== undefined || asked.numbers.length !== 1) return null
+  const built = Math.round(side * 100) / 100
+  return { built, differs: Math.abs(built - asked.numbers[0]) > SAME_MM }
+}
+
+/** The notes pino wrote beside the files of `reference/` under `## References` of `brief.md`, by `reference/<file>`; '' for a file with none. */
+export function referenceNotes(brief: string): Map<string, string> {
+  const listed = sectionsOf(brief).sections.filter((s) => s.heading.trim().toLowerCase() === 'references')
+  const notes = new Map<string, string>()
+  for (const line of listed.flatMap((s) => s.body.split('\n'))) {
+    const found = /^-\s+(reference\/[^\s:]+)(?::\s*(.*))?$/.exec(line.trim())
+    if (found) notes.set(found[1], found[2]?.trim() ?? '')
+  }
+  return notes
+}
 
 /** A size's value as the ledger shows it: the numbers read from it (`Ø 6.6`, `186 × 128`), or the value as typed when it is no numbers, with the unit it ends with left out. */
 export function sizeValue(size: SizeFact): string {

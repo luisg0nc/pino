@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { verdictWords, type BuildResult, type BuildState, type RoutingState } from '../shared/build'
 import type { CardsFile } from '../shared/cards'
 import type { StrokeMark } from '../shared/marks'
-import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../shared/view'
+import { DEFAULT_LOOK, type BoardLook, type PaneTab, type Selection } from '../shared/view'
 import { fx, readJson } from '../test/fixtures'
 import { toolName } from '../shared/app'
 import { CONTEXT_LIMIT, MOST_HOLDS, PinoDomain, VERDICT_LIMIT, verdictText, type DomainDeps } from './domain'
@@ -19,7 +19,7 @@ const padSel: Selection = { tab: 'board', target: { kind: 'pad', ref: 'U2', numb
 
 const stateOf = (over: Partial<BuildState> = {}): BuildState => ({ projectId: 'p1', engine: { state: 'ready', kernel: 'x', serve: 1 }, building: false, latest: ref, lastGood: ref, history: [], route: null, copperFrom: null, problem: null, ...over })
 
-function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open?: StrokeMark[]; view?: { tab: ViewTab; look: BoardLook; selection: Selection | null } | null; cards?: CardsFile; brief?: string } = {}) {
+function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open?: StrokeMark[]; view?: { tab: PaneTab; look: BoardLook; selection: Selection | null } | null; cards?: CardsFile; brief?: string } = {}) {
   let state = stateOf(opts.state)
   let told: Record<string, string> = {}
   const markTold = vi.fn(async (_id: string, next: Record<string, string>) => void (told = next))
@@ -99,6 +99,8 @@ describe("the build in Claude's prompt", () => {
     expect(text).toContain('The person sees the Schematic tab.')
     expect(text).toContain('Open marks: M1, M2 (stale: its track is gone).')
     expect((await domain({ view: { tab: '3d', look: DEFAULT_LOOK, selection: null } }).d.promptContext(project, 'x')).text).toContain('The person sees the 3D tab.')
+    // On the Brief nothing of a view is in hand to speak of.
+    expect((await domain({ view: { tab: 'brief', look: DEFAULT_LOOK, selection: padSel } }).d.promptContext(project, 'x')).text.split('\n')).toContain('The person sees the Brief.')
   })
 
   it('adds nothing for a project with nothing built and nothing marked', async () => {

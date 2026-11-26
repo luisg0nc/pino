@@ -1,12 +1,13 @@
 // Everything the renderer may ask of main, and the types both sides share for it.
 
 import type { ArtifactName, BuildResult, BuildState } from './build'
+import type { CardsFile, PersonChange } from './cards'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
 import type { FabProfile, FabState, Readiness } from './fab'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
 import type { EngineInfo } from './ready'
-import type { BoardLook, LookRequest, LookResult, Selection, ViewTab } from './view'
+import type { BoardLook, LookRequest, LookResult, PaneTab, Selection } from './view'
 import type { OpenFolder, WorkspaceInfo } from './workspace'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
@@ -100,7 +101,7 @@ export interface PinoBridge {
   }
   view: {
     /** What the window shows, so that Claude can be told what the person sees. */
-    tell(projectId: string, view: { tab: ViewTab; look: BoardLook; selection: Selection | null }): Promise<void>
+    tell(projectId: string, view: { tab: PaneTab; look: BoardLook; selection: Selection | null }): Promise<void>
     /** Main asks for something only the window can make: a picture for Claude's `look`. Answered once, by id. */
     onAsk(cb: (m: { id: number; kind: 'look'; req: LookRequest }) => void): () => void
     answer(id: number, result: LookResult | { error: string }): void
@@ -132,6 +133,22 @@ export interface PinoBridge {
     remove(projectId: string, id: string): Promise<void>
     resolve(projectId: string, id: string, note: string): Promise<Mark>
     onChange(cb: (m: { projectId: string; marks: Mark[] }) => void): () => void
+  }
+  /** The open project's Brief: its cards, `brief.md` and the files of `reference/`. Main alone writes the cards, and never `brief.md`. */
+  cards: {
+    read(projectId: string): Promise<CardsFile>
+    /** A change of the person's. Rejects with why main refuses it. */
+    change(projectId: string, change: PersonChange): Promise<CardsFile>
+    /** The words of `brief.md`; null when there is none. */
+    brief(projectId: string): Promise<string | null>
+    /** The photos, doodles and PDFs of `reference/`, by name. */
+    references(projectId: string): Promise<string[]>
+    /** A photo's or a doodle's bytes; null when it may not be read. */
+    reference(projectId: string, file: string): Promise<{ mediaType: string; bytes: Uint8Array } | null>
+    /** Opens in the browser the `nth` web address of a card, or of `brief.md` when `cardId` is `brief`. */
+    openLink(projectId: string, cardId: string, nth?: number): Promise<void>
+    onChanged(cb: (m: { projectId: string; file: CardsFile }) => void): () => void
+    onBriefChanged(cb: (m: { projectId: string }) => void): () => void
   }
   notices: {
     /** Something main has to say that no call asked for: a folder it may not write into. */

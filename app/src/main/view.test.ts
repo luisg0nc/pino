@@ -13,6 +13,8 @@ describe('what the window says it shows', () => {
   it('takes nothing that is not that', () => {
     expect(viewOf(null)).toBeNull()
     expect(viewOf({ tab: 'terminal', look: DEFAULT_LOOK, selection: null })).toBeNull()
+    // The Brief is what the person may see too, though nothing is selected on it.
+    expect(viewOf({ tab: 'brief', look: DEFAULT_LOOK, selection: null })?.tab).toBe('brief')
     expect(viewOf({ tab: 'board', look: { ...DEFAULT_LOOK, pours: 'yes' }, selection: null })).toBeNull()
     for (const bad of [{ ...selection, text: 'x'.repeat(5000) }, { ...selection, text: 'a\nb' }, { ...selection, target: { kind: 'file', path: '/etc' } }, { ...selection, label: 7 }]) {
       expect(viewOf({ tab: 'board', look: DEFAULT_LOOK, selection: bad })!.selection).toBeNull()

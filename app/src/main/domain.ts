@@ -5,7 +5,7 @@ import { verdictWords, type BuildResult, type BuildState, type Finding } from '.
 import { at } from '../shared/board/coords'
 import type { Mark } from '../shared/marks'
 import type { ProjectInfo } from '../shared/project'
-import { TAB_NAMES, type BoardLook, type Selection, type ViewTab } from '../shared/view'
+import { TAB_NAMES, type BoardLook, type PaneTab, type Selection } from '../shared/view'
 import { layerWords } from '../shared/board/refs'
 import type { Builds } from './builds'
 import type { CardStore } from './cards/store'
@@ -36,7 +36,7 @@ export interface DomainDeps {
   /** The words of the project's `brief.md`; undefined where there is none. */
   brief(project: ProjectInfo): Promise<string | undefined>
   /** What the person has on screen, as the window last said. */
-  view(): { tab: ViewTab; look: BoardLook; selection: Selection | null } | null
+  view(): { tab: PaneTab; look: BoardLook; selection: Selection | null } | null
   toolName: (tool: string) => string
   now?: () => number
 }
@@ -78,6 +78,8 @@ export function verdictText(r: BuildResult, state: BuildState, routedOn: number 
 }
 
 function viewLine(view: NonNullable<ReturnType<DomainDeps['view']>>): string {
+  // Nothing of a view is in front of them there, so what is selected in one is not said.
+  if (view.tab === 'brief') return 'The person sees the Brief.'
   const what = view.tab === 'board' ? `${TAB_NAMES.board} tab, ${layerWords(view.look.active)}` : view.tab === '3d' ? '3D tab' : `${TAB_NAMES.schematic} tab`
   const held = view.selection ? ` Selected: ${view.selection.text}.` : ''
   return `The person sees the ${what}.${held}`

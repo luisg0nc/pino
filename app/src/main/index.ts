@@ -9,6 +9,7 @@ import { writeFileAtomic } from './atomic'
 import { Builds } from './builds'
 import { CardStore } from './cards/store'
 import { readBrief } from './cards/text'
+import { watchBrief } from './cards/watch'
 import { listPrompts } from './sessions/prompts'
 import { PinoDomain } from './domain'
 import { frameOptions, MIN_WINDOW, SURFACE, windowSize } from './frame'
@@ -290,13 +291,23 @@ void app.whenReady().then(async () => {
     stopAll: () => sessions!.stopAll(),
     // No start is taken for a project that has been left, and `stopAll` waits for one under way.
     closed: (project) => {
+      unwatchBrief()
       cards.forget(project.id)
       routing.drop(project.id)
       fab.drop(project.id)
       builds.close(project.id)
     },
-    opened: (project) => builds.open(project)
+    opened: (project) => {
+      builds.open(project)
+      // `brief.md` is written in the person's editor, and the cards may be pulled: both are followed while it is open.
+      unwatchBrief()
+      unwatchBrief = watchBrief(project.dir, (what) => {
+        if (what.cards) void cards.refresh(project.id).catch((e: Error) => console.error(`cannot read the cards again: ${e.message}`))
+        if (what.brief) broadcast('cards:briefChanged', { projectId: project.id })
+      })
+    }
   }))
+  let unwatchBrief = (): void => {}
   openProjectId = () => holder.project()?.id
   // The cards of the open project's Brief: main alone writes them.
   const cards = new CardStore({
@@ -366,7 +377,7 @@ void app.whenReady().then(async () => {
       ...said,
       claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
     })))
-  registerIpc({ opened: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path) })
+  registerIpc({ opened: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path), cards, openExternal: isTest ? () => {} : (url) => void shell.openExternal(url) })
   // Every build that drew something has the marks found again on it.
   builds.onResult((projectId, result) => {
     fab.buildLanded(projectId)

@@ -27,7 +27,10 @@ export function registerView(tab: ViewTab, hooks: ViewHooks): () => void {
 
 if (underTest && window.__pinoTest) {
   Object.assign(window.__pinoTest, {
-    screenOf: (target: Target) => views.get(store.getState().tab)?.screenOf(target) ?? null,
+    screenOf: (target: Target) => {
+      const { tab } = store.getState()
+      return tab === 'brief' ? null : (views.get(tab)?.screenOf(target) ?? null)
+    },
     drawn: () => Object.fromEntries([...views].map(([tab, hooks]) => [DRAWN_AS[tab], hooks.drawn()]))
   })
 }

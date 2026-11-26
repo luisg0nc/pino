@@ -100,6 +100,16 @@ const bridge: PinoBridge = {
     resolve: (projectId, id, note) => invoke('marks:resolve', projectId, id, note),
     onChange: (cb) => subscribe('marks:changed', cb)
   },
+  cards: {
+    read: (projectId) => invoke('cards:read', projectId),
+    change: (projectId, change) => invoke('cards:change', projectId, change),
+    brief: (projectId) => invoke('cards:brief', projectId),
+    references: (projectId) => invoke('cards:references', projectId),
+    reference: (projectId, file) => invoke('cards:reference', projectId, file),
+    openLink: (projectId, cardId, nth) => invoke('cards:openLink', projectId, cardId, nth),
+    onChanged: (cb) => subscribe('cards:changed', cb),
+    onBriefChanged: (cb) => subscribe('cards:briefChanged', cb)
+  },
   notices: {
     onNotice: (cb) => subscribe('notice', cb)
   }

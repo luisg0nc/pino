@@ -697,7 +697,7 @@ git commit -m "brief and add_card: Claude writes what it learns as cards, never 
   - Route card: the `Brief` section is a button `Open the Brief` (sets the tab) above `FabBlock`; the line about `brief.md` goes.
   - `domain.ts` `viewLine`: on the Brief, `The person sees the Brief.`
 
-- [ ] **Step 1: Write the failing unit tests**
+- [x] **Step 1: Write the failing unit tests**
 
 ```ts
 // shared/view.test.ts
@@ -722,16 +722,16 @@ it("sets the board's width beside a size of that name, and marks a difference", 
 it("takes the Brief as what the person sees", () => { expect(viewOf({ tab: 'brief', look: DEFAULT_LOOK, selection: null })?.tab).toBe('brief') })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/view.test.ts src/shared/brief.test.ts src/main/view.test.ts src/main/domain.test.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Copy the window's files, adapt them, add the tab and the channels**
+- [x] **Step 3: Copy the window's files, adapt them, add the tab and the channels**
 
 `ViewPane` draws `PANE_TABS` (Left and Right go round all four); the Brief's panel is `BriefPage`, the others as now; the band at the foot only on the three views. "In your words" is torno's `BriefWords` (headings, paragraphs, lists with hanging indents, links as a link with its host, numbers in Martian Mono) on its sheet, the pictures beside it (`PictureTile` from `cards:reference`, with the note from `referenceNotes`), the PDF lines, then the person's cards by frame (`briefSections(file).yours`, each frame's name a heading). The size table compares with `model.board.box` of the build on show.
 
-- [ ] **Step 4: Write the failing e2e spec**
+- [x] **Step 4: Write the failing e2e spec**
 
 ```ts
 // e2e/brief.spec.ts: a temp project with brief.md, reference/photo-1.png and .pino/brief/cards.json written by the test
@@ -749,12 +749,12 @@ test('a board built opens on the views next time; the route card opens the Brief
 test("the board's width beside the person's size, marked when they differ", async () => { /* referenceProject + size card Board width 50: row says 'the board is 56 mm', data-differs */ })
 ```
 
-- [ ] **Step 5: Run the unit tests and the e2e suite**
+- [x] **Step 5: Run the unit tests and the e2e suite**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm test:e2e`
 Expected: PASS
 
-- [ ] **Step 6: Write `.claude/rules/brief.md` (paths: `app/src/main/cards/**`, `app/src/shared/cards.ts`, `app/src/shared/brief.ts`, `app/src/renderer/ui/brief/**`, `app/src/renderer/state/cards.ts`, `app/src/main/mcp/cardTools.ts`, `app/e2e/brief.spec.ts`), name it in `CLAUDE.md`'s rules by area, update `views.md` (the Brief tab first), and commit**
+- [x] **Step 6: Write `.claude/rules/brief.md` (paths: `app/src/main/cards/**`, `app/src/shared/cards.ts`, `app/src/shared/brief.ts`, `app/src/renderer/ui/brief/**`, `app/src/renderer/state/cards.ts`, `app/src/main/mcp/cardTools.ts`, `app/e2e/brief.spec.ts`), name it in `CLAUDE.md`'s rules by area, update `views.md` (the Brief tab first), and commit**
 
 ```bash
 git add -A app/src app/e2e shared-from-torno.json .claude/rules CLAUDE.md
