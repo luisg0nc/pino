@@ -117,6 +117,9 @@ for the same reason. torno's Brief in two voices (torno #347) is the page for it
 ## Decided by Luis (2026-11-26)
 
 - A workspace folder holds every project (over "any folder, New project asks where").
+- The Brief is the first page: the view tabs read Brief, Schematic, Board, 3D (over a fourth tab at the end, or
+  torno's switch of the whole main area). My reading, for Luis to correct: a project with no `board.py` yet opens
+  on the Brief; one with a board opens where it was left.
 - The Brief lives on, as torno's now (over "the first message only").
 - The silk, menus, parts tool, chat resize and 3D tracks are fixed separately (PRs on their own branches).
 - No mockups for now; the shape above is a starting point he will grow.
