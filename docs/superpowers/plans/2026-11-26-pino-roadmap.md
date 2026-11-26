@@ -17,3 +17,11 @@ software on its own and is written when the stage before it has taught what it n
 | 8. Parts (KiCad libraries, EasyEDA fallback, jlcsearch), fab limits in the Brief, release to JLC fab files | written after stage 7 | engine | not started |
 
 Each stage runs on its own branch with one whole-branch review at the end (Opus), per Luis's lean-review rule.
+
+## Design bar (Luis, 2026-11-26)
+
+torno's first UI was "bad design" and much of it was reworked. pino copies torno's current, reworked design, never an
+older state, and must do better where it diverges from torno: the Board, Schematic and 3D views, marks on a board,
+and the routing and checks process. For those parts: three mocked directions each, made with the frontend-design
+skill on real boards (the spike boards), judged from screenshots taken the way Luis would see them, then built, then
+an Opus design review alongside the code review before merge.
