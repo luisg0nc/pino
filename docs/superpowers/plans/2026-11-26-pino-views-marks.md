@@ -97,6 +97,8 @@ Copied from torno at `TORNO_COMMIT` (copy, then adapt only as named; list each i
 
 ### Task 1: The engine writes `sheet.json` and answers `diff`
 
+> As built: no version bump (director's call). The schematic SVG is exported with `--exclude-drawing-sheet`, so the Schematic tab shows blocks on one paper without KiCad's title block. `sheet.json` gives the paper's nominal size; KiCad's SVG is a few microns off it.
+
 **Files:**
 - Modify: `kernel/src/pino_kernel/schematic/writer.py`, `kernel/src/pino_kernel/build.py`, `kernel/src/pino_kernel/cli.py`, `kernel/src/pino_kernel/__init__.py`, `kernel/schema/build-result-1.schema.json`, `kernel/README.md`
 - Create: `kernel/src/pino_kernel/ops.py`, `kernel/schema/sheet-1.schema.json`
@@ -110,7 +112,7 @@ Copied from torno at `TORNO_COMMIT` (copy, then adapt only as named; list each i
   - `ops.extra_op(req: dict) -> dict | None`: answers `{"id", "op": "diff", "project", "from": "<hash>", "to": "<hash>"}` with `{"id", "ok": true, "changes": {"circuit": [...], "layout": [...]}}` from the two folders' `board.kicad_pcb` through `cap_changes(changes(a, b))`; a folder that is gone gives `{"ok": false, "error": "build <hash> is no longer kept"}`; a hash that is not 12 hex gives `"not a build hash"`. `None` for any other op. `cli._answer` calls it before its "unknown op" line, nothing else changes there (the routing branch moves the loop to `serve.py`: the merge keeps this one call).
   - `__version__ = "0.1.1"` (old caches stop matching, so every build has `sheet.json`). If `routing` merged first with `0.2.0`, use `0.2.1`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_sheet_json_has_every_pin_once(reference_circuit, real_symbols):
@@ -161,21 +163,21 @@ def test_other_ops_are_not_extra():
 def test_serve_answers_diff(two_builds): ...   # through cli.serve with io.StringIO, in order with a ping
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_sheet_json.py tests/test_ops.py -v`
 Expected: FAIL with `AttributeError: 'SchematicFiles' object has no attribute 'sheet'` and `ModuleNotFoundError: No module named 'pino_kernel.ops'`.
 
-- [ ] **Step 3: Write `sheet_json`, `ops.py`, the schema, the build step and the README lines**
+- [x] **Step 3: Write `sheet_json`, `ops.py`, the schema, the build step and the README lines**
 
 The schema's `artifacts` gains `"sheet": {"type": "string"}`; nothing else in it changes. README: `sheet.json` in the build folder list, `diff` in the serve protocol.
 
-- [ ] **Step 4: Run the kernel suite**
+- [x] **Step 4: Run the kernel suite**
 
 Run: `uv run --directory kernel pytest -v`
 Expected: PASS (the engine's 247 tests plus the new ones; kicad tests run here).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/

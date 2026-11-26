@@ -20,6 +20,7 @@ from . import __version__
 from .build import BuildOptions, build
 from .kicad_cli import KicadCli
 from .libraries import LibrariesNotFound, discover
+from .ops import extra_op
 from .result import SCHEMA
 
 EXIT = {"ok": 0, "errors": 1, "failed": 2}
@@ -83,6 +84,9 @@ def _answer(line: str) -> tuple[dict, bool]:
             print(f"pino-kernel: build failed inside the engine: {e!r}", file=sys.stderr)
             return {"id": rid, "ok": False, "error": f"the engine failed: {type(e).__name__}: {e}"}, False
         return {"id": rid, "ok": True, "result": result.to_dict()}, False
+    extra = extra_op(req)
+    if extra is not None:
+        return extra, False
     return {"id": rid, "ok": False, "error": f"unknown op {op!r}"}, False
 
 

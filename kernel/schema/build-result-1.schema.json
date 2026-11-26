@@ -160,6 +160,9 @@
     "schematic_svg": {
      "type": "string"
     },
+    "sheet": {
+     "type": "string"
+    },
     "glb": {
      "type": "string"
     },

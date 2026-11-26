@@ -7,6 +7,7 @@ already in pino's convention and go in after the conversion.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .. import ids
@@ -59,6 +60,7 @@ class SchematicFiles:
     fp_lib_table: str
     canvas: Canvas
     paper: str
+    sheet: dict  # pino.sheet/1: where everything is, for the views' hit-test layer
 
 
 # --- connectivity -------------------------------------------------------------
@@ -262,7 +264,47 @@ def write_schematic(circuit: Circuit, symbols: SymbolLibrary) -> SchematicFiles:
     # the canvas's parts belong to the layout's own model; the writer only reads their fields
     text = schematic(model, symbols, cv, paper)
     sym_table, fp_table = lib_tables(circuit, cv)
-    return SchematicFiles(text, sym_table, fp_table, cv, paper)
+    return SchematicFiles(text, sym_table, fp_table, cv, paper, sheet_json(cv, paper, circuit))
+
+
+SHEET_SCHEMA = "pino.sheet/1"
+PAPERS = {"A4": (297.0, 210.0), "A3": (420.0, 297.0), "A2": (594.0, 420.0), "A1": (841.0, 594.0)}
+
+
+def _sheet_mm(u) -> float:
+    value = round(u * GRID, 4)
+    return 0.0 if value == 0 else value
+
+
+def _natural(text: str):
+    return [(0, int(t), "") if t.isdigit() else (1, 0, t) for t in re.split(r"(\d+)", text) if t]
+
+
+def sheet_json(canvas: Canvas, paper: str, circuit: Circuit) -> dict:
+    """The sheet as data (schema pino.sheet/1): sheet millimetres, top left, y down, the SVG's own units."""
+    parts = {p.ref: p for p in circuit.parts}
+    symbols = []
+    for s in sorted((s for s in canvas.syms if s.part is not None), key=lambda s: _natural(s.ref)):
+        names = {p.number: p.name for p in parts[s.ref].pins}
+        pins = sorted((p for p in canvas.pins if p.ref == s.ref), key=lambda p: _natural(p.number))
+        x0, y0, x1, y1 = (_sheet_mm(v) for v in s.body)
+        symbols.append({"ref": s.ref, "x0": x0, "y0": y0, "x1": x1, "y1": y1, "pins": [
+            {"number": p.number, "name": names.get(p.number, ""), "net": p.net,
+             "x": _sheet_mm(p.x), "y": _sheet_mm(p.y)} for p in pins]})
+    power = sorted(((p.net, _sheet_mm(p.x), _sheet_mm(p.y)) for p in canvas.pins if p.ref not in parts and p.net))
+    wires = sorted((net, [_sheet_mm(a[0]), _sheet_mm(a[1])], [_sheet_mm(b[0]), _sheet_mm(b[1])])
+                   for a, b, net in connect(canvas)[0])
+    labels = sorted((lab.net, _sheet_mm(lab.x), _sheet_mm(lab.y), bool(lab.is_global)) for lab in canvas.labels)
+    width, height = PAPERS[paper]
+    frames = [{"key": f.key, "title": f.title, "x0": _sheet_mm(f.box[0]), "y0": _sheet_mm(f.box[1]),
+               "x1": _sheet_mm(f.box[2]), "y1": _sheet_mm(f.box[3])} for f in canvas.frames]
+    return {
+        "schema": SHEET_SCHEMA, "paper": {"name": paper, "width": width, "height": height}, "symbols": symbols,
+        "power": [{"net": net, "x": x, "y": y} for net, x, y in power],
+        "wires": [{"net": net, "a": a, "b": b} for net, a, b in wires],
+        "labels": [{"net": net, "x": x, "y": y, "global": g} for net, x, y, g in labels],
+        "frames": frames,
+    }
 
 
 def symbol_boxes(canvas: Canvas) -> list[dict]:

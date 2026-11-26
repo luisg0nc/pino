@@ -29,12 +29,17 @@ order. Logs go to stderr.
 {"id": 1, "op": "ping"}
 {"id": 2, "op": "build", "project": "/path/to/project", "options": {"timeout": 30, "render": false, "kicad": true, "cache": true}}
 {"id": 3, "op": "shutdown"}
+{"id": 4, "op": "diff", "project": "/path/to/project", "from": "0123456789ab", "to": "ba9876543210"}
 ```
 
 Replies are `{"id": 1, "ok": true, "pong": {"kernel": "0.1.0", "schema": "pino.build/1"}}`,
 `{"id": 2, "ok": true, "result": {...}}` and `{"id": 3, "ok": true}`. A line that is not JSON, or an unknown op,
 gets `{"id": <id or null>, "ok": false, "error": "..."}` and the loop goes on. End of input also stops it. Each build
 still runs board.py in a fresh child process.
+
+`diff` compares two build folders that are still kept and answers
+`{"id": 4, "ok": true, "changes": {"circuit": [...], "layout": [...]}}`, in the words a build's own `changes` uses.
+A folder that was pruned answers `build <hash> is no longer kept`.
 
 ## Libraries and kicad-cli
 
@@ -62,7 +67,9 @@ project.
   board.kicad_sch  board.kicad_pcb  board.kicad_pro  board.kicad_dru  sym-lib-table  fp-lib-table
   filled/                     a copy of the project, with the board's zones filled by kicad-cli
   erc.json  netlist.xml  drc.json
-  schematic.svg  svg/board-<layer>.svg  board.glb  render-top.png (with --render)
+  schematic.svg               the sheet without KiCad's drawing sheet (no border or title block)
+  sheet.json                  where each symbol, pin, wire, label and block frame is, in sheet mm
+  svg/board-<layer>.svg  board.glb  render-top.png (with --render)
   result.json
 ```
 
@@ -73,7 +80,8 @@ folders are kept.
 
 ## The result
 
-`schema/build-result-1.schema.json` describes `pino.build/1` exactly. A result has a verdict (`ok`, `errors` or
+`schema/build-result-1.schema.json` describes `pino.build/1` exactly, and `schema/sheet-1.schema.json` describes
+`sheet.json`. A result has a verdict (`ok`, `errors` or
 `failed`), a headline such as `On h4: 0 errors, 2 warnings, 18 unrouted`, counts, at most 200 findings (the rest
 counted in `truncated`), artifact paths relative to the project, timings per step, what changed since the previous
 build in words, the placement score and what still waits (`routing: not started`).
