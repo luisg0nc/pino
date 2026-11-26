@@ -6,7 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { statSync } from 'node:fs'
 import { join } from 'node:path'
 import { verdictWords, type BuildResult, type BuildState } from '../../shared/build'
-import { fabLine, type FabProfile } from '../../shared/fab'
+import { defaultFabNote, FAB_STILL_FETCHING, fabLine, fabUnknown, type FabProfile } from '../../shared/fab'
 import type { ProjectInfo } from '../../shared/project'
 import type { LookRequest, LookResult } from '../../shared/view'
 import type { Fab } from '../fab'
@@ -37,14 +37,19 @@ export interface ToolDeps {
   /** The project's marks: Claude reads them, adds its own and resolves what it has done. */
   marks: Pick<MarkStore, 'list' | 'add' | 'resolve'>
   /** The router in the background, and its trials. */
-  routing: Pick<Routing, 'available' | 'start' | 'cancel' | 'progress' | 'lastWords' | 'trial'>
+  routing: Pick<Routing, 'refusal' | 'start' | 'cancel' | 'progress' | 'lastWords' | 'trial'>
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
   /** Parts at JLC, and the release's state. */
-  fab: Pick<Fab, 'available' | 'parts' | 'state'>
+  fab: Pick<Fab, 'parts' | 'state' | 'defaultFab'>
   /** The limits of the fab the newest drawn board is built for. */
   fabProfile(project: ProjectInfo): Promise<FabProfile | null>
+  /** How long `project` waits for the default fab's limits; `FAB_WAIT_MS` where none is said. */
+  fabWaitMs?: number
 }
+
+/** `project` is called first, and an engine's first start under uv may take minutes: it is not waited for longer. */
+const FAB_WAIT_MS = 5_000
 
 /** Runs a tool on the open project, or says there is none. */
 export type OnProject = (run: (project: ProjectInfo) => Reply | Promise<Reply>) => Promise<Reply>
@@ -57,6 +62,24 @@ const isFile = (path: string): boolean => {
   } catch {
     return false
   }
+}
+
+/**
+ * The limits of the fab, for Claude: the one the drawn board is built for. With no board.py there is none yet, and the
+ * choices are being made: the default's are given, said to be the default's, or why they are not known.
+ */
+async function fabWords(deps: ToolDeps, project: ProjectInfo): Promise<string | null> {
+  const built = (await deps.fabProfile?.(project).catch(() => null)) ?? null
+  if (built) return fabLine(built)
+  if (isFile(join(project.dir, 'board.py'))) return null
+  const asked = deps.fab.defaultFab().then(
+    ({ profile, profiles }) => `${defaultFabNote(profile, profiles)}\n${fabLine(profile)}`,
+    (e: Error) => fabUnknown(e.message)
+  )
+  // What is asked goes on when it is not waited for: the next call joins it.
+  let timer: NodeJS.Timeout | undefined
+  const slow = new Promise<string>((done) => (timer = setTimeout(() => done(FAB_STILL_FETCHING), deps.fabWaitMs ?? FAB_WAIT_MS)))
+  return Promise.race([asked, slow]).finally(() => clearTimeout(timer))
 }
 
 export function registerTools(server: McpServer, deps: ToolDeps, projectId: string): void {
@@ -76,8 +99,8 @@ export function registerTools(server: McpServer, deps: ToolDeps, projectId: stri
       const latest = deps.state(project.id)?.latest
       const build = latest ? `The newest build: ${verdictWords(latest).on}: ${verdictWords(latest).rest}.` : 'Nothing has been built yet.'
       // The limits come before any choice: Claude offers nothing the fab cannot build.
-      const profile = (await deps.fabProfile?.(project).catch(() => null)) ?? null
-      return text([`Project ${project.name} in ${project.dir}. ${there('board.py')}. ${there('brief.md')}. ${build}`, profile && fabLine(profile)].filter(Boolean).join('\n'))
+      const limits = await fabWords(deps, project)
+      return text([`Project ${project.name} in ${project.dir}. ${there('board.py')}. ${there('brief.md')}. ${build}`, limits].filter(Boolean).join('\n'))
     })
   )
 

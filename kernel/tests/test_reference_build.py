@@ -94,3 +94,13 @@ def test_serve_builds_the_reference(ref):
                        capture_output=True, text=True, timeout=300)
     out = [json.loads(line) for line in p.stdout.splitlines()]
     assert [o["id"] for o in out] == [1, 2, 3] and out[1]["result"]["verdict"] == "ok" and p.returncode == 0
+
+
+def test_reference_labels_keep_off_pads_and_each_other(ref):
+    r = build(ref)
+    silk = [f.message for f in r.findings if f.source == "drc" and f.code in ("silk_overlap", "silk_over_copper")]
+    assert silk == []
+    # U1's own outline meets the board edge (it sits on it for its antenna); no label does
+    assert not [f for f in r.findings if f.code == "silk_edge_clearance" and "Reference" in f.message]
+    hidden = [f for f in r.findings if f.code == "label_hidden"]
+    assert len(hidden) <= 1 and (not hidden or hidden[0].severity == "info")

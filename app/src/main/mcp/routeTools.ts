@@ -4,7 +4,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { isRecord, type BuildResult, type Finding, type RouteProgress } from '../../shared/build'
 import type { ProjectInfo } from '../../shared/project'
-import { ROUTING_UNAVAILABLE } from '../routing'
 import { findingLine } from './readTools'
 import { refused, text, type Reply } from './reply'
 import { DESCRIPTIONS, keepInput, MOST_LINES, nudgeInput, routeInput, routeNetInput } from './schemas'
@@ -53,9 +52,12 @@ function trialAnswer(trial: unknown): Reply {
 }
 
 export function registerRouteTools(server: McpServer, deps: ToolDeps, onProject: OnProject): void {
-  /** Runs a tool where the engine routes; else says that it does not. */
+  /** Runs a tool where there is a board to route and an engine that routes; else says which is missing. */
   const onRouting = (run: (project: ProjectInfo) => Promise<Reply>) =>
-    onProject((project) => (deps.routing.available(project.id) ? run(project) : refused(ROUTING_UNAVAILABLE)))
+    onProject((project) => {
+      const why = deps.routing.refusal(project.id)
+      return why ? refused(why) : run(project)
+    })
 
   server.registerTool('route', { description: DESCRIPTIONS.route, inputSchema: routeInput, _meta: ALWAYS }, (input) =>
     onRouting(async (project) => {

@@ -76,6 +76,19 @@ test('Fab files… says what blocks a release', async () => {
   }
 })
 
+test('Fab files… before the first build has landed says there is no built board yet, in those words alone', async () => {
+  const { app, page } = await launch({ project: referenceProject(), env: { ...FABBED, FAKE_KERNEL_DELAY_MS: '8000' } })
+  try {
+    await pill(page).click()
+    await expect(dialog(page).locator('[data-tone="fail"]')).toHaveText('No built board yet: fab files are made from a build. Save board.py and wait for it to build.')
+    // Once the build lands, it is asked again.
+    await expect(dialog(page)).toContainText('Next: v1.0.0 (first release)', { timeout: 20_000 })
+    await expect(dialog(page).locator('[data-tone="fail"]')).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
 test('a release runs, shows its folder and pins its findings', async () => {
   const project = referenceProject()
   const { app, page } = await launch({ project, env: { ...FABBED, FAKE_KERNEL_RELEASE_MS: '150' } })

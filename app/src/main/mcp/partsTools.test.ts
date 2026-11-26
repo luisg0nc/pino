@@ -1,11 +1,10 @@
-import { writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { readJson, tempProject } from '../../test/fixtures'
 import { toolsOver } from '../../test/mcp'
 import { routedLoop } from '../../test/routing'
 import type { FabProfile } from '../../shared/fab'
-import { FAB_UNAVAILABLE } from '../../shared/fab'
 import { Fab } from '../fab'
 import type { ToolDeps } from './tools'
 
@@ -27,7 +26,7 @@ async function tools(env: Record<string, string> = {}, over: Partial<ToolDeps> =
   const loop = routedLoop(project, { FAKE_KERNEL_SERVE: '3', ...env })
   done.push(loop.dispose)
   await loop.built()
-  const fab = new Fab({ kernel: () => loop.kernel(), builds: loop.builds, engine: () => loop.builds.state(loop.info.id)!.engine, onState: () => {} })
+  const fab = new Fab({ kernel: () => loop.kernel(), running: loop.running, builds: loop.builds, engine: () => loop.builds.state(loop.info.id)!.engine, onState: () => {} })
   const mcp = await toolsOver({ project: () => loop.info, state: (id) => loop.builds.state(id), fab, ...over }, loop.info.id)
   return { ...mcp, loop, fab }
 }
@@ -69,9 +68,34 @@ describe('parts', () => {
     }
   })
 
-  it('says it is not there on an engine of protocol 2', async () => {
+  // A new project: Claude looks parts up before it writes board.py, so nothing has been built and no engine runs yet.
+  it('answers in a project with no board, and writes nothing in it', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const log = join(project.root, 'kernel-log.jsonl')
+    const t = await tools({ FAKE_KERNEL_LOG: log })
+    expect(t.loop.builds.state(t.loop.info.id)!.engine.state).toBe('starting')
+    // Several at once, as Claude asks them: one engine, pinged once.
+    const said = await Promise.all(['C25804', 'C51118', 'C25804'].map((lcsc) => t.call('parts', { lcsc })))
+    expect(said[0]).toContain('C25804 · basic')
+    expect(said[1]).toContain('C51118 · extended')
+    const ops = readFileSync(log, 'utf8').trim().split('\n').map((line) => (JSON.parse(line) as { op: string }).op)
+    expect(ops.filter((op) => op === 'ping')).toHaveLength(1)
+    expect(ops).not.toContain('build')
+    expect(existsSync(join(project.dir, '.pino'))).toBe(false)
+  })
+
+  it('says the engine is too old, on an engine of protocol 2', async () => {
     const t = await tools({ FAKE_KERNEL_SERVE: '2' })
-    expect(await t.call('parts', { lcsc: 'C25804' })).toBe(FAB_UNAVAILABLE)
+    expect(await t.call('parts', { lcsc: 'C25804' })).toBe("The engine is too old for parts and fab files: it speaks protocol 2, and they need 3. Update pino's engine (its kernel/ folder).")
+  })
+
+  it('says the engine did not start, and why', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const t = await tools({ FAKE_KERNEL_DIE: 'start' })
+    expect(await t.call('parts', { lcsc: 'C25804' })).toBe('The engine did not start: fake kernel died at start')
+    // The next lookup, right after, says the same and starts nothing.
+    expect(await t.call('parts', { lcsc: 'C25804' })).toBe('The engine did not start: fake kernel died at start')
+    expect(t.loop.started.size).toBe(1)
   })
 
   it('puts the fab limits in the project answer', async () => {
@@ -82,5 +106,47 @@ describe('parts', () => {
   it('leaves the project answer alone when no build names a fab', async () => {
     const t = await tools({}, { fabProfile: async () => null })
     expect(await t.call('project', {})).not.toContain('Fab:')
+  })
+
+  // The limits come before any choice about layers or copper, and those are made before there is a board.py.
+  it("gives the default fab's limits in a project with no board, and says that they are the default", async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const log = join(project.root, 'kernel-log.jsonl')
+    const t = await tools({ FAKE_KERNEL_LOG: log }, { fabProfile: async () => null })
+    const said = await t.call('project', {})
+    expect(said).toContain("No board.py yet, so these are the default fab's limits: what a board that names no fab gets. That is for 2 layers; with layers=4 it gets JLC standard 4-layer.")
+    expect(said).toContain('Fab: JLC standard 2-layer. Tracks and gaps 0.10 mm or more')
+    await t.call('project', {})
+    const ops = readFileSync(log, 'utf8').trim().split('\n').map((line) => (JSON.parse(line) as { op: string }).op)
+    expect(ops.filter((op) => op === 'fab_profiles')).toHaveLength(1)
+    expect(ops).not.toContain('build')
+    expect(existsSync(join(project.dir, '.pino'))).toBe(false)
+  })
+
+  // A first start under uv may take minutes: `project` is what Claude calls first, and it does not wait for that.
+  it('answers without the limits while the engine is slow to give them, and gives them once it has', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    let give: () => void = () => {}
+    const given = new Promise<void>((done) => (give = done))
+    const slow = { parts: () => Promise.reject(new Error('not asked')), state: () => null as never, defaultFab: () => given.then(() => ({ profile: TWO_LAYER, profiles: [TWO_LAYER] })) }
+    const t = await tools({}, { fabProfile: async () => null, fab: slow, fabWaitMs: 20 })
+    const first = await t.call('project', {})
+    expect(first).toContain('board.py: absent')
+    expect(first).toContain("The fab's limits are still being fetched, as the engine is slow to answer: call project again in a moment, before you offer any choice about layers, copper, holes or tracks.")
+    expect(first).not.toContain('Fab: ')
+    give()
+    expect(await t.call('project', {})).toContain('Fab: JLC standard 2-layer.')
+  })
+
+  it("says why the default limits are not known, and still answers", async () => {
+    rmSync(join(project.dir, 'board.py'))
+    for (const [env, why] of [[{ FAKE_KERNEL_DIE: 'start' }, 'The engine did not start: fake kernel died at start'], [{ FAKE_KERNEL_SERVE: '2' }, 'The engine is too old for parts and fab files']] as const) {
+      const t = await tools(env, { fabProfile: async () => null })
+      const answer = await t.result('project', {})
+      expect(answer.isError).toBeFalsy()
+      const said = answer.content.map((c) => c.text).join('\n')
+      expect(said).toContain('board.py: absent')
+      expect(said).toContain(`The fab's limits are not known: ${why}`)
+    }
   })
 })

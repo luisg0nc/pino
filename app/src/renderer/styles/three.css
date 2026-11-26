@@ -50,6 +50,22 @@
   color: var(--accent);
 }
 
+/* Where 3D is not the board the Board view draws: one line under the switches. */
+.three-copper {
+  position: absolute;
+  z-index: 5;
+  top: 90px;
+  left: 14px;
+  max-width: min(60ch, calc(100% - 28px));
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
 .three-note {
   position: absolute;
   bottom: 52px;

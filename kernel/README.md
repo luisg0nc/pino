@@ -88,13 +88,18 @@ has pads 0.5 mm apart or closer, else 0.1 mm.
 After the chain, pino takes only the copper back into its own board, gives it UUIDs hashed from its geometry,
 refills the zones, removes stubs, duplicates and dead ends, and runs DRC with schematic parity. Then come its own
 checks: floating copper, stubs, loops, pours that reach one pad, tracks thinner than their class, and pairs off
-their gap or not coupled. The route lands in `.pino/routes/<key>/` (`board.kicad_pcb`, `filled/`, `copper.json`,
-`drc.json`, `plan.json`, `key.json`, `route.json`, `log.txt`). The key is a hash of what the copper depends on:
-nets by pad, placement, footprints, outline, zones, kept copper, rules, routing instructions, and the router and
-kernel versions. A value change keeps the key; moving a part does not. The fast build reports routing as `none`,
+their gap or not coupled. Last it exports `board.glb` from the routed, zone-filled board, as a build exports its
+own (a build's model has no routed tracks, so the app's 3D view takes this one while the copper is a route's); if
+that export fails, the route stands, with a warning. The route lands in `.pino/routes/<key>/` (`board.kicad_pcb`,
+`filled/`, `board.glb`, `copper.json`, `drc.json`, `plan.json`, `key.json`, `route.json`, `log.txt`). The key is a
+hash of what the copper depends on: nets by pad, placement, footprints, outline, zones, kept copper, rules, routing
+instructions, and the router and kernel versions. The reference labels are in it too: the routed board is the
+build's board with the copper on it, and its DRC checks them. A value change keeps the key; moving a part or a label
+does not. The fast build reports routing as `none`,
 `running`, `current` or `stale` (with the reasons), and stale copper is never reused. One route runs per project.
-Routes are cached by key, can be cancelled (SIGTERM, or `route_cancel` in serve) and stop after 300 s per step and
-900 s in all.
+Routes are cached by key (a kept one with no `board.glb` gets it exported from its kept board, without routing
+again), can be cancelled (SIGTERM, or
+`route_cancel` in serve) and stop after 300 s per step and 900 s in all.
 
 Claude finishes a route with three trial tools. Each works in `.pino/trials/<n>/` and returns `board.py` lines; pino
 never edits `board.py` itself.
@@ -192,6 +197,24 @@ the preview before you pay.
 `diff` compares two build folders that are still kept and answers
 `{"id": 4, "ok": true, "changes": {"circuit": [...], "layout": [...]}}`, in the words a build's own `changes` uses.
 A folder that was pruned answers `build <hash> is no longer kept`.
+
+## Reference labels
+
+After placement, the board writer moves each part's reference label (its Reference text) to the first clear spot
+beside the part: above, below, left, right (centred, then flush with either end of that side), then the same four
+turned 90 degrees. A spot is clear when the text keeps the fab's silk to pad distance from every pad, stays off every
+courtyard (a label under a part is not seen once it is assembled), off every other label and footprint silk line, and
+the fab's copper to edge distance inside the outline. Tracks and zones do not count, since silk over copper is fine
+for the fab. When nothing fits, the text gets smaller, never below the fab's minimum text height and line width; when
+still nothing fits, the label is hidden and one `label_hidden` info finding names those parts. Bottom parts get their
+labels on B.SilkS, mirrored, by the same rules. The text's size is worked out from KiCad's stroke font
+(`pcb/labels.py`). The route starts from the build's board, so it keeps them, and a label that moves makes the
+route stale (`labels moved`).
+
+`b.label(part, ...)` in board.py sets one label by hand and wins: `side="left"` (top, bottom, left or right, centred),
+`at=(dx, dy)` (mm from the part's origin, board frame), `rot=90` (degrees; alone it only turns the automatic search) or
+`hide=True`. A hand label is not checked; DRC reports one that lands on a pad or another label. A `b.label()` on a
+part whose footprint draws no reference on the silkscreen places nothing and gives a `label_not_drawn` warning.
 
 ## Design rules
 

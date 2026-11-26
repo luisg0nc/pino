@@ -9,8 +9,8 @@
 //   shutdown
 // With FAKE_KERNEL_SERVE=2 it also routes (the engine's routing stage):
 //   route               streams a step, one `net` event per net of the ratsnest and `step_done`, writes
-//                       .pino/routes/<key>/ (the build's filled board plus one F.Cu segment per ratsnest edge) and
-//                       answers a pino.route/1 result; builds answer `routing`, current until a part moves
+//                       .pino/routes/<key>/ (the build's filled board plus one F.Cu segment per ratsnest edge, and a
+//                       board.glb: the build's with one board_via mesh more) and answers a pino.route/1 result; builds answer `routing`, current until a part moves
 //   route_status, route_cancel, route_net, nudge, keep   canned, in the engine's shapes
 // With FAKE_KERNEL_SERVE=3 it also does parts and fab files (the fab stage); `cancel` is `route_cancel`:
 //   fab_profiles        the profiles in fixtures/fab-profiles.json (the engine's own, to_json)
@@ -30,6 +30,7 @@
 //   FAKE_KERNEL_MOVE=<ref>:<dx>,<dy>  once board.py is no longer what the first build read, that footprint stands
 //                                dx, dy board millimetres (y up) from where the fixture has it
 //   FAKE_KERNEL_ROUTE_MS=<ms>    between two `net` events of a route
+//   FAKE_KERNEL_NO_ROUTE_GLB=1   a route writes and lists no board.glb, as one made before routes had a model
 //   FAKE_KERNEL_LOG=<file>       every request line it reads is added to the file
 //   FAKE_KERNEL_NO_KICAD=1       `version` answers that kicad-cli is not there
 
@@ -228,6 +229,25 @@ function copperFor(placement) {
     .join('')
 }
 
+/** The fixture's model with one mesh more, a copy of its pads under the name KiCad gives vias: the routed one. */
+function routedGlb() {
+  const bytes = readFileSync(join(FIXTURE, 'board.glb'))
+  const length = bytes.readUInt32LE(12)
+  const gltf = JSON.parse(bytes.subarray(20, 20 + length).toString('utf8'))
+  const pads = gltf.meshes.findIndex((m) => m.name === 'board_pad')
+  const node = gltf.nodes.findIndex((n) => n.mesh === pads)
+  const parent = gltf.nodes.find((n) => n.children?.includes(node))
+  gltf.meshes.push({ ...gltf.meshes[pads], name: 'board_via' })
+  gltf.nodes.push({ ...gltf.nodes[node], name: 'fake_vias', mesh: gltf.meshes.length - 1 })
+  parent.children.push(gltf.nodes.length - 1)
+  const text = JSON.stringify(gltf)
+  const json = Buffer.from(text + ' '.repeat((4 - (Buffer.byteLength(text) % 4)) % 4))
+  const head = Buffer.from(bytes.subarray(0, 20))
+  head.writeUInt32LE(bytes.length - length + json.length, 8)
+  head.writeUInt32LE(json.length, 12)
+  return Buffer.concat([head, json, bytes.subarray(20 + length)])
+}
+
 async function route(id, project) {
   const job = running.get(id) // there since its line was read, so that a cancel sent right after it finds it
   const started = Date.now()
@@ -259,6 +279,10 @@ async function route(id, project) {
     write(join(folder, name), `${board.slice(0, end)}${copperFor(placement)})\n`)
   }
   const result = routeResult('done', number, key, last.hash, nets.length, seconds())
+  if (!env.FAKE_KERNEL_NO_ROUTE_GLB) {
+    write(join(folder, 'board.glb'), routedGlb())
+    result.artifacts.glb = `${FOLDER}/routes/${key}/board.glb`
+  }
   write(join(folder, 'route.json'), `${JSON.stringify(result, null, 1)}\n`)
   const fresh = memoryOf(project)
   fresh.routes = number

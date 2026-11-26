@@ -77,8 +77,8 @@ export interface PinoBridge {
     result(projectId: string, hash: string): Promise<BuildResult>
     /** A file of the build with this hash: text, or the 3D model's bytes. Only what that build's result lists. */
     file(projectId: string, hash: string, name: ArtifactName): Promise<string | Uint8Array>
-    /** A file of the route with this key, as text. */
-    routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>
+    /** A file of the route with this key: text, and the model's bytes. */
+    routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route' | 'glb'): Promise<string | Uint8Array>
     onState(cb: (s: BuildState) => void): () => void
     /** Whether Claude Code, KiCad and the engine are here; asked once a run. */
     engineInfo(): Promise<EngineInfo>

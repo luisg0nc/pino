@@ -22,7 +22,8 @@ beforeAll(async () => {
   mkdirSync(dir)
   project = { id: 'p0123456789ab', dir, name: 'blinky board' }
   http = await startHttp()
-  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined } as unknown as ToolDeps)
+  const fab = { defaultFab: () => Promise.reject(new Error('there is no engine in this test')) }
+  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined, fab } as unknown as ToolDeps)
   token = http.grant([`/mcp/${project.id}`, '/mcp/pffffffffffff'])
 })
 
@@ -86,7 +87,7 @@ describe("pino's MCP server", () => {
   it("calls project and gets the project's name and folder", async () => {
     const client = await connect()
     const bare = textOf(await client.callTool({ name: 'project', arguments: {} }))
-    expect(bare).toBe(`Project blinky board in ${project.dir}. board.py: absent. brief.md: absent. Nothing has been built yet.`)
+    expect(bare).toBe(`Project blinky board in ${project.dir}. board.py: absent. brief.md: absent. Nothing has been built yet.\nThe fab's limits are not known: there is no engine in this test`)
     writeFileSync(join(project.dir, 'board.py'), '')
     writeFileSync(join(project.dir, 'brief.md'), '')
     expect(textOf(await client.callTool({ name: 'project', arguments: {} }))).toContain('board.py: present. brief.md: present.')
