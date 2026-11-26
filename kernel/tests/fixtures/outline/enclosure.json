@@ -1,0 +1,14 @@
+{
+  "name": "test box",
+  "notes": ["a 56 x 44 board with one corner notch and four M3 mounts"],
+  "origin": "centre of the mounting pattern, x along the long axis, mm",
+  "board": {"width": 56, "height": 44, "corner_radius": 2,
+            "notches": [{"corner": "+x+y", "width": 8, "height": 6}]},
+  "mounts": [{"x": -24.5, "y": 18.5, "hole": 3.2, "boss": 5.0, "name": "H1"},
+             {"x": 24.5, "y": -18.5, "hole": 3.2, "boss": 5.0, "name": "H2"},
+             {"x": -24.5, "y": -18.5, "hole": 3.2, "boss": 5.0, "head": 6.0, "name": "H3"},
+             {"x": 18.0, "y": 14.0, "hole": 3.2, "name": "H4"}],
+  "keepouts": [{"x": 0, "y": 10, "d": 4, "what": "lid screw boss"}],
+  "height_limit": {"top": 12.0, "bottom": 3.0},
+  "drawings": [{"rect": [60, 48], "label": "plate"}]
+}

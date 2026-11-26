@@ -1,0 +1,500 @@
+{
+ "$schema": "https://schemas.kicad.org/drc.v1.json",
+ "coordinate_units": "mm",
+ "kicad_version": "10.0.6",
+ "source": "board.kicad_pcb",
+ "violations": [
+  {
+   "description": "Clearance violation (netclass 'Default' clearance 0,2000 mm; actual 0,1000 mm)",
+   "severity": "error",
+   "type": "clearance",
+   "items": [
+    {
+     "description": "Pad 1 [VBUS] of R1 on F.Cu",
+     "pos": {
+      "x": 95.0,
+      "y": 98.0
+     },
+     "uuid": "aaaaaaaa-0000-0000-0000-000000000001"
+    },
+    {
+     "description": "Pad 2 [GND] of R2 on F.Cu",
+     "pos": {
+      "x": 95.2,
+      "y": 98.0
+     },
+     "uuid": "b"
+    }
+   ]
+  },
+  {
+   "description": "Courtyards overlap",
+   "severity": "error",
+   "type": "courtyards_overlap",
+   "items": [
+    {
+     "description": "Footprint R1",
+     "pos": {
+      "x": 95,
+      "y": 98
+     },
+     "uuid": "aaaaaaaa-0000-0000-0000-000000000001"
+    }
+   ]
+  },
+  {
+   "description": "Silkscreen clipped by solder mask",
+   "severity": "warning",
+   "type": "silk_over_copper",
+   "items": [
+    {
+     "description": "Reference field of R1",
+     "pos": {
+      "x": 96,
+      "y": 97
+     },
+     "uuid": "aaaaaaaa-0000-0000-0000-000000000001"
+    }
+   ]
+  },
+  {
+   "description": "Ignored",
+   "severity": "ignore",
+   "type": "silk_overlap",
+   "items": []
+  }
+ ],
+ "unconnected_items": [
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N0] of R0 on F.Cu",
+     "pos": {
+      "x": 100,
+      "y": 100
+     },
+     "uuid": "u0"
+    },
+    {
+     "description": "Pad 2 [N0] of R1 on F.Cu",
+     "pos": {
+      "x": 101,
+      "y": 100
+     },
+     "uuid": "v0"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N1] of R1 on F.Cu",
+     "pos": {
+      "x": 101,
+      "y": 100
+     },
+     "uuid": "u1"
+    },
+    {
+     "description": "Pad 2 [N1] of R2 on F.Cu",
+     "pos": {
+      "x": 102,
+      "y": 100
+     },
+     "uuid": "v1"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N2] of R2 on F.Cu",
+     "pos": {
+      "x": 102,
+      "y": 100
+     },
+     "uuid": "u2"
+    },
+    {
+     "description": "Pad 2 [N2] of R3 on F.Cu",
+     "pos": {
+      "x": 103,
+      "y": 100
+     },
+     "uuid": "v2"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N3] of R3 on F.Cu",
+     "pos": {
+      "x": 103,
+      "y": 100
+     },
+     "uuid": "u3"
+    },
+    {
+     "description": "Pad 2 [N3] of R4 on F.Cu",
+     "pos": {
+      "x": 104,
+      "y": 100
+     },
+     "uuid": "v3"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N4] of R4 on F.Cu",
+     "pos": {
+      "x": 104,
+      "y": 100
+     },
+     "uuid": "u4"
+    },
+    {
+     "description": "Pad 2 [N4] of R5 on F.Cu",
+     "pos": {
+      "x": 105,
+      "y": 100
+     },
+     "uuid": "v4"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N5] of R5 on F.Cu",
+     "pos": {
+      "x": 105,
+      "y": 100
+     },
+     "uuid": "u5"
+    },
+    {
+     "description": "Pad 2 [N5] of R6 on F.Cu",
+     "pos": {
+      "x": 106,
+      "y": 100
+     },
+     "uuid": "v5"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N6] of R6 on F.Cu",
+     "pos": {
+      "x": 106,
+      "y": 100
+     },
+     "uuid": "u6"
+    },
+    {
+     "description": "Pad 2 [N6] of R7 on F.Cu",
+     "pos": {
+      "x": 107,
+      "y": 100
+     },
+     "uuid": "v6"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N7] of R7 on F.Cu",
+     "pos": {
+      "x": 107,
+      "y": 100
+     },
+     "uuid": "u7"
+    },
+    {
+     "description": "Pad 2 [N7] of R8 on F.Cu",
+     "pos": {
+      "x": 108,
+      "y": 100
+     },
+     "uuid": "v7"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N8] of R8 on F.Cu",
+     "pos": {
+      "x": 108,
+      "y": 100
+     },
+     "uuid": "u8"
+    },
+    {
+     "description": "Pad 2 [N8] of R9 on F.Cu",
+     "pos": {
+      "x": 109,
+      "y": 100
+     },
+     "uuid": "v8"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N9] of R9 on F.Cu",
+     "pos": {
+      "x": 109,
+      "y": 100
+     },
+     "uuid": "u9"
+    },
+    {
+     "description": "Pad 2 [N9] of R10 on F.Cu",
+     "pos": {
+      "x": 110,
+      "y": 100
+     },
+     "uuid": "v9"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N10] of R10 on F.Cu",
+     "pos": {
+      "x": 110,
+      "y": 100
+     },
+     "uuid": "u10"
+    },
+    {
+     "description": "Pad 2 [N10] of R11 on F.Cu",
+     "pos": {
+      "x": 111,
+      "y": 100
+     },
+     "uuid": "v10"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N11] of R11 on F.Cu",
+     "pos": {
+      "x": 111,
+      "y": 100
+     },
+     "uuid": "u11"
+    },
+    {
+     "description": "Pad 2 [N11] of R12 on F.Cu",
+     "pos": {
+      "x": 112,
+      "y": 100
+     },
+     "uuid": "v11"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N12] of R12 on F.Cu",
+     "pos": {
+      "x": 112,
+      "y": 100
+     },
+     "uuid": "u12"
+    },
+    {
+     "description": "Pad 2 [N12] of R13 on F.Cu",
+     "pos": {
+      "x": 113,
+      "y": 100
+     },
+     "uuid": "v12"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N13] of R13 on F.Cu",
+     "pos": {
+      "x": 113,
+      "y": 100
+     },
+     "uuid": "u13"
+    },
+    {
+     "description": "Pad 2 [N13] of R14 on F.Cu",
+     "pos": {
+      "x": 114,
+      "y": 100
+     },
+     "uuid": "v13"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N14] of R14 on F.Cu",
+     "pos": {
+      "x": 114,
+      "y": 100
+     },
+     "uuid": "u14"
+    },
+    {
+     "description": "Pad 2 [N14] of R15 on F.Cu",
+     "pos": {
+      "x": 115,
+      "y": 100
+     },
+     "uuid": "v14"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N15] of R15 on F.Cu",
+     "pos": {
+      "x": 115,
+      "y": 100
+     },
+     "uuid": "u15"
+    },
+    {
+     "description": "Pad 2 [N15] of R16 on F.Cu",
+     "pos": {
+      "x": 116,
+      "y": 100
+     },
+     "uuid": "v15"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N16] of R16 on F.Cu",
+     "pos": {
+      "x": 116,
+      "y": 100
+     },
+     "uuid": "u16"
+    },
+    {
+     "description": "Pad 2 [N16] of R17 on F.Cu",
+     "pos": {
+      "x": 117,
+      "y": 100
+     },
+     "uuid": "v16"
+    }
+   ]
+  },
+  {
+   "description": "Missing connection between items",
+   "severity": "error",
+   "type": "unconnected_items",
+   "items": [
+    {
+     "description": "Pad 1 [N17] of R17 on F.Cu",
+     "pos": {
+      "x": 117,
+      "y": 100
+     },
+     "uuid": "u17"
+    },
+    {
+     "description": "Pad 2 [N17] of R18 on F.Cu",
+     "pos": {
+      "x": 118,
+      "y": 100
+     },
+     "uuid": "v17"
+    }
+   ]
+  }
+ ],
+ "schematic_parity": [
+  {
+   "description": "Missing footprint U9 (Package_SO:SOIC-8)",
+   "severity": "error",
+   "type": "missing_footprint",
+   "items": [
+    {
+     "description": "Symbol U9",
+     "pos": {
+      "x": 0,
+      "y": 0
+     },
+     "uuid": "c"
+    }
+   ]
+  }
+ ]
+}
