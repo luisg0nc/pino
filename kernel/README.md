@@ -95,7 +95,8 @@ that export fails, the route stands, with a warning. The route lands in `.pino/r
 hash of what the copper depends on: nets by pad, placement, footprints, outline, zones, kept copper, rules, routing instructions, and the router and
 kernel versions. A value change keeps the key; moving a part does not. The fast build reports routing as `none`,
 `running`, `current` or `stale` (with the reasons), and stale copper is never reused. One route runs per project.
-Routes are cached by key (a kept one with no `board.glb` is routed again), can be cancelled (SIGTERM, or
+Routes are cached by key (a kept one with no `board.glb` gets it exported from its kept board, without routing
+again), can be cancelled (SIGTERM, or
 `route_cancel` in serve) and stop after 300 s per step and 900 s in all.
 
 Claude finishes a route with three trial tools. Each works in `.pino/trials/<n>/` and returns `board.py` lines; pino

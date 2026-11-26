@@ -37,7 +37,24 @@ describe('what the 3D view says of its model', () => {
     expect(modelNote(route, KEY, routing('running'))).toBe(said)
   })
 
+  const missing = 'This route has no 3D model, so 3D lacks its tracks.'
+
   it('says why the routed tracks are missing when the route has no model, and what to do', () => {
-    expect(modelNote(build, KEY, routing('current'))).toBe('This route has no 3D model, so 3D lacks its tracks. Ask Claude to route again.')
+    expect(modelNote(build, KEY, routing('current'))).toBe(`${missing} Ask Claude to route again.`)
+    expect(modelNote(build, KEY, routing('stale'), [])).toBe(`${missing} Ask Claude to route again.`)
+  })
+
+  it('asks for no route while one runs, whether the build or the window is who says so', () => {
+    expect(modelNote(build, KEY, routing('running'))).toBe(missing)
+    // A route started on this build: its `routing` says so only after the next build, the window's progress at once.
+    expect(modelNote(build, KEY, routing('current'), [], true)).toBe(missing)
+    expect(modelNote(build, KEY, routing('stale'), [], true)).toBe(missing)
+  })
+
+  it('does not send the person to route again when KiCad could not export the model', () => {
+    const failed = { source: 'kernel', code: 'kicad_cli_failed', severity: 'warning' as const, message: 'kicad-cli glb failed: exit code 1' }
+    expect(modelNote(build, KEY, routing('current'), [failed])).toBe(`${missing} KiCad could not export it; the checks say why.`)
+    const other = { ...failed, message: 'kicad-cli svg failed: exit code 1' }
+    expect(modelNote(build, KEY, routing('current'), [other])).toBe(`${missing} Ask Claude to route again.`)
   })
 })
