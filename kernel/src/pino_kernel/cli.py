@@ -10,12 +10,16 @@
                                     [--rip P ...] [--events]
     pino-kernel nudge <project> --part REF [--by=dx,dy] [--rot DEG] [--back | --front] [--route] [--events]
     pino-kernel keep <project> --net N
+    pino-kernel parts search <text> [--package P] [--basic] [--preferred] [--limit N] [--events]
+    pino-kernel parts get <LCSC> | fetch <LCSC>... | refresh <project> [--events]
 
 `build` prints one build result (schema pino.build/1) on stdout and exits 0 for ok, 1 for errors,
 2 for failed. `serve` reads one JSON request per stdin line and answers one JSON object per stdout
 line (see serve.py). `route` prints one route result (schema pino.route/1), or with --events one
 progress event per line and last {"event": "done", "result": ...}; it exits 0 ok, 1 errors, 2 failed,
-timed out or busy, 130 cancelled. Logs go to stderr; nothing else is written to stdout.
+timed out or busy, 130 cancelled. `parts` prints one parts result (schema pino.parts/1), or with --events
+{"event": "done", "result": ...}; it exits 0, or 2 when jlcsearch could not answer and nothing was cached.
+Logs go to stderr; nothing else is written to stdout.
 """
 
 from __future__ import annotations
@@ -152,6 +156,39 @@ def _route(args) -> int:
     return ROUTE_EXIT.get(result.verdict, 2)
 
 
+def _parts_arguments(parser) -> None:
+    actions = parser.add_subparsers(dest="action", required=True)
+    search = actions.add_parser("search", help="search jlcsearch")
+    search.add_argument("text")
+    search.add_argument("--package", default=None)
+    search.add_argument("--basic", action="store_true", help="basic parts only")
+    search.add_argument("--preferred", action="store_true", help="preferred parts only")
+    search.add_argument("--limit", type=int, default=8)
+    get = actions.add_parser("get", help="one part by its LCSC number")
+    get.add_argument("lcsc", nargs=1)
+    fetch = actions.add_parser("fetch", help="several parts by their LCSC numbers")
+    fetch.add_argument("lcsc", nargs="+")
+    refresh = actions.add_parser("refresh", help="ask again about every part of a project's latest build")
+    refresh.add_argument("project", type=Path)
+    for a in (search, get, fetch, refresh):
+        a.add_argument("--events", action="store_true")
+
+
+def _parts(args) -> int:
+    from .parts.ops import run_parts
+
+    result, code = run_parts(args.action, q=getattr(args, "text", None), lcsc=getattr(args, "lcsc", None),
+                             package=getattr(args, "package", None), basic=getattr(args, "basic", False),
+                             preferred=getattr(args, "preferred", False), limit=getattr(args, "limit", 8),
+                             project=getattr(args, "project", None))
+    if args.events:
+        sys.stdout.write(json.dumps({"event": "done", "result": result.to_dict()}, ensure_ascii=False) + "\n")
+    else:
+        sys.stdout.write(result.to_json())
+    sys.stdout.flush()
+    return code
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pino-kernel", description="pino's engine: board.py to a KiCad project")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -196,7 +233,10 @@ def main(argv: list[str] | None = None) -> int:
     kp = sub.add_parser("keep", help="print keep_route lines for a net's routed copper")
     kp.add_argument("project", type=Path)
     kp.add_argument("--net", required=True)
+    _parts_arguments(sub.add_parser("parts", help="look up JLC parts: stock, price, basic or extended"))
     args = parser.parse_args(argv)
+    if args.command == "parts":
+        return _parts(args)
     if args.command in ("route-net", "nudge", "keep"):
         if not args.project.is_dir():
             print(f"pino-kernel: no project folder at {args.project}", file=sys.stderr)
