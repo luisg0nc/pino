@@ -14,6 +14,11 @@ test('starts with its window hidden', async () => {
   expect(await run.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.isVisible()))).toEqual([false])
 })
 
+test("the window's icon is a picture Electron can read", async () => {
+  const size = await run.app.evaluate(({ app, nativeImage }) => nativeImage.createFromPath(`${app.getAppPath()}/../scripts/pino.png`).getSize())
+  expect(size).toEqual({ width: 512, height: 512 })
+})
+
 test('keeps its profile in a temp folder, not under the person\'s config', async () => {
   expect(await run.app.evaluate(({ app }) => app.getPath('userData'))).toMatch(/\/pino-test-\d+-/)
 })

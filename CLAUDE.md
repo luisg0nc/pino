@@ -86,4 +86,4 @@ read one by hand before work its globs miss. Paths in a rule are written from `a
 - The agent: `agent-launch-and-tokens`, `sessions`, `chat-transcript`. Tests: `e2e-hidden-window` (every launch of Electron),
   `e2e-stand-in-agent` (the stand-in, the recordings).
 - The window: `first-screen`, `styles-themes`, `chat-pane`.
-- Files: `workspace-writes` (what pino writes in a project).
+- Files and shipping: `workspace-writes` (what pino writes in a project), `launcher-and-packaging`.

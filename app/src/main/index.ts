@@ -1,7 +1,7 @@
-import { rmSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme } from 'electron'
 import { APP, envName, toolName } from '../shared/app'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
@@ -182,12 +182,26 @@ const testHooks = {
   configPath: (): string | null => configPath
 }
 
+/**
+ * The window's icon, where the desktop takes it from the window and not from the desktop entry (X11): the icon beside
+ * the launcher, when it is there. Electron reads no SVG, so it is `scripts/pino.svg` drawn at 512 px
+ * (`rsvg-convert -w 512 -h 512`); the desktop entry names the drawing itself.
+ */
+function windowIcon(): NativeImage | undefined {
+  const file = resolve(app.getAppPath(), '..', 'scripts', `${APP.name}.png`)
+  if (!existsSync(file)) return undefined
+  const icon = nativeImage.createFromPath(file)
+  return icon.isEmpty() ? undefined : icon
+}
+
 function createWindow(): BrowserWindow {
+  const icon = windowIcon()
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
     show: false,
     title: APP.name,
+    ...(icon ? { icon } : {}),
     // The window's own background, painted before the renderer's first frame; no native frame (`frame.ts`).
     backgroundColor: nativeTheme.shouldUseDarkColors ? SURFACE.dark : SURFACE.light,
     ...frameOptions(nativeTheme.shouldUseDarkColors),

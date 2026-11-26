@@ -147,6 +147,10 @@
     { "pino": "app/src/renderer/ui/chat/StartChat.tsx", "torno": "app/src/renderer/ui/chat/StartChat.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "New session and Resume with the last conversation; no box" },
     { "pino": "app/src/renderer/ui/QuestionCard.tsx", "torno": "app/src/renderer/ui/QuestionCard.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the question about a folder's own Claude Code settings" },
     { "pino": "app/e2e/helpers.ts", "torno": "app/e2e/helpers.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "fromMore, newSession, the model menu and moreItems only" },
-    { "pino": ".claude/rules/chat-pane.md", "torno": ".claude/rules/chat-pane.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's dock and chat" }
+    { "pino": ".claude/rules/chat-pane.md", "torno": ".claude/rules/chat-pane.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's dock and chat" },
+    { "pino": "scripts/pino", "torno": "scripts/torno", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "app_name, PINO_ variables, a folder after --, no macOS, no uv, no viewer" },
+    { "pino": "scripts/pino.desktop.in", "torno": "scripts/torno.desktop.in", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's names and categories" },
+    { "pino": "app/src/launcher.test.ts", "torno": "app/src/launcher.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's names; no macOS skips, no icon-drawing or logo cases; a build-config case; folder, name and icon cases" },
+    { "pino": ".claude/rules/launcher-and-packaging.md", "torno": ".claude/rules/launcher-and-packaging.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's launcher, Linux only, no packaging" }
   ]
 }

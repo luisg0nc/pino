@@ -1007,6 +1007,12 @@ git add -A && git commit -m "Run a Claude Code chat in the session dock, end to 
 
 ### Task 15: Launcher and desktop entry
 
+> **Note from the build:** Electron cannot decode SVG (`nativeImage` gives an empty image), so the window's icon is `scripts/pino.png`, the placeholder drawn at 512 px with `rsvg-convert`. The desktop entry names the SVG. Tests hold the PNG's size and that Electron reads it.
+>
+> **Note from the build:** `--` ends the launcher's options, for a folder that begins with a dash.
+>
+> **Note from the build:** The launcher test keeps the install, uninstall, root and replace cases too.
+
 **Files:**
 - Copy adapted:
   - `scripts/pino` (from `scripts/torno`). Set `app_name=pino` once near the top, and use it for messages, the log folder and the entry name. The variables are `PINO_OZONE`, `PINO_NOTIFY`, `PINO_PROJECT` (the one argument, a folder) and `PINO_TEST`. Drop `darwin` and every macOS branch. The required tools are `node` and `pnpm` (no `uv` until the kernel). The source hash covers `app/src app/package.json app/electron.vite.config.ts app/tsconfig.json pnpm-lock.yaml`, without `app/scripts` and without `out/viewer/viewer.js`. Usage words say folder or project, not workspace.
@@ -1020,7 +1026,7 @@ git add -A && git commit -m "Run a Claude Code chat in the session dock, end to 
 - Consumes: the built app, `PINO_PROJECT` (Task 8).
 - Produces: `scripts/pino [folder]`, `--print-command`, `--print-desktop`, `--install-desktop`, `--uninstall-desktop`.
 
-- [ ] **Step 1: Copy and adapt the test, and add**
+- [x] **Step 1: Copy and adapt the test, and add**
 
 ```ts
 it('names the app as shared/app.ts does', () => { expect(readFileSync(script, 'utf8')).toMatch(new RegExp(`^app_name=${APP.name}$`, 'm')) })
@@ -1030,21 +1036,21 @@ it('passes a folder with spaces, unicode or a leading dash to the app as PINO_PR
 it('has no macOS branch', () => { expect(readFileSync(script, 'utf8')).not.toMatch(/Darwin|darwin|macOS/) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/launcher.test.ts`
 Expected: FAIL, the script is missing.
 
-- [ ] **Step 3: Copy and adapt the script, entry and rule; draw the placeholder icon**
+- [x] **Step 3: Copy and adapt the script, entry and rule; draw the placeholder icon**
 
 `run()` keeps torno's temp `HOME` and `XDG_DATA_HOME`. No test runs the launcher against the person's home or starts the real app.
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && sh scripts/pino --print-command /tmp`
 Expected: PASS; the printed command starts with `PINO_PROJECT=/tmp` and nothing is started.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's launcher as scripts/pino, Linux only, with a placeholder icon"
