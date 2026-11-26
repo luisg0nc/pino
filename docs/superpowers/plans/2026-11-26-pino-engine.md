@@ -439,7 +439,7 @@ git commit -m "kernel: circuit model JSON, placement, findings and fab profiles"
   - `pino.__init__` exports `Board, Block, Part, PinSet, CircuitError`.
   - `tests/helpers.py`: `small_board() -> pino.Board` (fixture libs: CONN_VBUS J1 to LDO3 U1 to IC6 U2, caps, an LED with its resistor; validated and complete) used by later tasks.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_pin_name_gives_every_pad(fixture_libs):
@@ -483,12 +483,12 @@ def test_to_circuit_is_deterministic(fixture_libs):
     assert small_board().to_circuit().to_json() == small_board().to_circuit().to_json()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_pino_parts.py -v`
 Expected: FAIL with `ImportError: cannot import name 'Board' from 'pino'`
 
-- [ ] **Step 3: Write `pino/board.py`**
+- [x] **Step 3: Write `pino/board.py`**
 
 - Keep the spike's rules: role as method name; every pin on a net or no-connect; stacked pins on different nets are an error; `external=True` is explicit; no automatic PWR_FLAG.
 - Line capture: each public call records the first stack frame whose file is outside the `pino` package (`sys._getframe` walk); stored as `line` on specs and on `Problem`. `file` is the frame's filename.
@@ -497,17 +497,20 @@ Expected: FAIL with `ImportError: cannot import name 'Board' from 'pino'`
 - `nc_rest` returns what it marked and `to_circuit` stores it in `Circuit.nc_rest` so the build can list it.
 - Placement, outline, keep-outs, zones, net classes and expects come in Task 6; `to_circuit` fills them with empty values for now, and `outline` is required (a missing one is a validate problem: "Board needs an outline: pass outline='outline.json' or outline=(width, height)"). A tuple outline becomes a rounded rectangle with 1 mm corners through Task 6's `outline.rectangle`; until then the tuple only stores width and height.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_pino_parts.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino kernel/tests/helpers.py kernel/tests/test_pino_parts.py
 git commit -m "pino: board.py library with parts by symbol and footprint, pins, nets and blocks"
 ```
+
+> **Plan fix (Task 5, during the build):** `test_unknown_pin_names_the_line` as written could never pass: `r["X"]` raises
+> before `line = ...` runs on the same line. The test takes the line number first (`f_lineno + 2`) and then calls `r["X"]`.
 
 ---
 
