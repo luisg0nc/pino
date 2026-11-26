@@ -2,7 +2,7 @@
 // board.py.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { FAB_UNAVAILABLE, type PartInfo, type PartsResult } from '../../shared/fab'
+import type { PartInfo, PartsResult } from '../../shared/fab'
 import { refused, text } from './reply'
 import { capText, DESCRIPTIONS, MOST_LINES, partsInput } from './schemas'
 import { ALWAYS, type OnProject, type ToolDeps } from './tools'
@@ -32,7 +32,6 @@ export function partsAnswer(result: PartsResult): string {
 export function registerPartsTools(server: McpServer, deps: ToolDeps, onProject: OnProject): void {
   server.registerTool('parts', { description: DESCRIPTIONS.parts, inputSchema: partsInput, _meta: ALWAYS }, (input) =>
     onProject(async (project) => {
-      if (!deps.fab?.available()) return refused(FAB_UNAVAILABLE)
       if ((input.lcsc === undefined) === (input.search === undefined)) return refused('Give lcsc (a part number) or search (words), one of the two.')
       return text(partsAnswer(await deps.fab.parts(project, input)))
     })

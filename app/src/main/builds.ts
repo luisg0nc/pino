@@ -8,6 +8,7 @@ import { join, relative, sep } from 'node:path'
 import { watch as chokidarWatch } from 'chokidar'
 import { APP } from '../shared/app'
 import type { BuildEntry, BuildResult, BuildState, EngineState, Verdict } from '../shared/build'
+import { engineDidNotStart } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
 import { BUILD_HASH } from './artifacts'
 import { KernelError, type KernelClient, type Pong } from './kernel/client'
@@ -120,8 +121,10 @@ export class Builds {
   private readonly entries = new Map<string, Entry>()
   private readonly stateListeners = new Set<(s: BuildState) => void>()
   private readonly resultListeners = new Set<(projectId: string, r: BuildResult) => void>()
-  /** What each engine answered to its first ping, and the engines whose exit is listened for. */
-  private readonly pongs = new WeakMap<KernelClient, Promise<EngineState>>()
+  /** Each engine's answer to its one ping, whoever asked first. */
+  private readonly pongs = new WeakMap<KernelClient, Promise<Pong>>()
+  /** The last start that failed, until an engine answers. */
+  private startFailed: { at: number; reason: string } | undefined
   private engineFailedAt: number | undefined
 
   constructor(deps: { kernel: () => KernelClient; watch?: typeof watchProject; readHistory?: (dir: string) => Promise<BuildEntry[]>; now?: () => number; pingTimeoutMs?: number }) {
@@ -293,20 +296,46 @@ export class Builds {
     for (const done of entry.settled.splice(0)) done()
   }
 
-  /** The engine that answers, pinged once; rejects with why it did not start. */
+  /**
+   * The engine's answer to its ping, asked once of each engine, for the build loop and for what asks the engine without
+   * a build. A ping is answered in turn: a second one sent during a long build would time out on a healthy engine.
+   * Whoever asks first says how long it has, and whether it started this engine (`own`): only then is a silent one
+   * ended, and its failure a start that failed. Rejects with why the engine did not start.
+   */
+  pong(client: KernelClient, { ms = this.pingTimeoutMs, own = true }: { ms?: number; own?: boolean } = {}): Promise<Pong> {
+    const held = this.pongs.get(client)
+    if (held) return held
+    const pong = answered(client, ms, own).then(
+      (p) => {
+        this.startFailed = undefined
+        return p
+      },
+      (e: Error) => {
+        const reason = engineDidNotStart(e.message)
+        if (own) this.startFailed = { at: this.now(), reason }
+        // One that was already running is asked again the next time.
+        else this.pongs.delete(client)
+        throw new Error(reason)
+      }
+    )
+    this.pongs.set(client, pong)
+    return pong
+  }
+
+  /** Why the last start failed, while it is too soon (RESTART_MS) to start another engine; else null. */
+  startFailure(): string | null {
+    const failed = this.startFailed
+    return failed && this.now() - failed.at < RESTART_MS ? failed.reason : null
+  }
+
+  /** The engine that answers; rejects with why it did not start. */
   private async engine(entry: Entry): Promise<KernelClient> {
     const client = this.kernel()
-    let pong = this.pongs.get(client)
-    if (!pong) {
-      this.say(entry, { engine: { state: 'starting' } })
-      pong = answered(client, this.pingTimeoutMs).then(
-        (p): EngineState => ({ state: 'ready', kernel: p.kernel, serve: p.serve }),
-        (e: Error): EngineState => ({ state: 'failed', reason: `The engine did not start: ${e.message}` })
-      )
-      this.pongs.set(client, pong)
-    }
-    const engine = await pong
-    if (engine.state === 'failed') throw new EngineDown(engine.reason)
+    if (!this.pongs.has(client)) this.say(entry, { engine: { state: 'starting' } })
+    const pong = await this.pong(client).catch((e: Error) => {
+      throw new EngineDown(e.message)
+    })
+    const engine: EngineState = { state: 'ready', kernel: pong.kernel, serve: pong.serve }
     if (this.entries.get(entry.project.id) === entry && entry.state.engine.state !== 'ready') this.say(entry, { engine })
     return client
   }
@@ -359,14 +388,14 @@ export class Builds {
 }
 
 /**
- * The engine's first answer. One that has said nothing in `ms` is ended, so that nothing waits on it for ever and the
- * next build starts another.
+ * The engine's first answer. Nothing waits for it past `ms`; with `end`, one that has said nothing by then is ended, so
+ * that the next build starts another.
  */
-function answered(client: KernelClient, ms: number): Promise<Pong> {
+function answered(client: KernelClient, ms: number, end: boolean): Promise<Pong> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`it did not answer within ${Math.round(ms / 1000)} s`))
-      client.kill()
+      if (end) client.kill()
     }, ms)
     client.ping().then(resolve, reject).finally(() => clearTimeout(timer))
   })

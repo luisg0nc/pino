@@ -3,6 +3,8 @@ paths:
   - "app/src/renderer/ui/chat/**"
   - "app/src/renderer/ui/SessionDock.tsx"
   - "app/src/renderer/ui/QuestionCard.tsx"
+  - "app/src/renderer/state/dock.ts"
+  - "app/e2e/dock.spec.ts"
   - "app/src/renderer/state/chat.ts"
   - "app/src/renderer/state/chat.test.ts"
   - "app/src/renderer/styles/chat.css"
@@ -26,6 +28,13 @@ paths:
 - A start that is refused is said in the dock (`role="alert"`). Refused for the folder's own Claude Code settings, it
   is the question `ui/QuestionCard.tsx` ("This folder has Claude Code settings of its own", the files in the number
   face, "Trust and start" and "Not now").
+
+## Its width
+
+- The dock's left edge is its resize handle (`App.tsx`, `role="separator"`, "Resize session", `.dock-edge` in
+  `layout.css`): dragged, or moved 16 px a press with Left and Right (`dock.resize`), from 320 px to what leaves the
+  view 420 px beside the card. The width is the window's (`localStorage`, `pino.dock`; `state/dock.ts`), never a
+  project's; with none kept, `--dock-w` stands. A smaller window shows less and keeps what was asked for.
 
 ## The chat pane (`ui/chat/`, `state/chat.ts`)
 

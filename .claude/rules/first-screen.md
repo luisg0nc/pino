@@ -51,7 +51,10 @@ paths:
   asks the engine `version` once a run (`main/engineInfo.ts`), only when the screen asks.
 - With a project open, the title bar (`ui/TitleBar.tsx`) has the logo, the project's crumb and its menu
   (`ui/FolderMenu.tsx`, `useMenu` for its keys): the recent folders (the open one marked "current"), "Open folder…"
-  and "Close project".
+  and "Close project". The menu and its rows are `.menu` and `.menu-item` (`viewbars.css`), as are the view cube's. A
+  recent folder's row is two lines (name, path), so its style is `.menu-item.folder-item` (`titlebar.css`):
+  `.folder-item` alone loses its height and padding to `.menu-item`, which comes later in the cascade
+  (`e2e/menus.spec.ts` holds the rows apart).
 
 ## Quitting
 
