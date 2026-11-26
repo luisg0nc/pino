@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { hint, pressed } from '../../../shared/keys'
 import { MAX_PDF_BYTES, MAX_PHOTO_BYTES, MOST_REFERENCES, PDF_FORMATS, projectNameProblem } from '../../../shared/projectName'
 import type { ProjectInfo } from '../../../shared/project'
+import { DEFAULT_FAB } from '../../../shared/slots'
 import { cardsActions } from '../../state/cards'
 import { actions, store, useStore } from '../../state/store'
 import { draftHas, onboard, onboarding, sizesWrong, useOnboard, type Stroke } from '../../state/onboard'
@@ -9,7 +10,11 @@ import { Confirm } from '../Confirm'
 import { numbered } from '../numbered'
 import { TYPING, giveKeysBack } from '../typing'
 import { useReady } from '../useReady'
+import { ConnectionsSlot } from './ConnectionsSlot'
 import { Doodle } from './Doodle'
+import { FabSlot } from './FabSlot'
+import { PartsSlot } from './PartsSlot'
+import { PowerSlot } from './PowerSlot'
 import { HEIC_REASON, pastedFiles, prepareImage } from './images'
 import { DraftPaneLive, type Make } from './DraftPane'
 import { LinksSlot } from './LinksSlot'
@@ -125,6 +130,8 @@ export function NewProject({ onShow }: { onShow: (project: ProjectInfo) => void 
   }
   const isOpen = (slot: SlotId): boolean => opened.includes(slot) || holds[slot]
   const open = (slot: SlotId): void => {
+    // The fab is asked for in whole: it starts as the usual order, and every field is there to change.
+    if (slot === 'fab' && onboard.getState().draft.fab === null) onboarding.setFab(DEFAULT_FAB)
     setOpened((now) => (now.includes(slot) ? now : [...now, slot]))
     setFocusSlot(slot)
   }
@@ -304,11 +311,11 @@ export function NewProject({ onShow }: { onShow: (project: ProjectInfo) => void 
       : 'Give it a name and say what it does.'
 
   const slotBody: Record<SlotId, React.ReactNode> = {
-    power: null,
-    connections: null,
+    power: <PowerSlot rows={draft.power} disabled={working} onSaid={setSaid} />,
+    connections: <ConnectionsSlot rows={draft.connections} disabled={working} onSaid={setSaid} />,
     shape: <SizesSlot sizes={draft.sizes} enclosure={draft.enclosure} edges={draft.edges} disabled={working} onSaid={setSaid} />,
-    parts: null,
-    fab: null,
+    parts: <PartsSlot rows={draft.parts} disabled={working} onSaid={setSaid} />,
+    fab: draft.fab ? <FabSlot fab={draft.fab} disabled={working} /> : null,
     rules: <RulesSlot rules={draft.rules} disabled={working} onRefused={setSaid} />,
     links: <LinksSlot draft={draft} disabled={working} onAddPdf={() => void addPdf()} onSaid={setSaid} />
   }

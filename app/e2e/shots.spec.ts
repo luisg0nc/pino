@@ -127,6 +127,39 @@ const onSpine = async (run: Launched, project: string): Promise<void> => {
   await run.page.mouse.move(5, 5)
 }
 
+/** The New project page, filled: opened from a board's menu, with every PCB slot holding something. */
+const onNewProject = async (run: Launched, project: string): Promise<void> => {
+  await run.page.getByRole('button', { name: `Project ${basename(project)}` }).click()
+  await run.page.getByRole('menuitem', { name: 'New project…' }).click()
+  const page = run.page.getByRole('region', { name: 'New project', exact: true })
+  await page.getByRole('textbox', { name: 'Name' }).fill('sensor-node')
+  await page.getByRole('textbox', { name: 'What it does' }).fill('Reads temperature and humidity every minute and sends them over Wi-Fi from a LiPo cell.')
+  const open = (title: string) => page.getByRole('list', { name: 'Add' }).getByRole('button', { name: title, exact: true }).click()
+  await open('Power')
+  await page.getByRole('button', { name: 'Add a power source' }).click()
+  await page.getByRole('combobox', { name: 'Source of power 1' }).selectOption('battery')
+  await page.getByRole('textbox', { name: 'Which battery, power 1' }).fill('LiPo 1S')
+  await page.getByRole('textbox', { name: 'Voltage of power 1' }).fill('3.7')
+  await open('Connections')
+  await page.getByRole('button', { name: 'Add a connection' }).click()
+  await page.getByRole('textbox', { name: 'What connection 1 is' }).fill('SHT40 sensor')
+  await page.getByRole('textbox', { name: 'Connector of connection 1' }).fill('JST-SH 4-pin')
+  await open('Size and shape')
+  await page.getByRole('button', { name: 'Board width' }).click()
+  await page.getByRole('textbox', { name: 'Value of size 1' }).fill('50')
+  await page.getByRole('textbox', { name: 'Connector edges' }).fill('USB on a short edge')
+  await open('Parts I have')
+  await page.getByRole('button', { name: 'Add a part' }).click()
+  await page.getByRole('textbox', { name: 'Part 1', exact: true }).fill('C25804')
+  await expect(page.getByRole('listitem', { name: 'Part 1', exact: true })).toContainText('stock 1,234,567')
+  await open('Fab and assembly')
+  await open('Rules')
+  await page.getByRole('textbox', { name: 'Rules' }).fill('Hand-solderable, 0805 or larger')
+  await run.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await run.page.locator('.new-column').evaluate((el) => el.scrollTo(0, 0))
+  await run.page.mouse.move(5, 5)
+}
+
 /** An engine that makes fab files. */
 const FABBED = { FAKE_KERNEL_SERVE: '3' }
 
@@ -163,6 +196,15 @@ const SHOTS: Record<string, Shot> = {
   'first-dark': { first: true, dark: true },
   projects: { at: onProjects },
   'projects-dark': { dark: true, at: onProjects },
+  'new-project': { env: FABBED, at: onNewProject },
+  'new-project-dark': { env: FABBED, dark: true, at: onNewProject },
+  'new-project-foot': {
+    env: FABBED,
+    at: async (run, project) => {
+      await onNewProject(run, project)
+      await run.page.locator('.new-column').evaluate((el) => el.scrollTo(0, el.scrollHeight))
+    }
+  },
   'marks-dense': {
     at: async (run) => {
       await onBoard(run)

@@ -72,6 +72,32 @@
   font-size: var(--text-small);
 }
 
+/* A row of Power, Connections, Parts or Sizes: its short fields give way first, so that Remove stays on its line. */
+.new-page .size-row .size-value {
+  flex: 1 1 72px;
+}
+
+.new-page .size-row .size-what {
+  flex-basis: 132px;
+}
+
+/* Parts I have: what the stock check says, under the row; empty, it takes no room. */
+.part-state:empty {
+  flex-basis: 0;
+}
+
+.fab-boards {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+}
+
+.fab-boards .size-value {
+  flex: none;
+  width: 90px;
+}
+
 .new-missing {
   display: flex;
   flex-direction: column;
@@ -335,7 +361,7 @@
 }
 
 .size-note {
-  flex: 3 1 180px;
+  flex: 3 1 120px;
   min-width: 0;
 }
 

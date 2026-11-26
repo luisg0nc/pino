@@ -3,7 +3,7 @@ import { MAX_LINKS, MOST_REFERENCES } from '../../shared/projectName'
 import { MAX_SIZES } from '../../shared/size'
 import { MAX_TEXT_CHARS } from '../../shared/cards'
 import { DEFAULT_FAB, MAX_CONNECTIONS, MAX_PARTS_HAD, MAX_POWER, MAX_SHAPE_NOTE } from '../../shared/slots'
-import { createRequest } from '../ui/onboard/make'
+import { createRequest, previewDraft, rowsWrong } from '../ui/onboard/make'
 import { actions } from './store'
 import { draftHas, onboard, onboarding, heldSaid, sizeBlank, sizeProblem, sizesWrong, type Draft, type DoodleDraft, type PhotoDraft, type SizeDraft } from './onboard'
 
@@ -70,6 +70,12 @@ describe('the draft of a new project', () => {
       expect(draftHas(onboard.getState().draft)).toBe(true)
     }
     expect(onboarding.setEnclosure('x'.repeat(MAX_SHAPE_NOTE + 1))).toBe(`At most ${MAX_SHAPE_NOTE} characters.`)
+  })
+
+  it('holds the project back over a number of boards the fab does not take, and leaves it out of the preview', () => {
+    onboarding.setFab({ ...DEFAULT_FAB, boards: 0 })
+    expect(rowsWrong(onboard.getState().draft)).toBe('Between 1 and 10,000 boards.')
+    expect(previewDraft(onboard.getState().draft).fab).toBeNull()
   })
 
   it('removes a row of any slot', () => {

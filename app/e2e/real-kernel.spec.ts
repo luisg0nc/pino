@@ -1,7 +1,7 @@
 // The one spec that runs the real engine, through uv, on the reference board: that the app and the engine agree on
 // what a build is, and that the default fab's limits and a parts lookup (from recorded answers) are there before any board is. It is skipped where uv, kicad-cli or the engine's environment is missing (CI).
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { readBoard } from '../src/shared/board/board'
@@ -42,6 +42,24 @@ test('gives the default fab limits and answers a parts lookup in a project with 
     // No call wrote anything: what may be there is the Brief on screen keeping what was seen of it.
     const there = existsSync(join(dir, '.pino')) ? readdirSync(join(dir, '.pino')) : []
     expect(there.filter((name) => name !== 'brief' && name !== '.gitignore')).toEqual([])
+  } finally {
+    await app.close()
+  }
+})
+
+test('the New project page checks a part with the real engine from recorded answers', async () => {
+  const root = tempFolder('workspace')
+  const config = join(tempFolder('config'), 'config.json')
+  writeFileSync(config, JSON.stringify({ workspace: root, workspaces: [root] }))
+  const env = { PINO_CONFIG: config, UV_NO_SYNC: '1', UV_OFFLINE: '1', PINO_PARTS_RECORDED: join(kernel, 'tests', 'fixtures', 'parts', 'jlcsearch'), PINO_CACHE_DIR: tempFolder('cache') }
+  const { app, page } = await launch({ kernel: 'real', env })
+  try {
+    const fresh = page.getByRole('region', { name: 'New project' })
+    await fresh.getByRole('list', { name: 'Add' }).getByRole('button', { name: 'Parts I have', exact: true }).click()
+    await fresh.getByRole('button', { name: 'Add a part' }).click()
+    await fresh.getByRole('textbox', { name: 'Part 1', exact: true }).pressSequentially('C25804')
+    await expect(fresh.getByRole('listitem', { name: 'Part 1', exact: true })).toContainText('basic · 0603', { timeout: 150_000 })
+    expect(readdirSync(root)).toEqual([])
   } finally {
     await app.close()
   }

@@ -1006,7 +1006,7 @@ git commit -m "The New project page: name, what it does, photos, sketch, size an
   - `ui/onboard/parts.ts`: `LOOKUP_AFTER_MS = 400`; `partState(row: PartDraft): { kind: 'module' | 'looking' | 'read' | 'refused' | 'none'; said: string }` (`module`: `A module in words: Claude looks it up.`; `looking`: `Checking JLC…`; `read`: `readingLine(row.reading)`; `refused`: `Stock not checked: <why>.`; `none`: '' while the row is empty); `useStockCheck(row: PartDraft): void` (looks up an `LCSC` 400 ms after the last key, once per number; an answer for a number the row no longer holds is dropped).
   - Slots: Power rows of source (`POWER_SOURCES`), kind (shown for `battery`), volts, current (optional), note; at most `MAX_POWER`. Connections rows of what, bus (`BUSES`), connector; at most `MAX_CONNECTIONS`. Parts I have rows of an LCSC number or a module, and a note, with `partState` under each; at most `MAX_PARTS_HAD`. Fab and assembly: layers 2 or 4, thickness (`THICKNESSES`), `JLC assembles it`, `I solder it`, `A mix`, and how many boards; filled from `DEFAULT_FAB` when the tile is opened. Rows are kept as typed; one that `checkPower`/`checkConnection`/`checkPartHad` refuses says why under it and holds Make it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // ui/onboard/parts.test.ts
@@ -1032,19 +1032,19 @@ test('the New project page checks a part with the real engine from recorded answ
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/onboard/parts.test.ts && pnpm test:e2e -- onboard.spec.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Write the four slots and the stock check, and open them from their tiles**
+- [x] **Step 3: Write the four slots and the stock check, and open them from their tiles**
 
-- [ ] **Step 4: Run them to verify they pass**
+- [x] **Step 4: Run them to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm test:e2e`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A app/src app/e2e

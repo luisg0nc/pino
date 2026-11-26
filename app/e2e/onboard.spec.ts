@@ -146,6 +146,92 @@ test('a sketch over the photo is a doodle in reference/', async () => {
   }
 })
 
+/** An engine that looks parts up (protocol 3). */
+const PARTS = { FAKE_KERNEL_SERVE: '3' }
+
+const slot = (page: Page, title: string) => newPage(page).getByRole('region', { name: title, exact: true })
+const open = (page: Page, title: string) => newPage(page).getByRole('list', { name: 'Add' }).getByRole('button', { name: title, exact: true }).click()
+
+/** A row of Parts I have, with this typed as its part. */
+async function typePart(page: Page, n: number, typed: string) {
+  await slot(page, 'Parts I have').getByRole('button', { name: 'Add a part' }).click()
+  await slot(page, 'Parts I have').getByRole('textbox', { name: `Part ${n}`, exact: true }).pressSequentially(typed)
+  return slot(page, 'Parts I have').getByRole('listitem', { name: `Part ${n}`, exact: true })
+}
+
+const cardsIn = (dir: string) => (JSON.parse(readFileSync(join(dir, '.pino', 'brief', 'cards.json'), 'utf8')) as { cards: Array<{ kind: string; part?: unknown }> }).cards
+
+test('a part typed in Parts I have is checked against JLC as it is typed', async () => {
+  const { app, page, root } = await onEmpty({ env: PARTS })
+  try {
+    await open(page, 'Parts I have')
+    await expect(await typePart(page, 1, 'C25804')).toContainText('basic · 0603 · stock 1,234,567 · $0.0024 each (checked 2026-11-26)')
+    await expect(await typePart(page, 2, 'C1')).toContainText('JLC has no such part (checked ')
+    await expect(await typePart(page, 3, 'ESP32-C3 module')).toContainText('A module in words: Claude looks it up.')
+    expect(readdirSync(root)).toEqual([])
+  } finally {
+    await app.close()
+  }
+})
+
+test('a part typed while jlcsearch cannot be reached says so and does not hold Start', async () => {
+  const { app, page, root } = await onEmpty({ env: { ...PARTS, FAKE_KERNEL_PARTS: 'unreachable' } })
+  try {
+    await name(page).fill('blinky')
+    await what(page).fill('Blinks an LED.')
+    await open(page, 'Parts I have')
+    await expect(await typePart(page, 1, 'C25804')).toContainText('Stock not checked: jlcsearch could not be reached.')
+    await expect(makeIt(page)).toBeEnabled()
+    await makeIt(page).click()
+    await expect(page.getByRole('button', { name: 'Project blinky' })).toBeVisible()
+    expect(cardsIn(join(root, 'blinky')).filter((c) => c.kind === 'part').map((c) => c.part)).toEqual([{ lcsc: 'C25804' }])
+  } finally {
+    await app.close()
+  }
+})
+
+test('every PCB slot becomes cards of the person, in frames', async () => {
+  const { app, page, root } = await onEmpty({ env: PARTS })
+  try {
+    await name(page).fill('blinky')
+    await what(page).fill('Blinks an LED.')
+    await open(page, 'Power')
+    const power = slot(page, 'Power')
+    await power.getByRole('button', { name: 'Add a power source' }).click()
+    await expect(power.getByRole('combobox', { name: 'Source of power 1' })).toHaveValue('USB-C')
+    await expect(power.getByRole('textbox', { name: 'Which battery, power 1' })).toHaveCount(0)
+    await power.getByRole('textbox', { name: 'Voltage of power 1' }).fill('5')
+    await power.getByRole('textbox', { name: 'Current of power 1' }).fill('0.5')
+    await open(page, 'Connections')
+    const connections = slot(page, 'Connections')
+    await connections.getByRole('button', { name: 'Add a connection' }).click()
+    await connections.getByRole('textbox', { name: 'What connection 1 is' }).fill('SHT40 sensor')
+    await connections.getByRole('combobox', { name: 'How connection 1 talks' }).selectOption('I2C')
+    await connections.getByRole('textbox', { name: 'Connector of connection 1' }).fill('JST-SH 4-pin')
+    // A row half typed says why under it, and holds Make it until it is whole.
+    await connections.getByRole('textbox', { name: 'What connection 1 is' }).fill('')
+    await expect(connections).toContainText('Say what plugs in.')
+    await expect(makeIt(page)).toBeDisabled()
+    await connections.getByRole('textbox', { name: 'What connection 1 is' }).fill('SHT40 sensor')
+    await open(page, 'Parts I have')
+    await expect(await typePart(page, 1, 'C25804')).toContainText('stock 1,234,567')
+    await open(page, 'Fab and assembly')
+    const fab = slot(page, 'Fab and assembly')
+    await expect(fab.getByRole('spinbutton', { name: 'How many boards' })).toHaveValue('5')
+    await fab.getByRole('combobox', { name: 'Layers' }).selectOption('4')
+    await makeIt(page).click()
+    await expect(page.getByRole('button', { name: 'Project blinky' })).toBeVisible()
+    const brief = page.getByRole('tabpanel', { name: 'Brief' })
+    // A frame whose cards all stand in a table (Fab and assembly) has no heading among the person's words.
+    for (const heading of ['Power', 'Connections', 'Parts I have']) await expect(brief.getByRole('region', { name: heading, exact: true })).toBeVisible()
+    for (const said of ['USB-C, 5 V, 0.5 A', 'SHT40 sensor over I2C, JST-SH 4-pin', 'You asked for 4 layers, 1.6 mm, JLC assembles it, 5 boards']) await expect(brief).toContainText(said)
+    const cards = cardsIn(join(root, 'blinky'))
+    expect(cards.find((c) => c.kind === 'part')?.part).toMatchObject({ lcsc: 'C25804', reading: { class: 'basic', stock: 1234567 } })
+  } finally {
+    await app.close()
+  }
+})
+
 test('New project from the menu of an open project makes another and opens it, and opening a workspace sweeps what a crash left', async () => {
   const root = tempFolder('workspace')
   mkdirSync(join(root, 'a'))

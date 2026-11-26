@@ -3,7 +3,7 @@ import type { AgentChoice } from '../../../shared/chat'
 import type { ProjectInfo } from '../../../shared/project'
 import { sizeBlank, sizeFact, sizeProblem, type ConnectionDraft, type Draft, type Held, type PartDraft, type PowerDraft } from '../../state/onboard'
 import { PDF_FORMATS, referenceFiles as namedReferences } from '../../../shared/projectName'
-import { checkConnection, checkPartHad, checkPower } from '../../../shared/slots'
+import { checkConnection, checkFab, checkPartHad, checkPower } from '../../../shared/slots'
 import { extensionOf } from './images'
 
 /** What an IPC call failed with, without Electron's wrapping. */
@@ -65,7 +65,7 @@ export const connectionBlank = (row: ConnectionDraft): boolean => row.what.trim(
 export const partBlank = (row: PartDraft): boolean => row.what.trim() === '' && row.note.trim() === ''
 
 /** The rows of the PCB slots as main takes them, those nothing was typed in left out; or why the first that is not whole is refused. */
-function pcbRows(draft: Draft): { rows: Pick<CreateRequest, 'power' | 'connections' | 'parts'>; wrong: string | null } {
+function pcbRows(draft: Draft): { rows: Pick<CreateRequest, 'power' | 'connections' | 'parts' | 'fab'>; wrong: string | null } {
   let wrong: string | null = null
   const whole = <R, T>(list: readonly R[], check: (raw: unknown) => T | string): T[] =>
     list.flatMap((row): T[] => {
@@ -78,7 +78,8 @@ function pcbRows(draft: Draft): { rows: Pick<CreateRequest, 'power' | 'connectio
   const connections = whole(draft.connections.filter((r) => !connectionBlank(r)), checkConnection)
   // A reading is main's: `checkPartHad` takes the number and the note alone.
   const parts = whole(draft.parts.filter((r) => !partBlank(r)), checkPartHad)
-  return { rows: { power, connections, parts }, wrong }
+  const [fab = null] = whole(draft.fab ? [draft.fab] : [], checkFab)
+  return { rows: { power, connections, parts, fab }, wrong }
 }
 
 /** Why a row of a PCB slot holds the project back, or null. */
@@ -105,7 +106,6 @@ const slotsOf = (draft: Draft) => ({
   sizes: wholeSizes(draft),
   enclosure: draft.enclosure.trim(),
   edges: draft.edges.trim(),
-  fab: draft.fab,
   rules: draft.rules,
   links: linksOf(draft)
 })

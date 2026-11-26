@@ -24,6 +24,7 @@
 //   FAKE_KERNEL_RELEASE=refused|unchanged|broken   how a release ends, instead of `released`
 //   FAKE_KERNEL_RELEASE_MS=<ms>  between two steps of a release
 //   FAKE_KERNEL_PARTS=offline    parts answer from a cache of 2026-11-20, saying jlcsearch was not reached
+//   FAKE_KERNEL_PARTS=unreachable  jlcsearch is not reached and nothing is kept: no part, a parts_unavailable error
 //   FAKE_KERNEL_DELAY_MS=<ms>    how long a build takes
 //   FAKE_KERNEL_FAIL_ON=<n>      build n fails: board.py, "invalid syntax", line 12
 //   FAKE_KERNEL_DIE=start|build  exits 1 with a line on stderr, at start or at the first build
@@ -297,6 +298,11 @@ const FAKE_PARTS = {
 }
 
 function parts(req) {
+  // jlcsearch not reached and nothing kept: no part, and the finding that says so (the engine's parts_unavailable).
+  if (env.FAKE_KERNEL_PARTS === 'unreachable') {
+    const findings = [{ source: 'parts', code: 'parts_unavailable', severity: 'error', message: 'jlcsearch could not be reached, and no answer is kept.' }]
+    return { ok: true, result: { schema: 'pino.parts/1', kind: req.action, query: {}, parts: [], resolved: [], findings, source: { url: 'https://jlcsearch.tscircuit.com', fresh: false, fetched_at: null }, headline: 'Parts: jlcsearch could not be reached' } }
+  }
   const offline = env.FAKE_KERNEL_PARTS === 'offline'
   const found = req.action === 'search' ? Object.values(FAKE_PARTS).slice(0, req.limit ?? 8) : [FAKE_PARTS[String(req.lcsc).toUpperCase()]].filter(Boolean)
   const shown = offline ? found.map((p) => ({ ...p, checked_at: null, fetched_at: '2026-11-20T06:00:00+00:00' })) : found
