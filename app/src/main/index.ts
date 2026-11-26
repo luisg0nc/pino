@@ -18,7 +18,7 @@ import { type BuildModel, Models } from './model'
 import { onNotOwn } from './own'
 import { resultOfBuild } from './artifacts'
 import type { LookResult } from '../shared/view'
-import { openProject } from './project'
+import { openProject, workspaceOf } from './project'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
 import { readEngine, versionCommand } from './engineInfo'
@@ -95,11 +95,11 @@ Menu.setApplicationMenu(null)
 const configPath: string | null = env('CONFIG') ?? (isTest ? null : join(app.getPath('appData'), APP.configDir, 'config.json'))
 
 async function readConfig(): Promise<Config> {
-  if (!configPath) return { recent: [] }
+  if (!configPath) return { workspaces: [] }
   try {
-    return configOf(JSON.parse(await readFile(configPath, 'utf8')))
+    return configOf(JSON.parse(await readFile(configPath, 'utf8')), app.getPath('home'))
   } catch {
-    return { recent: [] } // no file yet, or not one of ours
+    return { workspaces: [] } // no file yet, or not one of ours
   }
 }
 
@@ -174,7 +174,12 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
       }
       open = next
       builds.open(next)
-      await changeConfig((config) => ({ project: next.dir, recent: recentWith(config.recent, next.dir) }))
+      const parent = workspaceOf(next.dir, app.getPath('home'))
+      await changeConfig((config) => ({
+        ...(parent ? { workspace: parent } : {}),
+        project: next.dir,
+        workspaces: parent ? recentWith(config.workspaces, parent) : config.workspaces
+      }))
       return next
     })
 
@@ -207,7 +212,7 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
     },
     async recent() {
       await configWritten
-      return listed((await readConfig()).recent)
+      return listed((await readConfig()).workspaces)
     },
     close: () =>
       inTurn(async () => {
@@ -218,7 +223,7 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
         }
         open = undefined
         await sessions().stopAll()
-        await changeConfig((config) => ({ recent: config.recent }))
+        await changeConfig(({ project: _closed, ...config }) => config)
       }),
     async startAt(dir, said) {
       // A folder named at this start that cannot be opened is said; a remembered one that is gone is only listed as missing.

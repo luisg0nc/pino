@@ -123,7 +123,7 @@ app/src/renderer/
   - `main/project.ts`: `isProjectFolder(dir: string): Promise<boolean>` (`board.py` or `brief.md` there as a plain file); `workspaceOf(projectDir: string, home: string): string | null` (the parent, or null when the parent is `/` or `home`).
   - `main/recent.ts`: `Config { workspace?: string; project?: string; workspaces: string[] }`; `MAX_RECENT = 8`; `recentWith`, `recentWithout` unchanged; `configOf(value: unknown, home: string): Config`; `listed(recent: readonly string[]): Promise<RecentFolder[]>` unchanged.
 
-- [ ] **Step 1: Copy torno's two workspace files and their test, then write the failing tests**
+- [x] **Step 1: Copy torno's two workspace files and their test, then write the failing tests**
 
 ```ts
 // main/workspace.test.ts
@@ -154,21 +154,21 @@ it('never makes the home or the root a workspace', () => {
 it('keeps whole paths only, once each, eight at most', () => { /* relative paths dropped, duplicates, 10 -> 8 */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/workspace.test.ts src/main/recent.test.ts src/main/project.test.ts`
 Expected: FAIL (`scanWorkspace` lists by model files; `configOf` has no `workspaces`; `workspaceOf` not defined)
 
-- [ ] **Step 3: Adapt `scanWorkspace`, write `isProjectFolder`, `workspaceOf` and the new `configOf`**
+- [x] **Step 3: Adapt `scanWorkspace`, write `isProjectFolder`, `workspaceOf` and the new `configOf`**
 
 `scanWorkspace` keeps torno's `readdir(root, { withFileTypes: true })` and sort, and reads `board.py` and `brief.md` with `lstat` (a link is not a plain file). The migration in `configOf` runs only when `workspaces` is not an array: then `workspaces` is the parents of `recent` by `workspaceOf`, newest first, once each, and `workspace` the parent of `project`; the next `changeConfig` writes the new shape, so it never runs again. Add the three entries to `shared-from-torno.json`.
 
-- [ ] **Step 4: Run them to verify they pass**
+- [x] **Step 4: Run them to verify they pass**
 
 Run: `pnpm -C app exec vitest run src/main/workspace.test.ts src/main/recent.test.ts src/main/project.test.ts src/manifest.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/main/workspace.ts app/src/main/workspace.test.ts app/src/shared/workspace.ts app/src/main/recent.ts app/src/main/recent.test.ts app/src/main/project.ts app/src/main/project.test.ts shared-from-torno.json

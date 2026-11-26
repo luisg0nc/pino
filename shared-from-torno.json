@@ -62,7 +62,7 @@
     { "pino": "app/src/main/quit.test.ts", "torno": "app/src/main/quit.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/openFolder.ts", "torno": "app/src/renderer/ui/openFolder.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/openFolder.test.ts", "torno": "app/src/renderer/ui/openFolder.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
-    { "pino": "app/src/main/recent.ts", "torno": "app/src/main/recent.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Config holds a project, RecentFolder from shared/project" },
+    { "pino": "app/src/main/recent.ts", "torno": "app/src/main/recent.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Config holds a workspace, a project and the recent workspaces, with the migration from recent project folders; RecentFolder from shared/project" },
     { "pino": "app/src/main/recent.test.ts", "torno": "app/src/main/recent.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "to match recent.ts" },
     { "pino": "app/src/main/frame.ts", "torno": "app/src/main/frame.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Linux only: no overlay, no MUTED, no drawsControls" },
     { "pino": "app/src/main/window.test.ts", "torno": "app/src/main/window.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Linux cases only; the surface colours are held by contrast.test.ts" },
@@ -178,6 +178,9 @@
     { "pino": "app/src/renderer/styles/viewbars.css", "torno": "app/src/renderer/styles/viewbars.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the menu rules only (.menu, .menu-item); no bars and no Compare" },
     { "pino": "app/src/renderer/App.tsx", "torno": "app/src/renderer/App.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "only the session dock's resize handle, its kept width and its fit on a window resize come from torno; the rest is pino's own" },
     { "pino": "app/src/renderer/state/dock.ts", "torno": "app/src/renderer/state/dock.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's key and 1500 px breakpoint; NARROW_WINDOW, VIEWPORT_MIN and windowStorage here, from torno's column.ts" },
-    { "pino": "app/src/renderer/state/dock.test.ts", "torno": "app/src/renderer/state/dock.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's key and breakpoint, held to tokens.css; a case for no storage" }
+    { "pino": "app/src/renderer/state/dock.test.ts", "torno": "app/src/renderer/state/dock.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's key and breakpoint, held to tokens.css; a case for no storage" },
+    { "pino": "app/src/main/workspace.ts", "torno": "app/src/main/workspace.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "a project is any direct subfolder that is not hidden and not a link; board, brief and empty from its files; no models, no common/ or pyproject" },
+    { "pino": "app/src/main/workspace.test.ts", "torno": "app/src/main/workspace.test.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's listing rules" },
+    { "pino": "app/src/shared/workspace.ts", "torno": "app/src/shared/workspace.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "ListedProject and WorkspaceInfo for boards; RecentFolder stays in shared/project.ts; no example" }
   ]
 }
