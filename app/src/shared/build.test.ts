@@ -33,7 +33,8 @@ describe('the build result', () => {
 
   it('holds every required field of the kernel schema', () => {
     const schema = readJson<{ required: string[] }>('../kernel/schema/build-result-1.schema.json')
-    expect([...REQUIRED_FIELDS]).toEqual(schema.required)
+    // routing is read when there is one: an engine of serve protocol 1 sends none, and its builds still draw
+    expect([...REQUIRED_FIELDS, 'routing']).toEqual(schema.required)
   })
 
   it('names only artifacts the kernel schema has', () => {
