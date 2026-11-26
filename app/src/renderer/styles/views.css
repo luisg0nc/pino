@@ -1,0 +1,93 @@
+/* The three views over the board and their empty panels (`ui/ViewPane.tsx`). */
+
+/* The grid's middle cell: the tabs along its top, the chosen view under them. */
+.views {
+  display: flex;
+  flex-direction: column;
+}
+
+.views-tabs {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--divider);
+}
+
+.views-tab {
+  min-width: 88px;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.views-tab:hover {
+  color: var(--ink);
+}
+
+.views-tab[aria-selected='true'] {
+  border-color: var(--hairline);
+  background: var(--raise);
+  color: var(--ink);
+}
+
+.views-panel {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+}
+
+/* An empty view is the dye, with its words at its foot as on the first screen, at a view's size. */
+.views-panel .plate {
+  gap: var(--space-2);
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+.views-empty-title {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.views-panel .plate-lead {
+  max-width: 46ch;
+  margin: 0;
+}
+
+/* The status line: the notice takes what room is left and is cut before anything else is; the session stands at the right. */
+.status-notice {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--warn);
+  text-overflow: ellipsis;
+}
+
+.status-session[data-status='needs_input'] {
+  color: var(--warn);
+  font-weight: 500;
+}
+
+.status-session[data-status='working'] {
+  color: var(--accent);
+}
+
+/* The dock is the grid's right column: its head, then what the session is. */
+.dock {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The files named by the question about a folder's own Claude Code settings. */
+.ask-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}

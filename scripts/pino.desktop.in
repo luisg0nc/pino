@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=pino
+GenericName=PCB workbench
+Comment=Design printed circuit boards with Claude Code
+Exec=@EXEC@ %F
+Icon=@ICON@
+Terminal=false
+Categories=Development;Electronics;Engineering;
+StartupWMClass=pino

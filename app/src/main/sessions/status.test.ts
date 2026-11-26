@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest'
+import type { SessionStatus } from '../../shared/bridge'
+import { reduceStatus } from './status'
+
+const ALL: SessionStatus[] = ['starting', 'idle', 'working', 'needs_input', 'exited']
+
+describe('reduceStatus', () => {
+  it('follows the hooks', () => {
+    expect(reduceStatus('idle', 'UserPromptSubmit')).toBe('working')
+    expect(reduceStatus('working', 'Stop')).toBe('idle')
+    expect(reduceStatus('working', 'Notification')).toBe('needs_input')
+    // Seen with the real CLI: a Notification is also posted when it has only been idle for a while, which is no question.
+    expect(reduceStatus('idle', 'Notification', { notification_type: 'idle_prompt', message: 'Claude is waiting for your input' })).toBe('idle')
+    expect(reduceStatus('idle', 'Notification', { message: 'Claude is waiting for your input' })).toBe('idle')
+    expect(reduceStatus('idle', 'Notification', { notification_type: 'auth_success', message: 'Signed in' })).toBe('idle')
+    expect(reduceStatus('working', 'Notification', { notification_type: 'idle_prompt' })).toBe('working')
+    // One that is a question, or says nothing of its kind, still is.
+    expect(reduceStatus('working', 'Notification', { notification_type: 'permission_prompt', message: 'Claude needs your permission to use Bash' })).toBe('needs_input')
+    expect(reduceStatus('working', 'Notification', { notification_type: 'elicitation_dialog' })).toBe('needs_input')
+    expect(reduceStatus('working', 'Notification', { message: 'Claude needs your permission to use Bash' })).toBe('needs_input')
+    expect(reduceStatus('working', 'Notification', 'not an object')).toBe('needs_input')
+    expect(reduceStatus('working', 'PermissionRequest')).toBe('needs_input')
+    expect(reduceStatus('needs_input', 'UserPromptSubmit')).toBe('working')
+    expect(reduceStatus('needs_input', 'Stop')).toBe('idle')
+    // A turn that ended on an error of the API (a login that failed, an overload) ends as a Stop does.
+    expect(reduceStatus('working', 'StopFailure')).toBe('idle')
+    expect(reduceStatus('needs_input', 'StopFailure')).toBe('idle')
+    expect(reduceStatus('idle', 'SessionEnd')).toBe('exited')
+  })
+
+  it('is working again once a tool runs: a permission prompt was answered', () => {
+    expect(reduceStatus('needs_input', 'PreToolUse')).toBe('working')
+    expect(reduceStatus('needs_input', 'PostToolUse')).toBe('working')
+    expect(reduceStatus('working', 'PreToolUse')).toBe('working')
+    expect(reduceStatus('idle', 'PostToolUse')).toBe('working')
+  })
+
+  it('waits for the person while a chat session has a request of the CLI open, and works again once it is answered', () => {
+    expect(reduceStatus('working', 'ask')).toBe('needs_input')
+    expect(reduceStatus('idle', 'ask')).toBe('needs_input')
+    expect(reduceStatus('needs_input', 'answered')).toBe('working')
+    // An answer says the agent goes on only to one that was waiting: a late one changes nothing.
+    expect(reduceStatus('idle', 'answered')).toBe('idle')
+    expect(reduceStatus('exited', 'ask')).toBe('exited')
+    expect(reduceStatus('exited', 'answered')).toBe('exited')
+  })
+
+  it('is idle from the first output, and only from the first', () => {
+    expect(reduceStatus('starting', 'output')).toBe('idle')
+    for (const status of ALL.filter((s) => s !== 'starting')) expect(reduceStatus(status, 'output')).toBe(status)
+  })
+
+  it('has exited when the process has, whatever it was doing', () => {
+    for (const status of ALL) expect(reduceStatus(status, 'exit')).toBe('exited')
+  })
+
+  it('stays exited', () => {
+    for (const event of ['output', 'UserPromptSubmit', 'Stop', 'StopFailure', 'Notification', 'PermissionRequest', 'PreToolUse', 'PostToolUse', 'SessionEnd', 'ask', 'answered']) {
+      expect(reduceStatus('exited', event)).toBe('exited')
+    }
+  })
+
+  it('is left unchanged by an event it does not know', () => {
+    for (const status of ALL) {
+      expect(reduceStatus(status, 'SubagentStop')).toBe(status)
+      expect(reduceStatus(status, '')).toBe(status)
+      expect(reduceStatus(status, 'toString')).toBe(status)
+    }
+  })
+})

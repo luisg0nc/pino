@@ -1,0 +1,251 @@
+#!/bin/sh
+# Start pino: scripts/pino [folder]
+#
+# Works from any directory. Installs the dependencies if they are missing,
+# builds the app if it has not been built since its sources changed, then starts
+# Electron on it. A folder given as the argument is opened as the project;
+# with none, pino opens the one that was open last. `--` ends the options.
+#
+# PINO_OZONE=wayland or x11 has Electron told which platform to draw on;
+# unset, Electron chooses. --print-command says what would be started and
+# starts nothing. --print-desktop prints a desktop entry for this script,
+# --install-desktop writes it, --uninstall-desktop removes it: that one file,
+# under the person's data folder, is all this script ever writes outside the
+# repository, and only when it is asked to by that option.
+#
+# --from-desktop is how the desktop entry starts it: nobody reads what a launcher prints, so what goes wrong is
+# then also shown as a notice (notify-send, where there is one) or, failing that, written to
+# ${XDG_STATE_HOME:-~/.local/state}/pino/launcher.log.
+set -eu
+
+# The app's name, as app/src/shared/app.ts says it (a test holds the two equal): this file cannot import it.
+app_name=pino
+
+# The repository is the parent of this file's folder, also when called through a symlink.
+self=$0
+while [ -L "$self" ]; do
+  target=$(readlink "$self")
+  case $target in
+    /*) self=$target ;;
+    *) self=$(dirname "$self")/$target ;;
+  esac
+done
+root=$(CDPATH= cd -- "$(dirname -- "$self")/.." && pwd -P)
+app=$root/app
+
+# Says what went wrong: on stderr, and for a start from the desktop entry also where it will be seen.
+from_desktop=
+complain() {
+  echo "$app_name: $1" >&2
+  [ -n "$from_desktop" ] || return 0
+  notifier=${PINO_NOTIFY:-notify-send}
+  if command -v "$notifier" >/dev/null 2>&1 && "$notifier" "$app_name" "$1" 2>/dev/null; then
+    return 0
+  fi
+  case ${XDG_STATE_HOME-} in
+    /*) state=$XDG_STATE_HOME ;;
+    *) state=${HOME:+$HOME/.local/state} ;;
+  esac
+  [ -n "$state" ] || return 0
+  mkdir -p -- "$state/$app_name" 2>/dev/null || return 0
+  printf '%s %s: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$app_name" "$1" >>"$state/$app_name/launcher.log" 2>/dev/null || true
+}
+if [ "${1-}" = --from-desktop ]; then
+  from_desktop=1
+  shift
+fi
+
+usage() {
+  echo "usage: $app_name [folder]"
+  echo "       $app_name --print-command [folder]"
+  echo "       $app_name --print-desktop | --install-desktop | --uninstall-desktop"
+  echo "  folder               a project folder to open (default: the one open last)"
+  echo "  --print-command      print the command that would be started, one argument a line, and start nothing"
+  echo "  --print-desktop      print the desktop entry for this script, and write nothing"
+  echo "  --install-desktop    write that entry to \${XDG_DATA_HOME:-~/.local/share}/applications/$app_name.desktop"
+  echo "  --uninstall-desktop  remove it"
+  echo "  --from-desktop       first, as the desktop entry gives it: errors are also shown as a notice, or logged"
+  echo "  PINO_OZONE           wayland or x11, the platform Electron is told to draw on (default: Electron chooses)"
+}
+
+# How it is used, whatever else is asked or set: the help is where PINO_OZONE is explained.
+case ${1-} in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+
+# The platform is passed on only when it is asked for by name. Read before anything is checked, installed,
+# built or written. Never headless: Electron crashes with it here. And none at all under PINO_TEST=1.
+ozone=
+case ${PINO_OZONE-} in
+  '') ;;
+  wayland | x11)
+    [ "${PINO_TEST-}" = 1 ] || ozone=--ozone-platform=$PINO_OZONE
+    ;;
+  *)
+    complain "PINO_OZONE must be wayland or x11 (headless is not supported: Electron crashes with it here)"
+    exit 2
+    ;;
+esac
+
+# The desktop entry, from scripts/pino.desktop.in: @EXEC@ is this script and @ICON@ the icon beside it, both
+# by their whole paths, so nothing but the entry is installed. It names no platform: this script decides that
+# when it is started, from PINO_OZONE.
+desktop_entry() {
+  case $root in
+    *"
+"*)
+      echo "$app_name: the repository's path holds a line break: a desktop entry cannot name it" >&2
+      return 2
+      ;;
+  esac
+  # Exec: the path in double quotes with the four characters the Desktop Entry Specification names escaped,
+  # then every backslash doubled as in any string of the file, and a per cent doubled, which is else a field code.
+  exec_path=$(printf '%s' "$root/scripts/$app_name" | sed -e 's/[\\"`$]/\\&/g' -e 's/\\/\\\\/g' -e 's/%/%%/g')
+  icon_path=$(printf '%s' "$root/scripts/$app_name.svg" | sed -e 's/\\/\\\\/g')
+  while IFS= read -r line || [ -n "$line" ]; do
+    case $line in
+      *@EXEC@*) printf '%s"%s" --from-desktop%s\n' "${line%%@EXEC@*}" "$exec_path" "${line#*@EXEC@}" ;;
+      *@ICON@*) printf '%s%s%s\n' "${line%%@ICON@*}" "$icon_path" "${line#*@ICON@}" ;;
+      *) printf '%s\n' "$line" ;;
+    esac
+  done <"$root/scripts/$app_name.desktop.in"
+}
+
+print_only=
+case ${1-} in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --print-command)
+    print_only=1
+    shift
+    ;;
+  --print-desktop | --install-desktop | --uninstall-desktop)
+    if [ $# -gt 1 ]; then
+      echo "$app_name: $1 takes nothing after it" >&2
+      exit 2
+    fi
+    if [ "$1" = --print-desktop ]; then
+      desktop_entry
+      exit
+    fi
+    # Where the person's applications are listed. Never the system's, and never as root: this is one person's launcher.
+    if [ "$(id -u)" = 0 ]; then
+      echo "$app_name: $1 is for your own account, not as root" >&2
+      exit 2
+    fi
+    # A data folder that is not a whole path is no data folder (the specification says to pass over it).
+    case ${XDG_DATA_HOME-} in
+      /*) data=$XDG_DATA_HOME ;;
+      *) data= ;;
+    esac
+    if [ -n "$data" ]; then
+      :
+    elif [ -n "${HOME-}" ]; then
+      data=$HOME/.local/share
+    else
+      echo "$app_name: neither XDG_DATA_HOME nor HOME is set: there is nowhere to keep a desktop entry" >&2
+      exit 2
+    fi
+    entry=$data/applications/$app_name.desktop
+    if [ "$1" = --uninstall-desktop ]; then
+      rm -f -- "$entry"
+      echo "$app_name: removed $entry"
+      exit 0
+    fi
+    text=$(desktop_entry)
+    # Said before it is done: the one file, and what goes into it.
+    if [ -e "$entry" ] || [ -L "$entry" ]; then
+      echo "$app_name: replacing $entry"
+    else
+      echo "$app_name: writing $entry"
+    fi
+    printf '%s\n' "$text"
+    mkdir -p -- "$data/applications"
+    printf '%s\n' "$text" >"$entry"
+    echo "$app_name: wrote $entry"
+    echo "Run it again after moving the repository."
+    exit 0
+    ;;
+esac
+# What follows is a folder, whatever it begins with.
+[ "${1-}" != -- ] || shift
+if [ $# -gt 1 ]; then
+  complain "expected at most one argument, a project folder"
+  exit 2
+fi
+project_given=0
+if [ $# -eq 1 ]; then
+  project_given=1
+  if [ ! -d "$1" ]; then
+    complain "not a folder: $1"
+    exit 2
+  fi
+  PINO_PROJECT=$(CDPATH= cd -- "$1" && pwd -P)
+  export PINO_PROJECT
+fi
+
+# The command, made once: what --print-command prints is what is started. The folder is not an argument of
+# it: it goes in the environment, as PINO_PROJECT.
+set -- "$app/node_modules/.bin/electron" "$app"
+[ -z "$ozone" ] || set -- "$@" "$ozone"
+if [ -n "$print_only" ]; then
+  # All of what is started: the folder goes in the environment, and is said first when there is one.
+  [ -z "${PINO_PROJECT-}" ] || [ $project_given = 0 ] || printf 'PINO_PROJECT=%s\n' "$PINO_PROJECT"
+  printf '%s\n' "$@"
+  exit 0
+fi
+
+for tool in node pnpm; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    complain "'$tool' was not found on PATH (see README.md, Requirements)"
+    exit 1
+  fi
+done
+
+if [ ! -d "$root/node_modules" ] || [ ! -d "$app/node_modules" ]; then
+  echo "$app_name: installing dependencies" >&2
+  (cd "$root" && pnpm install) >&2 || {
+    complain "installing the dependencies failed: run scripts/$app_name in a terminal to see why"
+    exit 1
+  }
+fi
+
+# Built once, and again whenever what a source or the build's own configuration holds is other than at the last
+# build that succeeded. The stamp
+# is a hash of those files, their paths and their contents, not a time: a checkout or a touch that leaves every
+# one as it was builds nothing, and any change of one, a file added, removed or renamed among them, builds
+# again. The build's own files will not do as a stamp, since the main bundle is written before the renderer is
+# compiled, and a build that then fails would leave it looking fresh. Tests and notes are not built.
+# The hash tool, chosen once: sha256sum (coreutils), else shasum. Both print `<hash>  <name>`.
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256=sha256sum
+elif command -v shasum >/dev/null 2>&1; then
+  sha256='shasum -a 256'
+else
+  complain "neither sha256sum nor shasum was found on PATH"
+  exit 1
+fi
+sources() {
+  (cd "$root" && find app/src app/package.json app/electron.vite.config.ts app/tsconfig.json pnpm-lock.yaml \
+    -type f ! -name '*.test.ts' ! -name '*.test.tsx' ! -name '*.itest.ts' ! -name 'CLAUDE.md' -print0 |
+    LC_ALL=C sort -z | xargs -0 $sha256 | $sha256 | cut -d ' ' -f 1)
+}
+stamp=$app/out/.built
+held=$(sources)
+if [ ! -f "$stamp" ] || [ ! -f "$app/out/main/index.js" ] || [ ! -f "$app/out/preload/index.js" ] || [ ! -f "$app/out/renderer/index.html" ] ||
+  [ "$(cat "$stamp")" != "$held" ]; then
+  echo "$app_name: building the app" >&2
+  # The stamp is of what the sources held when the build began: one saved while it ran is a change.
+  (cd "$root" && pnpm build) >&2 || {
+    complain "building the app failed: run scripts/$app_name in a terminal to see why"
+    exit 1
+  }
+  printf '%s\n' "$held" >"$stamp.tmp" && mv -f -- "$stamp.tmp" "$stamp"
+fi
+
+exec "$@"
