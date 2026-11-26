@@ -74,6 +74,26 @@
     { "pino": "app/src/renderer/main.tsx", "torno": "app/src/renderer/main.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's App; no platform attribute" },
     { "pino": "app/playwright.config.ts", "torno": "app/playwright.config.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "no kernel switch and no evals" },
     { "pino": "app/e2e/terminal.ts", "torno": "app/e2e/terminal.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "cwdOf and agentsIn only, Linux /proc" },
-    { "pino": ".claude/rules/e2e-hidden-window.md", "torno": ".claude/rules/e2e-hidden-window.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's hooks and names; no kernel, scans, exports or terminal" }
+    { "pino": ".claude/rules/e2e-hidden-window.md", "torno": ".claude/rules/e2e-hidden-window.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's hooks and names; no kernel, scans, exports or terminal" },
+    { "pino": "app/src/shared/contrast.ts", "torno": "app/src/shared/contrast.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/layout.css", "torno": "app/src/renderer/styles/layout.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/session.css", "torno": "app/src/renderer/styles/session.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/chat-prompt.css", "torno": "app/src/renderer/styles/chat-prompt.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/chat-slip.css", "torno": "app/src/renderer/styles/chat-slip.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/chat-foot.css", "torno": "app/src/renderer/styles/chat-foot.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/controls.css", "torno": "app/src/renderer/styles/controls.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/status.css", "torno": "app/src/renderer/styles/status.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/card.css", "torno": "app/src/renderer/styles/card.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/plate.css", "torno": "app/src/renderer/styles/plate.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/welcome.css", "torno": "app/src/renderer/styles/welcome.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/styles/tokens.css", "torno": "app/src/renderer/styles/tokens.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's accent, dye, mark and diff colours; the CAD and terminal tokens dropped" },
+    { "pino": "app/src/renderer/styles/app.css", "torno": "app/src/renderer/styles/app.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the list of pino's sheets" },
+    { "pino": "app/src/renderer/styles/titlebar.css", "torno": "app/src/renderer/styles/titlebar.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "no macOS rules; comments" },
+    { "pino": "app/src/renderer/styles/chat.css", "torno": "app/src/renderer/styles/chat.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's own tools are marked data-own" },
+    { "pino": "app/src/shared/fonts.ts", "torno": "app/src/shared/fonts.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "comment only" },
+    { "pino": "app/src/shared/fonts.test.ts", "torno": "app/src/shared/fonts.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "two files may name a family; no IBM Plex case" },
+    { "pino": "app/src/shared/contrast.test.ts", "torno": "app/src/shared/contrast.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the CAD and terminal cases dropped; the added wash is not held from --ok; a case for pino's colours" },
+    { "pino": "app/src/renderer/styles/styles.test.ts", "torno": "app/src/renderer/styles/styles.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's sheets; no export page, card sizes, old tokens or macOS cases; cases for undefined variables and torno's blue" },
+    { "pino": ".claude/rules/styles-themes.md", "torno": ".claude/rules/styles-themes.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's colours and sheets" }
   ]
 }

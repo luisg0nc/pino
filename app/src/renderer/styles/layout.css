@@ -1,0 +1,316 @@
+/* Shell layout: one grid. A title row on top, the card at the left, the view,
+   the session dock at the right, and the status line along the foot. A card or a dock that is away is a zero column.
+   Colours and sizes come from tokens.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 var(--text-size) / var(--text-leading) var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Every number and ref is set in the monospace face. The monospace face is wide: inline in a line of sans it runs smaller, a little
+   tighter, with a margin each side so that the sans space beside it does not vanish. A column or a table sets its own size and margin. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86em;
+  letter-spacing: -0.02em;
+  margin-inline: 0.12em;
+}
+
+/* A control is no run of sans with a number in it: it keeps the face and the size, and takes no margin, so that it is as wide as its box says. */
+:is(button, input, select, textarea).num {
+  margin-inline: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* ---- Shell ---- */
+
+.shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--card-space) minmax(0, 1fr) var(--dock-space);
+  grid-template-rows: var(--title-h) minmax(0, 1fr) var(--status-h);
+  height: 100%;
+  overflow: hidden;
+  /* The columns: the card's and the dock's, or nothing while one is away. */
+  --card-space: var(--card-w);
+  --dock-space: var(--dock-w);
+  /* How far in from the window's left the view starts: the card docked at the left when one is open. The sheet that rises
+     from the status line keeps clear of the left column by it. */
+  --left-w: var(--card-space);
+  /* How tall the switch of Board and Model is, at the top left of the main area (`pboard-switch`): the bars of the view stand below it, never under it. */
+  --switch-h: 34px;
+}
+
+.shell[data-left='away'] {
+  --card-space: 0px;
+}
+
+.shell[data-dock='collapsed'] {
+  --dock-space: 0px;
+}
+
+/* Keeps the resize cursor when the pointer outruns the dock's edge at a limit. */
+.shell[data-resizing] {
+  cursor: col-resize;
+}
+
+/* ---- Viewport: the grid's middle cell ---- */
+
+.viewport {
+  position: relative;
+  grid-area: 2 / 2 / 3 / 3;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+}
+
+/* With no folder open the prompt is the whole window: no title row, no dock. */
+.viewport.welcome {
+  grid-area: 1 / 1 / -1 / -1;
+}
+
+/* The part of the viewport no panel covers: the canvas, the tags and bands over it and
+   whatever is said when there is nothing to draw. */
+.viewport-pane {
+  position: absolute;
+  inset: 0;
+  /* What the corner of the view holds at the left: the axis triad reaches this high and this far across (`TRIAD_CLEAR` in viewport/overlay.ts,
+     which a test holds this to). The hint at the foot of the view keeps this far in from each side, clear of the triad and of the scale bar or the
+     grid's step. Nothing else stands at the foot: the bars are tags, bands and procedure cards, each placed by its own rule. */
+  --triad-clear: 102px;
+}
+
+.viewport-canvas,
+.viewport-canvas canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.viewport-canvas canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* On a handle of a shape's gizmo, whichever tool is in hand. */
+.viewport-canvas canvas[data-gizmo-axis] {
+  cursor: grab !important;
+}
+
+/* The numbers of the marks, drawn over the 3D view; the pointer goes through to it. */
+.viewport-canvas .mark-labels {
+  pointer-events: none;
+}
+
+.viewport-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--surface);
+  text-align: center;
+}
+
+.viewport-empty .button {
+  margin-top: var(--space-3);
+}
+
+/* torno's logo (ui/Logo.tsx): the vise in the colour it is given, the part in the accent; plain, all of it in that colour. */
+.logo {
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--space-3);
+  color: var(--muted);
+}
+
+.logo-part {
+  fill: var(--accent);
+}
+
+.logo-plain .logo-part {
+  fill: currentColor;
+}
+
+.viewport-empty h2 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.viewport-empty p {
+  max-width: 40ch;
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+/* ---- Panels over the viewport ---- */
+
+.left,
+.dock {
+  position: relative;
+  z-index: 1; /* above the viewport, which comes after the left column in the DOM (reading order): their edges' hit strips reach over it */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+}
+
+/* The route card: the region the focus goes round as "left". */
+.left {
+  grid-area: 2 / 1 / 3 / 2;
+  flex-direction: row;
+}
+
+.left[hidden] {
+  display: none;
+}
+
+.dock {
+  grid-area: 2 / 3 / 3 / 4;
+  border-left: var(--divider);
+}
+
+.dock[hidden] {
+  display: none;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 40px;
+  padding: 0 var(--space-4);
+}
+
+.wordmark {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.panel-title {
+  font-weight: 500;
+}
+
+.panel-note {
+  padding: var(--space-1) var(--space-4) 0;
+  color: var(--muted);
+}
+
+/* The dock's left edge is its resize handle: a 9 px hit strip over the hairline. */
+.dock-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  z-index: 1; /* over the session's terminal, which comes after it */
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.dock-edge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+}
+
+.dock-edge:hover::after,
+.dock-edge:focus-visible::after,
+.shell[data-resizing] .dock-edge::after {
+  background: var(--accent);
+}
+
+.dock-edge:focus-visible {
+  outline: none;
+}
+
+/* The right edge of the card: a band of 9 px to take hold of, a hairline of the accent when it is hot. */
+.left-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -5px;
+  z-index: 2;
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.left-edge::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+}
+
+.left-edge:hover::after,
+.left-edge:focus-visible::after,
+.shell[data-resizing-left] .left-edge::after {
+  background: var(--accent);
+}
+
+.left-edge:focus-visible {
+  outline: none;
+}
+
+.shell[data-resizing-left] {
+  cursor: col-resize;
+  user-select: none;
+}

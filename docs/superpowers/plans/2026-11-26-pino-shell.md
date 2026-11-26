@@ -686,6 +686,12 @@ git add -A && git commit -m "Add the hidden-window e2e harness"
 
 ### Task 10: Design tokens, fonts, contrast and style tests
 
+> **Note from the build:** `layout.css` and the other as-is sheets are unchanged. `chat.css` is adapted: its own-tool rules select `[data-own]`, not torno's name.
+>
+> **Note from the build:** The undefined-variable check accepts a `var()` with a fallback: `controls.css` reads `--stem` that way, set from `Popover.tsx`.
+>
+> **Note from the build:** Every pino colour passed torno's contrast thresholds unchanged.
+
 **Files:**
 - Copy adapted:
   - `app/src/renderer/styles/tokens.css`: the accent, dye, diff-added and mark values of Global Constraints. Drop the CAD and terminal groups: `--scan-plain`, `--deviation-*`, `--drawing-ink`, `--part-*`, `--part-reference`, `--set-*`, `--layer-*`, `--ansi-*`, `--term-*`, `--band`, `--band-edge`. The comments say solder mask where they said layout blue.
@@ -710,7 +716,7 @@ git add -A && git commit -m "Add the hidden-window e2e harness"
 - Keep "app.css is the list", the rule reader, "animates nothing without end", "dims no text by opacity", "uses radii from the tokens", "has one shadow" and "says what it does for less motion".
 - Drop the palette-shadow legacy, the card and dock sizes, and the macOS title bar cases.
 
-- [ ] **Step 1: Copy the tests, adapt them as named, and add**
+- [x] **Step 1: Copy the tests, adapt them as named, and add**
 
 ```ts
 // contrast.test.ts
@@ -723,21 +729,21 @@ it('reads only custom properties that tokens.css or the sheet itself defines', (
 it('has no blue of torno\'s accent left in a sheet', () => { expect(sheetsMatching(/#1D46B8|#7C9BF7/i)).toEqual([]) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared src/renderer/styles`
 Expected: FAIL, sheets missing.
 
-- [ ] **Step 3: Copy the sheets and modules, adapt as named, list them in the manifest**
+- [x] **Step 3: Copy the sheets and modules, adapt as named, list them in the manifest**
 
 If a copied sheet reads a dropped token, delete those rules from it and mark it adapted.
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app build`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's design tokens and sheets with a solder-mask green accent"
