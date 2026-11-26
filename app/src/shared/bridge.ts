@@ -1,5 +1,6 @@
 // Everything the renderer may ask of main, and the types both sides share for it.
 
+import type { ArtifactName, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
 import type { ProjectInfo, RecentFolder } from './project'
 
@@ -63,6 +64,16 @@ export interface PinoBridge {
     onItem(cb: (m: { sessionId: string; item: ChatItem; seq: number }) => void): () => void
     onMeta(cb: (m: { sessionId: string; meta: ChatMeta; seq: number }) => void): () => void
     onCapabilities(cb: (m: { sessionId: string; commands: ChatCommand[]; models: ChatModel[]; seq: number }) => void): () => void
+  }
+  build: {
+    /** The build loop of the open project as it stands; null for a project that is not open. */
+    state(projectId: string): Promise<BuildState | null>
+    rebuild(projectId: string): Promise<void>
+    /** A file of the build with this hash: text, or the 3D model's bytes. Only what that build's result lists. */
+    file(projectId: string, hash: string, name: ArtifactName): Promise<string | Uint8Array>
+    /** A file of the route with this key, as text. */
+    routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>
+    onState(cb: (s: BuildState) => void): () => void
   }
   notices: {
     /** Something main has to say that no call asked for: a folder it may not write into. */

@@ -1,5 +1,8 @@
 import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import type { ArtifactName } from '../shared/build'
 import type { ProjectInfo, RecentFolder } from '../shared/project'
+import { readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
+import type { Builds } from './builds'
 import { lastConversation } from './sessions/chatlog'
 import type { Sessions } from './sessions/manager'
 import type { KnownModels } from './sessions/models'
@@ -10,9 +13,10 @@ import type { Trust } from './trust'
 //   invoked: project:pick, project:open, project:current, project:recent, project:close,
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
-//            chat:setEffort, chat:models
+//            chat:setEffort, chat:models,
+//            build:state, build:rebuild, build:file, build:routeFile
 //   sent:    chat:answer, window:minimize, window:toggleMaximize, window:close
-//   to the window: session:status, chat:item, chat:meta, chat:capabilities, notice, window:maximized (index.ts)
+//   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, notice, window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
 
 /** What main holds of the open project, as the window may ask for it. */
@@ -32,6 +36,7 @@ export interface IpcDeps {
   sessions: Sessions
   trust: Trust
   models: KnownModels
+  builds: Builds
 }
 
 /** Sends a message to the window, if there is one to hear it. */
@@ -41,7 +46,7 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ projects, sessions, trust, models }: IpcDeps): void {
+export function registerIpc({ projects, sessions, trust, models, builds }: IpcDeps): void {
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -98,6 +103,19 @@ export function registerIpc({ projects, sessions, trust, models }: IpcDeps): voi
   ipcMain.on('chat:answer', (event, sessionId: unknown, requestId: unknown, answer: Parameters<Sessions['answer']>[2]) => {
     if (ours(event)) sessions.answer(String(sessionId), String(requestId), answer)
   })
+
+  handle('build:state', (id: unknown) => {
+    const project = projectOf(id)
+    return project ? (builds.state(project.id) ?? null) : null
+  })
+  handle('build:rebuild', (id: unknown) => builds.rebuild(mustBeOpen(id).id))
+  handle('build:file', async (id: unknown, hash: unknown, name: unknown) => {
+    const project = mustBeOpen(id)
+    const result = await resultOfBuild(project, String(hash), [builds.latest(project.id), builds.lastGood(project.id)])
+    return readArtifact(project, String(hash), name as ArtifactName, result)
+  })
+  handle('build:routeFile', (id: unknown, key: unknown, name: unknown) => readRouteFile(mustBeOpen(id), String(key), name as RouteFile))
+  builds.onState((state) => broadcast('build:state', state))
 
   sessions.on('status', (m) => broadcast('session:status', { sessionId: m.sessionId, status: m.status }))
   sessions.on('item', (m) => broadcast('chat:item', { sessionId: m.sessionId, item: m.item, seq: m.seq }))

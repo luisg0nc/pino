@@ -5,9 +5,11 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImag
 import { APP, envName, toolName } from '../shared/app'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
+import { Builds } from './builds'
 import { frameOptions, MIN_WINDOW, SURFACE } from './frame'
 import { startHttp } from './http'
 import { broadcast, type Projects, registerIpc } from './ipc'
+import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
 import { applyLoginPath } from './loginPath'
 import { mountMcp } from './mcp/server'
 import { onNotOwn } from './own'
@@ -29,6 +31,8 @@ import { Trust } from './trust'
 //   PINO_CONFIG=<path>     config file to use instead of ~/.config/pino/config.json (under test there is none unless
 //                          one is named)
 //   PINO_AGENT_CMD=<cmd>   command to run for a session instead of `claude`, split on spaces
+//   PINO_KERNEL_CMD=<cmd>  command to run as the engine's serve mode instead of `uv run ... pino-kernel serve`
+//   PINO_KERNEL_DIR=<dir>  the engine's folder, instead of `kernel` beside the app
 //   PINO_DEBUG=1           print where the MCP server is, and the command line and the hooks of every session
 // Whose window this is, said outright: the desktop finds pino's entry and icon by it (the Wayland app id, the
 // X11 class).
@@ -102,6 +106,12 @@ function changeConfig(change: (config: Config) => Config): Promise<void> {
   return done
 }
 
+/** The one engine of this run, and the build loop over it. Neither starts anything until a project has a board. */
+const kernel = kernelHolder(() =>
+  startKernel(kernelCommand(process.env, app.getAppPath()), { env: process.env, cwd: app.getPath('userData') })
+)
+const builds = new Builds({ kernel: () => kernel.get() })
+
 /** The one project open, and the rules of opening and closing it. */
 function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: string, said: boolean): Promise<void> } {
   let open: ProjectInfo | undefined
@@ -119,10 +129,12 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
       const next = await openProject(dir)
       if (open && open.id !== next.id) {
         // No start is taken for the old project from here on, and `stopAll` waits for one under way.
+        builds.close(open.id)
         open = undefined
         await sessions().stopAll()
       }
       open = next
+      builds.open(next)
       await changeConfig((config) => ({ project: next.dir, recent: recentWith(config.recent, next.dir) }))
       return next
     })
@@ -160,6 +172,7 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
     },
     close: () =>
       inTurn(async () => {
+        if (open) builds.close(open.id)
         open = undefined
         await sessions().stopAll()
         await changeConfig((config) => ({ recent: config.recent }))
@@ -179,6 +192,8 @@ const testHooks = {
   pickFolder: null as string | null,
   picks: 0,
   mcpFor: (_projectId: string): { url: string; token: string } => ({ url: '', token: '' }),
+  /** The engine's process id, when one runs: a spec checks that it does not outlive pino. */
+  kernelPid: (): number | null => kernel.current()?.pid ?? null,
   configPath: (): string | null => configPath
 }
 
@@ -301,7 +316,7 @@ void app.whenReady().then(async () => {
   if (isDebug) console.error(`[${APP.name}] listening at ${http.url('/')}`)
   // A folder of a project that pino may not write into is said in the window, once.
   onNotOwn((_dir, message) => broadcast('notice', { text: message }))
-  registerIpc({ projects: holder, sessions, trust, models })
+  registerIpc({ projects: holder, sessions, trust, models, builds })
 
   testHooks.mcpFor = (projectId) => ({ url: http.url(`/mcp/${projectId}`), token: http.grant([`/mcp/${projectId}`]) })
   if (isTest) Object.assign(globalThis, { [APP.mainHook]: testHooks })
@@ -316,12 +331,16 @@ void app.whenReady().then(async () => {
 const quitWaits = quitGate(3000)
 
 app.on('before-quit', (event) => {
-  const wait = quitWaits([sessions?.busy ? sessions.stopAll() : null, configWriting > 0 ? configWritten : null])
+  // The engine is asked to shut down; it has the same three seconds, and its whole group is killed with pino.
+  const wait = quitWaits([sessions?.busy ? sessions.stopAll() : null, configWriting > 0 ? configWritten : null, kernel.current() ? kernel.dispose() : null])
   if (!wait) return
   event.preventDefault()
   void wait.then(() => app.quit())
 })
-app.on('will-quit', () => sessions?.killAll())
+app.on('will-quit', () => {
+  sessions?.killAll()
+  kernel.kill()
+})
 
 // Closing the window ends the app: sessions do not outlive it.
 app.on('window-all-closed', () => app.quit())

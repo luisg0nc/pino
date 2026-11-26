@@ -38,6 +38,13 @@ export function App() {
     }
   }, [])
 
+  // The build loop of the project on show: what main tells from now on, and how it stands already.
+  useEffect(() => window.pino.build.onState(actions.setBuild), [])
+  const projectId = project?.id
+  useEffect(() => {
+    if (projectId) void window.pino.build.state(projectId).then((s) => s && actions.setBuild(s), () => {})
+  }, [projectId])
+
   // The project main holds open: the one remembered or named at start, and the same one after the window is reloaded.
   useEffect(() => {
     void window.pino.project.current().then(

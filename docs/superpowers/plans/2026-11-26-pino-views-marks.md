@@ -267,6 +267,8 @@ git commit -m "Build result types, the reference build as a fixture, and a stand
 
 ### Task 3: Kernel client and the build loop in main
 
+> As built: a folder with no `board.py` yet is not built and no engine is started, so opening an empty folder writes nothing. Main also refuses to ask the engine to build when `.pino` or a folder it writes under it is a link. `Builds.patch` is added for the router's progress.
+
 **Files:**
 - Create: `app/src/main/kernel/client.ts`, `app/src/main/builds.ts`, `app/src/main/artifacts.ts`
 - Modify: `app/package.json` (`chokidar ^5.0.0`), `app/src/main/index.ts`, `app/src/main/ipc.ts`, `app/src/shared/bridge.ts`, `app/src/preload/index.ts`, `app/src/renderer/state/store.ts`, `app/src/renderer/App.tsx`
@@ -291,7 +293,7 @@ git commit -m "Build result types, the reference build as a fixture, and a stand
   - `build: { state(projectId: string): Promise<BuildState | null>; rebuild(projectId: string): Promise<void>; file(projectId: string, hash: string, name: ArtifactName): Promise<string | Uint8Array>; routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>; onState(cb: (s: BuildState) => void): () => void }` (`glb` is a `Uint8Array`, the rest text).
 - Store: `build: BuildState | null`, `shown: number | null` (an older build chosen in the strip; null is the latest), actions `setBuild(s: BuildState)`, `showBuild(n: number | null)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // client.test.ts (spawns the stand-in; kills only its own pid group)
@@ -336,21 +338,21 @@ it('refuses a name the result does not list, and a hash that is not one', () => 
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/kernel/client.test.ts src/main/builds.test.ts src/main/artifacts.test.ts`
 Expected: FAIL with "Cannot find module".
 
-- [ ] **Step 3: Add chokidar, write the client, the loop, the artifact paths, IPC, preload, store**
+- [x] **Step 3: Add chokidar, write the client, the loop, the artifact paths, IPC, preload, store**
 
 `pnpm -C app add chokidar@^5.0.0`. `index.ts` makes one `Builds`, opens the project when `projects.openAt` succeeds, closes it on close, disposes the kernel in `before-quit` through `quitGate`, and broadcasts `build:state`. `App.tsx` subscribes once and calls `actions.setBuild`.
 
-- [ ] **Step 4: Run the tests, then the whole unit suite and typecheck**
+- [x] **Step 4: Run the tests, then the whole unit suite and typecheck**
 
 Run: `pnpm -C app exec vitest run src/main && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/package.json pnpm-lock.yaml app/src/main app/src/shared/bridge.ts app/src/preload/index.ts app/src/renderer/state/store.ts app/src/renderer/App.tsx
