@@ -4,8 +4,8 @@ Each part is the sha256 of a canonical text (UUIDs, fills, silkscreen, values an
 nets by pad, placement, footprint pads, the outline, zones and rule areas, kept (locked) copper, the rules,
 the routing instructions (the plan without its rules and warnings), and the router and kernel versions. The
 reference labels are a part too, though the copper does not depend on them: the routed board is the build's board
-with the copper on it, and its DRC checks the labels, so a label moved by board.py needs that board made again.
-The key is the first 12 hex of the sha256 over the parts.
+with the copper on it, and its DRC checks the labels, so a label moved by board.py needs that board made again
+(without the router: see `labels_only`). The key is the first 12 hex of the sha256 over the parts.
 """
 
 from __future__ import annotations
@@ -111,10 +111,20 @@ def route_key(board_text: str, pro_text: str, dru_text: str | None, plan: RouteP
     return RouteKey(key, parts)
 
 
+def changed_parts(old: RouteKey, new: RouteKey) -> list[str]:
+    """The parts of the key that differ, in PARTS order. A part one key lacks counts as changed."""
+    return [k for k in PARTS if old.parts.get(k) is None or old.parts.get(k) != new.parts.get(k)]
+
+
+def labels_only(old: RouteKey, new: RouteKey) -> bool:
+    """The two boards differ by their reference labels alone, so the old copper fits the new board."""
+    return changed_parts(old, new) == ["labels"]
+
+
 def stale_reasons(old: RouteKey, new: RouteKey) -> list[str]:
     """Why the copper is stale. Labels moved is said only when nothing else changed: a part that moves takes its
     neighbours' labels with it."""
-    changed = [k for k in PARTS if old.parts.get(k) != new.parts.get(k)]
+    changed = changed_parts(old, new)
     if len(changed) > 1 and "labels" in changed:
         changed.remove("labels")
     return [REASONS[k] for k in changed]

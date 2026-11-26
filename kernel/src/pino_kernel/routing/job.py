@@ -10,6 +10,15 @@
     checks    DRC the routing added, nets left, copper checks, failed steps
     glb       the 3D model of the routed, filled board, exported as a build exports its own
 
+When the newest kept route's board differs from this build's only by its reference labels, the router does not run:
+
+    copper    that route's copper (tracks, arcs, vias) put on this build's board
+    drc       the board refilled with DRC and schematic parity, as above
+    checks    as above, with that route's steps
+    glb       as above
+
+The result says whose copper it kept (`reused`).
+
 A route runs in `<key>.tmp-<pid>-<thread>/` and is renamed into place when it is done, so a half-written folder is
 never read. One route runs per project (`.pino/routes/job.lock`).
 """
@@ -39,7 +48,7 @@ from ..result import Timing, sort_and_cap
 from .chain import Events, StepRun, chain_steps, hint_steps, run_steps
 from .checks import Share, complete_nets, copper_findings, router_drc, unrouted_findings, unrouted_nets
 from .history import RouteHistory
-from .key import route_key
+from .key import RouteKey, labels_only, route_key
 from .krt import KRT_COMMIT, KRT_VERSION, Krt, RouterMissing, ensure, krt_env
 from .plan import RoutePlan, board_box, net_class_widths, plan_for_build
 from .result import SCHEMA, RouteResult, empty_counts, route_headline
@@ -116,6 +125,76 @@ def _drc_into(kicad: KicadCli, folder: Path, board_text: str, project_files: Map
     except json.JSONDecodeError:
         return None, board_text, "kicad-cli DRC wrote a report pino cannot read"
     return report, pcb.read_text(encoding="utf-8"), None
+
+
+def _checks(report: dict, baseline: dict | None, board_text: str, copper: Copper, pro_text: str, plan: RoutePlan,
+            steps: list[StepRun]) -> list[Finding]:
+    """DRC the routing added, the nets left, the copper checks and the router steps that failed."""
+    out = router_drc(report, baseline or {}, _footprint_refs(board_text))
+    out += unrouted_findings(report, copper)
+    widths = net_class_widths(pro_text, sorted({p.net for p in copper.pads if p.net}))
+    out += copper_findings(copper, plan, widths)
+    for s in steps:
+        if s.note.startswith(("failed", "no output")):
+            out.append(Finding("router", "router_step_failed", "warning",
+                               f"router step {s.step} ({s.script}) {s.note}"))
+    return out
+
+
+def reuse_copper(work: Path, board_text: str, pro_text: str, plan: RoutePlan, routed_text: str, *, kicad: KicadCli,
+                 project_files: Mapping[str, Path], baseline: dict | None, steps: list[StepRun], share: Share,
+                 events: Events, cancel: threading.Event) -> RouteOutcome:
+    """A kept route's copper (from its board, `routed_text`) on a board that differs from its own only by the labels:
+    no router, the zones refilled and DRC run with parity, then the route's own checks. `steps` and `share` are the
+    kept route's, since its copper is what they made."""
+    work = Path(work)
+    work.mkdir(parents=True, exist_ok=True)
+    clock = _Clock()
+    findings: list[Finding] = list(plan.warnings)
+
+    def outcome(stopped, problem=None, text=board_text, copper=None, drc=None, filled=""):
+        return RouteOutcome(text, copper or read_copper(text), drc or {}, share, list(steps), findings, clock.times,
+                            stopped, filled, problem, 0, plan)
+
+    events({"event": "step", "step": "copper", "index": 0, "of": 0})
+    final = clock.run("copper", lambda: merge_copper(board_text, rewrite_uuids(copper_nodes(routed_text))))
+    events({"event": "step", "step": "drc", "index": 0, "of": 0})
+    report, filled, problem = clock.run("drc", _drc_into, kicad, work / "filled", final, project_files,
+                                        work / "drc.json", parity=True, cancel=cancel)
+    if cancel.is_set():
+        return outcome("cancelled")
+    if problem:
+        findings.append(Finding("kicad", "kicad_cli_failed", "error", problem))
+        return outcome("failed", problem, text=final)
+    copper = read_copper(filled)
+    findings.extend(clock.run("checks", _checks, report, baseline, final, copper, pro_text, plan, steps))
+    o = outcome(None, text=final, copper=copper, drc=report, filled=filled)
+    o.unrouted = sum(unrouted_nets(report, copper).values())
+    return o
+
+
+@dataclass
+class _Kept:
+    """The newest kept route, when this build's board differs from its own only by the labels."""
+    number: int
+    key: str
+    folder: Path
+    result: RouteResult
+
+
+def _labels_only_base(routes: Path, history: RouteHistory, key: RouteKey) -> _Kept | None:
+    latest = history.latest_done()
+    if latest is None or latest["key"] == key.key:
+        return None
+    folder = routes / latest["key"]
+    try:
+        old = RouteKey.from_json((folder / "key.json").read_text(encoding="utf-8"))
+        stored = RouteResult.from_json((folder / "route.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if stored.state != "done" or stored.share is None or not (folder / "board.kicad_pcb").is_file():
+        return None
+    return _Kept(latest["number"], latest["key"], folder, stored) if labels_only(old, key) else None
 
 
 def route_board(work: Path, board_text: str, pro_text: str, dru_text: str | None, plan: RoutePlan, *,
@@ -199,19 +278,7 @@ def route_board(work: Path, board_text: str, pro_text: str, dru_text: str | None
         findings.append(Finding("kicad", "kicad_cli_failed", "error", problem))
         return outcome("failed", steps, problem, text=final)
     copper = read_copper(filled)
-
-    def checks():
-        out = router_drc(report, baseline or {}, _footprint_refs(final))
-        out += unrouted_findings(report, copper)
-        widths = net_class_widths(pro_text, sorted({p.net for p in copper.pads if p.net}))
-        out += copper_findings(copper, plan, widths)
-        for s in steps:
-            if s.note.startswith(("failed", "no output")):
-                out.append(Finding("router", "router_step_failed", "warning",
-                                   f"router step {s.step} ({s.script}) {s.note}"))
-        return out
-
-    findings.extend(clock.run("checks", checks))
+    findings.extend(clock.run("checks", _checks, report, baseline, final, copper, pro_text, plan, steps))
     after_finish = complete_nets(report, copper)[1]
     share = Share(nets, before, after_router, after_finish, result.seconds, finish_seconds)
     o = outcome(None, steps, text=final, copper=copper, drc=report, share=share, filled=filled)
@@ -304,7 +371,12 @@ def _model_for_kept(project: Path, final: Path, stored: RouteResult, cancel: thr
     return Timing("glb", seconds)
 
 
-def _write_log(folder: Path, steps: list[StepRun], work: Path) -> None:
+def _write_log(folder: Path, steps: list[StepRun], work: Path, kept: Path | None = None) -> None:
+    """The router steps' output, or the kept route's own log when its copper was reused."""
+    if kept is not None:
+        log = kept / "log.txt"
+        (folder / "log.txt").write_bytes(log.read_bytes() if log.is_file() else b"")
+        return
     parts = []
     for s in steps:
         log = work / "steps" / s.folder / "log.txt"
@@ -415,7 +487,8 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                         return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", [],
                                       key.key, build_hash)
                 stored.number, stored.build, stored.cached = number, build_hash, True
-                stored.headline = route_headline(number, build_number, "done", stored.counts, stored.share, None)
+                stored.headline = route_headline(number, build_number, "done", stored.counts, stored.share, None,
+                                                 stored.reused)
                 stored.timings = clock.times + [Timing("plan", plan_seconds)] + \
                     [Timing(t.step, t.seconds, True) for t in stored.timings
                      if t.step not in ("router", "plan") and not (exported and t.step == "glb")] + \
@@ -451,9 +524,17 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                 text = filled_src.read_text(encoding="utf-8") if filled_src.is_file() else board_text
                 baseline, _, _ = _drc_into(kicad, tmp / "baseline", text, project_files, tmp / "baseline" / "drc.json",
                                            parity=False, cancel=cancel)
-            outcome = route_board(tmp / "work", board_text, pro_text, dru_text, plan, kicad=kicad, krt=krt,
-                                  project_files=project_files, baseline=baseline, options=options, events=events,
-                                  cancel=cancel)
+            base = _labels_only_base(routes, history, key) if options.cache else None
+            reused = {"number": base.number, "key": base.key} if base else None
+            if base is not None:
+                outcome = reuse_copper(tmp / "work", board_text, pro_text, plan,
+                                       (base.folder / "board.kicad_pcb").read_text(encoding="utf-8"), kicad=kicad,
+                                       project_files=project_files, baseline=baseline, steps=base.result.steps,
+                                       share=Share.from_json(base.result.share), events=events, cancel=cancel)
+            else:
+                outcome = route_board(tmp / "work", board_text, pro_text, dru_text, plan, kicad=kicad, krt=krt,
+                                      project_files=project_files, baseline=baseline, options=options, events=events,
+                                      cancel=cancel)
             timings = clock.times + [Timing("plan", plan_seconds + sum(t.seconds for t in outcome.timings
                                                                        if t.step == "plan"))] + \
                 [t for t in outcome.timings if t.step != "plan"]
@@ -485,16 +566,17 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                          "plan": rel("plan.json"), "key": rel("key.json"), "log": rel("log.txt")}
             if (tmp / "board.glb").is_file():
                 artifacts["glb"] = rel("board.glb")
-            headline = route_headline(number, build_number, "done", counts, share, None)
+            headline = route_headline(number, build_number, "done", counts, share, None, reused)
             result = RouteResult(SCHEMA, __version__, dict(ROUTER), key.key, build_hash, number, "done", verdict, headline,
-                                 complete, counts, share, kept, truncated, outcome.steps, timings, artifacts, False)
+                                 complete, counts, share, kept, truncated, outcome.steps, timings, artifacts, False,
+                                 reused)
             (tmp / "key.json").write_text(key.to_json(), encoding="utf-8")
             (tmp / "plan.json").write_text(plan.to_json(), encoding="utf-8")
             (tmp / "board.kicad_pcb").write_text(outcome.board_text, encoding="utf-8")
             (tmp / "copper.json").write_text(copper_json(outcome.copper), encoding="utf-8")
             shutil.copy(tmp / "work" / "drc.json", tmp / "drc.json")
             normalize(tmp / "drc.json")
-            _write_log(tmp, outcome.steps, tmp / "work")
+            _write_log(tmp, outcome.steps, tmp / "work", base.folder if base else None)
             (tmp / "route.json").write_text(result.to_json(), encoding="utf-8")
             if options.keep_steps:
                 (tmp / "work").rename(tmp / "steps")

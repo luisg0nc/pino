@@ -40,6 +40,8 @@ class RouteResult:
     timings: list[Timing]
     artifacts: dict
     cached: bool = False
+    # {"number", "key"} of the route whose copper this one kept, when only labels moved since it; else None
+    reused: dict | None = None
 
     def to_dict(self) -> dict:
         return {"schema": self.schema, "kernel_version": self.kernel_version, "router": dict(self.router),
@@ -48,7 +50,7 @@ class RouteResult:
                 "counts": dict(self.counts), "share": self.share, "findings": [f.to_json() for f in self.findings],
                 "truncated": self.truncated, "steps": [s.to_json() for s in self.steps],
                 "timings": [t.to_json() for t in self.timings], "artifacts": dict(self.artifacts),
-                "cached": self.cached}
+                "cached": self.cached, "reused": dict(self.reused) if self.reused else None}
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=1, sort_keys=True, ensure_ascii=False) + "\n"
@@ -63,22 +65,25 @@ class RouteResult:
                            [Finding.from_json(f) for f in d["findings"]], d["truncated"],
                            [StepRun.from_json(s) for s in d["steps"]],
                            [Timing(t["step"], t["seconds"], t.get("cached", False)) for t in d["timings"]],
-                           d["artifacts"], d.get("cached", False))
+                           d["artifacts"], d.get("cached", False), d.get("reused"))
 
 
 def route_headline(number: int, build_number: int | None, state: str, counts: dict, share: dict | None,
-                   problem: str | None) -> str:
+                   problem: str | None, reused: dict | None = None) -> str:
     prefix = f"Route r{number}" + (f" (h{build_number})" if build_number else "")
     if problem:
         return cut(f"{prefix}: {problem}", MAX_HEADLINE)
     router = (share or {}).get("router") or {}
-    if state == "done" and share is not None and router.get("share") is None and not counts.get("unrouted"):
+    if state == "done" and share is not None and router.get("share") is None and not counts.get("unrouted") \
+            and not reused:
         return cut(f"{prefix}: nothing to route", MAX_HEADLINE)
     bits = []
-    if router:
+    if reused:
+        bits.append(f"copper of r{reused['number']} kept (labels moved)")
+    elif router:
         bits.append(f"router {router.get('routed', 0)}/{router.get('of', 0)} nets in {router.get('seconds', 0):.0f} s")
     finish = ((share or {}).get("finish") or {}).get("routed", 0)
-    if finish:
+    if finish and not reused:
         bits.append(f"finish {finish}")
     bits.append(f"{counts.get('unrouted', 0)} left")
     drc = counts.get("drc_errors", 0)

@@ -95,8 +95,14 @@ that export fails, the route stands, with a warning. The route lands in `.pino/r
 hash of what the copper depends on: nets by pad, placement, footprints, outline, zones, kept copper, rules, routing
 instructions, and the router and kernel versions. The reference labels are in it too: the routed board is the
 build's board with the copper on it, and its DRC checks them. A value change keeps the key; moving a part or a label
-does not. The fast build reports routing as `none`,
-`running`, `current` or `stale` (with the reasons), and stale copper is never reused. One route runs per project.
+does not. When the newest kept route's board differs from the new one only by its labels (`labels moved` and nothing
+else), a route does not run the router: it puts that route's tracks, arcs and vias on the new build's board, fills the
+zones, runs DRC with parity and pino's checks, exports `board.glb` and stores the result as a new route (3 s on the
+reference board, most of it the model export). Its result says so in `reused` (`{"number", "key"}` of the route it
+took the copper from, else `null`) and in its headline (`copper of r3 kept (labels moved)`), and keeps that route's
+steps, share and log. `--no-cache` always runs the router. The fast build reports routing as `none`, `running`,
+`current` or `stale` (with the reasons), and stale copper is never used as it is: only a new route, by the router or
+by this step, makes it current again. One route runs per project.
 Routes are cached by key (a kept one with no `board.glb` gets it exported from its kept board, without routing
 again), can be cancelled (SIGTERM, or
 `route_cancel` in serve) and stop after 300 s per step and 900 s in all.
@@ -203,13 +209,16 @@ A folder that was pruned answers `build <hash> is no longer kept`.
 After placement, the board writer moves each part's reference label (its Reference text) to the first clear spot
 beside the part: above, below, left, right (centred, then flush with either end of that side), then the same four
 turned 90 degrees. A spot is clear when the text keeps the fab's silk to pad distance from every pad, stays off every
-courtyard (a label under a part is not seen once it is assembled), off every other label and footprint silk line, and
-the fab's copper to edge distance inside the outline. Tracks and zones do not count, since silk over copper is fine
+part's body (a label under a part is not seen once it is assembled), off every other label and footprint silk line, and
+the fab's copper to edge distance inside the outline. A part's body is its F.Fab or B.Fab outline on that side, or, for
+a footprint that draws none, the outline round its pads and silk; the courtyard's margin outside the body does not
+block, so a label may sit there (it can still be read). Tracks and zones do not count, since silk over copper is fine
 for the fab. When nothing fits, the text gets smaller, never below the fab's minimum text height and line width; when
 still nothing fits, the label is hidden and one `label_hidden` info finding names those parts. Bottom parts get their
 labels on B.SilkS, mirrored, by the same rules. The text's size is worked out from KiCad's stroke font
 (`pcb/labels.py`). The route starts from the build's board, so it keeps them, and a label that moves makes the
-route stale (`labels moved`).
+route stale (`labels moved`). The next route then keeps the copper (see Routing). On the reference board 3 of 22
+labels are hidden (C3, C5, C7).
 
 `b.label(part, ...)` in board.py sets one label by hand and wins: `side="left"` (top, bottom, left or right, centred),
 `at=(dx, dy)` (mm from the part's origin, board frame), `rot=90` (degrees; alone it only turns the automatic search) or

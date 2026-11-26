@@ -1,7 +1,8 @@
 """Where routing stands for a build: current copper, a route running, stale copper (and why), or none.
 
 Copper is only ever current for the route key it was made for; a build whose key differs sees the latest route as
-stale, with the reasons, and never reuses it.
+stale, with the reasons, and never uses it as it is (a route after a change of labels alone takes its copper
+onto the new board: see job.py).
 """
 
 from __future__ import annotations
