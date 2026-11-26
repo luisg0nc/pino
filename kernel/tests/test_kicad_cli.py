@@ -66,3 +66,9 @@ def test_find_honours_pino_kicad_cli(tmp_path):
 def test_real_version_is_10(tmp_path):
     libs = discover(); cli = KicadCli(libs, tmp_path / "home", KicadCli.find())
     assert cli.version().startswith("10.")
+
+
+def test_a_saving_drc_passes_paths_by_environment_only(tmp_path, fixture_libs):
+    seen = first_json(make(tmp_path, fixture_libs).drc(tmp_path / "b.kicad_pcb", tmp_path / "d.json", refill=True, save=True))
+    assert not any(a.startswith("KICAD10_") for a in seen["argv"])
+    assert seen["env"]["KICAD10_FOOTPRINT_DIR"] == str(fixture_libs.footprints)

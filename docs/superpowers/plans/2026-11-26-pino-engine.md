@@ -948,7 +948,7 @@ git commit -m "kernel: footprint loader with library roots, edge face and 3D mod
   - `copper_layers(n: int) -> list[tuple[int, str]]` (F.Cu 0, In1.Cu 4, In2.Cu 6, B.Cu 2).
   - `tests/semdiff.py`: `changed_items(a_text: str, b_text: str) -> list[tuple[str, str]]` (top-level `(kind, uuid)` pairs that differ, order ignored).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_same_bytes_twice_and_across_hash_seeds(fixture_libs, tmp_path): ...   # sha256 equal; subprocess with PYTHONHASHSEED 1 and 98765
@@ -1006,12 +1006,12 @@ def test_footprint_zone_survives_kicad_resave(kicad, tmp_path):
     assert zone_polygon(footprint_named_text(out, "U1")) == zone_polygon(footprint_named_text(filled, "U1"))
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_board_writer.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.pcb.writer'`
 
-- [ ] **Step 3: Write the board writer**
+- [x] **Step 3: Write the board writer**
 
 - From the spike: header, layers, setup with `pcbplotparams`, footprints front then back each by UUID, Edge.Cuts drawings by (layer, start, end, uuid), `embedded_fonts no`. No tracks or vias in this stage.
 - Outline: `circuit.outline.segments` to `gr_line`/`gr_arc` on Edge.Cuts, stroke 0.05, UUIDs `ids.uid("edge", kind, index)`.
@@ -1024,17 +1024,30 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.pcb.write
 - `kicad_pro`: the spike's JSON with rules from the profile and net classes from `circuit.net_classes`; `meta.filename "board.kicad_pro"`.
 - `kicad_dru`: `(version 1)` then one rule per limit named `"pino: <limit>"` with the profile's values in mm (`edge_clearance` = `copper_to_edge`, `text_height` = `silk_min_text_height`, `silk_clearance` 0).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_board_writer.py -v`
 Expected: PASS (kicad tests pass, or skip with the marker messages)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/pcb kernel/tests/semdiff.py kernel/tests/test_board_writer.py
 git commit -m "kernel: board writer with stackups, outline, holes, zones, net classes and JLC rules"
 ```
+
+> **Plan fixes (Task 11, during the build), each found by the refill test against kicad-cli 10.0.6:**
+> - Footprint-owned zones: board coordinates (after rotation, flip and translation) are what KiCad's re-save keeps;
+>   `test_footprint_zone_survives_kicad_resave` passes with them and with `(layers "F.Cu" "B.Cu")` written as a list.
+> - Edge.Cuts arcs: KiCad keeps arcs turning one way in its y-down frame and swaps the ends of the others, so the
+>   writer swaps start and end when the cross product in KiCad's frame is negative.
+> - `drc --save-board` stores every `-D` variable as a board `(property ...)`. A saving run passes the library paths
+>   through the environment only.
+> - Mounting holes use the footprint name `"MountingHole"` with no library nickname (KiCad's library check reports
+>   `"pino:MountingHole"` as a missing library).
+> - `.kicad_dru`: `silk_clearance` with no condition also matches silk against copper zones, and `text_height` against
+>   fab-layer text, so both rules carry a silkscreen condition.
+> - An unrouted board's GND zone with no through-hole pad is `isolated_copper` (warning); the refill test allows it.
 
 ---
 

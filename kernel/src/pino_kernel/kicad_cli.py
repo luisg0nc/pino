@@ -109,8 +109,8 @@ class KicadCli:
         return out
 
     def _call(self, step: str, words: tuple[str, ...], flags: Sequence[str], output: Path | None, target: Path,
-              *, output_is_dir: bool = False, timeout: float = 120.0) -> CliRun:
-        args = [*words, *flags, *self._defines(words)]
+              *, output_is_dir: bool = False, timeout: float = 120.0, defines: bool = True) -> CliRun:
+        args = [*words, *flags, *(self._defines(words) if defines else [])]
         if output is not None:
             _remove(output)
             if output_is_dir:
@@ -140,7 +140,9 @@ class KicadCli:
         flags += ["--refill-zones"] if refill else []
         flags += ["--save-board"] if save else []
         flags += ["--schematic-parity"] if parity else []
-        return self._call("drc", ("pcb", "drc"), flags, out, pcb, timeout=300.0)
+        # A saved board keeps every -D variable as a board property, so a run that saves passes the
+        # library paths through the environment only.
+        return self._call("drc", ("pcb", "drc"), flags, out, pcb, timeout=300.0, defines=not save)
 
     def pcb_svg(self, pcb: Path, out_dir: Path, layers: Sequence[str]) -> CliRun:
         words = ("pcb", "export", "svg")
