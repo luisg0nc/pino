@@ -7,7 +7,7 @@
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { capture, resize, settled, waitForBuild } from './helpers'
+import { capture, clickTarget, resize, settled, waitForBuild } from './helpers'
 import { launch, referenceProject, type Launched } from './launch'
 
 const folder = process.env.PINO_SHOTS ? resolve(process.env.PINO_SHOTS) : null
@@ -36,7 +36,17 @@ const press = (key: string) => async (run: Launched) => {
   await run.page.keyboard.press(key)
 }
 
+const onSheet = async (run: Launched): Promise<void> => {
+  await tab(run, 'Schematic').click()
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().sheet?.symbols ?? 0)).toBeGreaterThan(0)
+  await clickTarget(run.page, { kind: 'part', ref: 'J1' })
+  // The tag stands where the pointer has left it, not under the pointer's hover.
+  await run.page.mouse.move(5, 5)
+}
+
 const SHOTS: Record<string, Shot> = {
+  sheet: { at: onSheet },
+  'sheet-dark': { dark: true, at: onSheet },
   board: { at: onBoard },
   'board-1920': { width: 1920, height: 1080, at: onBoard },
   'board-dark': { dark: true, at: onBoard },

@@ -580,6 +580,8 @@ git commit -m "Board tab: pan, zoom, click for the exact reference, layer stack,
 
 ### Task 7: The Schematic view: the sheet in the board's ink
 
+> As built: findings on the sheet are the same pins as on the board, at a constant size on screen, not 2.6 px numbers in sheet mm. The block wash is drawn over the picture, since KiCad's background paints over anything under it. `ink.ts` also holds the sheet's tag words and where a target sits.
+
 **Files:**
 - Create: `app/src/renderer/sheet/ink.ts`, `SheetView.tsx`, `app/src/renderer/styles/sheet.css`
 - Modify: `app/src/renderer/ui/ViewPane.tsx`, `app/src/renderer/styles/app.css`
@@ -593,7 +595,7 @@ git commit -m "Board tab: pan, zoom, click for the exact reference, layer stack,
   - `SheetView.tsx`: the inked SVG under an SVG overlay in the same viewBox: hit boxes, the selection as an accent wash with a 0.45 stroke, a selected net drawn as a 0.7 accent line along its wires, block frames lit when their block is in hand, finding pins at `sheet` positions (2.6 px mono numbers), and marks (Task 12). Pan and zoom by the SVG's viewBox with Task 6's `zoomAt`. A part or pin selected here has its board `describeTarget` text (the selection carries over to the Board tab and back). After a build, symbols whose box moved or whose part changed (`changes.circuit` names it) get the accent wash once.
   - Test hook: `drawn().sheet = { hash: string | null; symbols: number; selected: string | null; net: string | null }`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('recolours the reference sheet to the ink and leaves none of KiCad's colours', () => {
@@ -612,21 +614,21 @@ it('finds a pin before its wire, and a symbol by its box', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/sheet`
 Expected: FAIL.
 
-- [ ] **Step 3: Write `ink.ts` and `SheetView.tsx`**
+- [x] **Step 3: Write `ink.ts` and `SheetView.tsx`**
 
 The sheet sits on the plate as one paper (`--sch-paper`) with the float shadow; fonts inside the SVG are `var(--font-mono)` (mock `sheet.css`). Hint pill: "Click a part, pin or wire · drag pans · scroll zooms".
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run src/renderer/sheet && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/renderer

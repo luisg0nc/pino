@@ -23,6 +23,8 @@ export interface PinoState {
   look: BoardLook
   /** The finding pointed at, by its place in the shown build's findings: its pin lights and its tag is tied to it. */
   hotFinding: number | null
+  /** The block pointed at in the route card, by its key: its frame lights on the sheet. */
+  hotBlock: string | null
   /** The session the dock shows, running or just ended; null when the project has had none since it was opened. */
   session: { sessionId: string; status: SessionStatus } | null
   /** What the status line says once of the open project: a folder pino may not write into, a folder that did not open. */
@@ -31,10 +33,10 @@ export interface PinoState {
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
-const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null } as const
+const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null } as const
 
 export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
@@ -63,6 +65,9 @@ export const actions = {
   },
   setLook(patch: Partial<BoardLook>): void {
     store.setState({ look: { ...store.getState().look, ...patch } })
+  },
+  hoverBlock(hotBlock: string | null): void {
+    store.setState({ hotBlock })
   },
   hoverFinding(hotFinding: number | null): void {
     store.setState({ hotFinding })
