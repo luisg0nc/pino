@@ -1077,7 +1077,7 @@ git commit -m "kernel: routing state in the build result, stale copper named and
   - Out of order: `{"id", "op": "route_cancel", "job": <id>}` -> `{"id", "ok": true, "cancelled": true | false}` at once, from the reader thread.
   - `shutdown` and end of input cancel running jobs, wait up to 10 s, then answer (shutdown) and exit 0. Every output line is written whole under one lock and flushed.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def serve(lines, **kw): ...    # Popen of "serve", writes lines (dicts as JSON), returns parsed output lines in order
@@ -1110,24 +1110,30 @@ def test_route_status(routed_project): ... # status["state"] == "none", then "cu
 def test_ping_says_serve_2(): ...
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_serve_jobs.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.serve'`
 
-- [ ] **Step 3: Write `serve.py` and move the loop out of `cli.py`**
+- [x] **Step 3: Write `serve.py` and move the loop out of `cli.py`**
 
-- [ ] **Step 4: Run the tests to verify they pass, the engine's serve test included**
+- [x] **Step 4: Run the tests to verify they pass, the engine's serve test included**
 
 Run: `uv run --directory kernel pytest tests/test_serve_jobs.py tests/test_cli.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/serve.py kernel/src/pino_kernel/cli.py kernel/README.md kernel/tests/test_serve_jobs.py
 git commit -m "kernel: serve mode runs route jobs with streamed progress and cancel"
 ```
+
+**Plan fixes (implementation):**
+- The engine's `test_cli.py` compared the pong exactly; the pong now carries `serve` and `route_schema` too, so that one assertion follows the plan's pong. The ordering of replies in that test is unchanged and passes.
+- The reader runs in a daemon thread and the ordered worker in the main thread, so `shutdown` ends serve without waiting for the end of input. `route_status` with no build answers `ok: false` ("no build yet: save board.py first").
+- The tests wait for the fake router's pid file before cancelling (the first event can come before the router starts). Extra test: bad route requests.
+- `Server.extend()` is the hook Task 11 uses for its ops.
 
 ---
 

@@ -35,7 +35,7 @@ def test_serve_answers_in_order_and_survives_bad_lines(make_project, fixture_lib
     p = run_cli("serve", input="\n".join(l if isinstance(l, str) else json.dumps(l) for l in lines) + "\n", timeout=60)
     out = [json.loads(l) for l in p.stdout.splitlines()]
     assert [o["id"] for o in out] == [1, None, 2, 3, 4, 5] and p.returncode == 0
-    assert out[0]["pong"] == {"kernel": __version__, "schema": "pino.build/1"}
+    assert out[0]["pong"] == {"kernel": __version__, "schema": "pino.build/1", "serve": 2, "route_schema": "pino.route/1"}
     assert out[1]["ok"] is False and out[2]["result"]["verdict"] == "failed" and out[3]["result"]["verdict"] != "failed"
     assert out[4]["error"] == "unknown op 'nope'"
 

@@ -22,19 +22,30 @@ Options: `--timeout S` (how long board.py may run, 30 s by default), `--render` 
 
 ## Serve protocol
 
-`serve` reads one JSON request per line on stdin and writes one JSON reply per line on stdout, flushed, in request
-order. Logs go to stderr.
+`serve` reads one JSON request per line on stdin and writes one JSON object per line on stdout, flushed. Logs go
+to stderr.
 
 ```json
 {"id": 1, "op": "ping"}
 {"id": 2, "op": "build", "project": "/path/to/project", "options": {"timeout": 30, "render": false, "kicad": true, "cache": true}}
-{"id": 3, "op": "shutdown"}
+{"id": 3, "op": "route", "project": "/path/to/project", "options": {"build": null, "timeout": 900, "step_timeout": 300, "install": true, "cache": true}}
+{"id": 4, "op": "route_status", "project": "/path/to/project"}
+{"id": 5, "op": "route_cancel", "job": 3}
+{"id": 6, "op": "shutdown"}
 ```
 
-Replies are `{"id": 1, "ok": true, "pong": {"kernel": "0.1.0", "schema": "pino.build/1"}}`,
-`{"id": 2, "ok": true, "result": {...}}` and `{"id": 3, "ok": true}`. A line that is not JSON, or an unknown op,
-gets `{"id": <id or null>, "ok": false, "error": "..."}` and the loop goes on. End of input also stops it. Each build
-still runs board.py in a fresh child process.
+Ordered ops are answered in request order: `ping` gives `{"id": 1, "ok": true, "pong": {"kernel": "0.2.0",
+"schema": "pino.build/1", "serve": 2, "route_schema": "pino.route/1"}}`, `build` gives `{"id": 2, "ok": true,
+"result": {...}}`, `route_status` gives `{"id": 4, "ok": true, "status": {...}}` (the `routing` field of the latest
+build) and `shutdown` gives `{"id": 6, "ok": true}`.
+
+A job op (`route`) runs in its own child process and does not hold up the ordered ops. Its progress comes back as
+`{"id": 3, "event": {...}}` lines and its end as one `{"id": 3, "ok": true, "result": {...}}`. `route_cancel` is
+answered at once, out of order, with `{"id": 5, "ok": true, "cancelled": true}` (`false` when no such job runs).
+`shutdown` and the end of input cancel running jobs and wait up to 10 s for them.
+
+A line that is not JSON, or an unknown op, gets `{"id": <id or null>, "ok": false, "error": "..."}` and the loop
+goes on. Each build still runs board.py in a fresh child process.
 
 ## Libraries and kicad-cli
 

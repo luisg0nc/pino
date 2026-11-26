@@ -9,7 +9,9 @@
 
 `build` prints one build result (schema pino.build/1) on stdout and exits 0 for ok, 1 for errors,
 2 for failed. `serve` reads one JSON request per stdin line and answers one JSON object per stdout
-line, in request order. Logs go to stderr; nothing else is written to stdout.
+line (see serve.py). `route` prints one route result (schema pino.route/1), or with --events one
+progress event per line and last {"event": "done", "result": ...}; it exits 0 ok, 1 errors, 2 failed,
+timed out or busy, 130 cancelled. Logs go to stderr; nothing else is written to stdout.
 """
 
 from __future__ import annotations
@@ -99,65 +101,6 @@ def _route(args) -> int:
     return ROUTE_EXIT.get(result.verdict, 2)
 
 
-def _options(raw) -> BuildOptions:
-    raw = raw or {}
-    if not isinstance(raw, dict):
-        raise ValueError("options must be an object")
-    known = {"timeout", "render", "kicad", "cache"}
-    extra = sorted(set(raw) - known)
-    if extra:
-        raise ValueError(f"unknown option {extra[0]!r}")
-    return BuildOptions(timeout=float(raw.get("timeout", 30.0)), render=bool(raw.get("render", False)),
-                        kicad=bool(raw.get("kicad", True)), cache=bool(raw.get("cache", True)))
-
-
-def _answer(line: str) -> tuple[dict, bool]:
-    """(the reply, whether to stop)."""
-    try:
-        req = json.loads(line)
-    except json.JSONDecodeError as e:
-        return {"id": None, "ok": False, "error": f"that line is not JSON: {e.msg}"}, False
-    if not isinstance(req, dict):
-        return {"id": None, "ok": False, "error": "a request is a JSON object with an op"}, False
-    rid = req.get("id")
-    op = req.get("op")
-    if op == "ping":
-        return {"id": rid, "ok": True, "pong": {"kernel": __version__, "schema": SCHEMA}}, False
-    if op == "shutdown":
-        return {"id": rid, "ok": True}, True
-    if op == "build":
-        project = req.get("project")
-        if not isinstance(project, str) or not project:
-            return {"id": rid, "ok": False, "error": "build needs a project folder"}, False
-        if not Path(project).is_dir():
-            return {"id": rid, "ok": False, "error": f"no project folder at {project}"}, False
-        try:
-            options = _options(req.get("options"))
-        except (TypeError, ValueError) as e:
-            return {"id": rid, "ok": False, "error": str(e)}, False
-        try:
-            result = build(Path(project), options)
-        except Exception as e:  # noqa: BLE001 - the loop must survive an engine fault
-            print(f"pino-kernel: build failed inside the engine: {e!r}", file=sys.stderr)
-            return {"id": rid, "ok": False, "error": f"the engine failed: {type(e).__name__}: {e}"}, False
-        return {"id": rid, "ok": True, "result": result.to_dict()}, False
-    return {"id": rid, "ok": False, "error": f"unknown op {op!r}"}, False
-
-
-def serve(stdin=None, stdout=None) -> int:
-    stdin = stdin or sys.stdin
-    stdout = stdout or sys.stdout
-    for line in stdin:
-        if not line.strip():
-            continue
-        reply, stop = _answer(line)
-        stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
-        stdout.flush()
-        if stop:
-            break
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pino-kernel", description="pino's engine: board.py to a KiCad project")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -192,7 +135,9 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(json.dumps(_version(), ensure_ascii=False) + "\n")
         return 0
     if args.command == "serve":
-        return serve()
+        from .serve import main as serve_main
+
+        return serve_main()
     if not args.project.is_dir():
         print(f"pino-kernel: no project folder at {args.project}", file=sys.stderr)
         return 2
