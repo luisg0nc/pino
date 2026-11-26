@@ -15,6 +15,7 @@ Ported files (each carries a header naming its origin):
 - src/pino_kernel/outline.py (outline_points and its helpers, from pcbkit/mech.py)
 - src/pino_kernel/placement/ratsnest.py (from pcbkit/placement.py)
 - src/pino_kernel/diff.py (from pcbkit/release/versions.py)
+- src/pino_kernel/pcb/cleanup.py (EPS, key, collinear, within and plan, from pcbkit/checks/cleanup_tracks.py)
 
 MIT License
 

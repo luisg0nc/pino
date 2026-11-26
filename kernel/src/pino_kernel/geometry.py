@@ -147,3 +147,38 @@ def clip_half_plane(poly: Polygon, axis: str, value: float, keep: str) -> Polygo
             t = (value - a[i]) / (b[i] - a[i])
             out.append((a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])))
     return out
+
+
+def point_segment_distance(p: Point, a: Point, b: Point) -> float:
+    return _seg_dist(p, a, b)
+
+
+def _segments_meet(a: Point, b: Point, c: Point, d: Point, eps: float = 1e-9) -> bool:
+    d1, d2 = _cross(c, d, a), _cross(c, d, b)
+    d3, d4 = _cross(a, b, c), _cross(a, b, d)
+    if ((d1 > eps and d2 < -eps) or (d1 < -eps and d2 > eps)) and ((d3 > eps and d4 < -eps) or (d3 < -eps and d4 > eps)):
+        return True
+    return min(_seg_dist(a, c, d), _seg_dist(b, c, d), _seg_dist(c, a, b), _seg_dist(d, a, b)) <= eps
+
+
+def segment_distance(a: Point, b: Point, c: Point, d: Point) -> float:
+    """Distance between segments ab and cd; 0 when they meet."""
+    if _segments_meet(a, b, c, d):
+        return 0.0
+    return min(_seg_dist(a, c, d), _seg_dist(b, c, d), _seg_dist(c, a, b), _seg_dist(d, a, b))
+
+
+def segment_polygon_distance(a: Point, b: Point, poly: Polygon) -> float:
+    """Distance between segment ab and the polygon's area; 0 when they meet (or ab lies inside)."""
+    if point_in_polygon(a, poly) or point_in_polygon(b, poly):
+        return 0.0
+    n = len(poly)
+    return min(segment_distance(a, b, poly[i], poly[(i + 1) % n]) for i in range(n))
+
+
+def polygon_distance(p: Polygon, q: Polygon) -> float:
+    """Distance between two polygon areas; 0 when they meet."""
+    if point_in_polygon(p[0], q) or point_in_polygon(q[0], p):
+        return 0.0
+    n = len(p)
+    return min(segment_polygon_distance(p[i], p[(i + 1) % n], q) for i in range(n))

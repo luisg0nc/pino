@@ -439,7 +439,7 @@ git commit -m "kernel: kept routes and fixed vias written as locked copper, with
   - `cleanup.CleanupReport(removed: dict[str, str], merged: int)` (uuid to reason: `zero-length`, `duplicate`, `covered`, `merged`, `dangling`).
   - `cleanup.cleanup(text: str, copper: Copper) -> tuple[str, CleanupReport]`: the ported `plan` on unlocked segments (EPS 0.001 mm), then dangling leaves peeled one at a time: an unlocked segment with an end that touches nothing of its net on its layer (pad, via, other track, fill island) and whose other neighbours all meet at its other end. Applied to the text by UUID. Locked copper is never touched.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `copper_boards.py` builds board texts with `sexpr.dump`: `board(footprints=[fp("R1", at=(x, y, rot), pads=[...], back=False)], tracks=[...], vias=[...], zones=[...])`, coordinates in board mm.
 
@@ -490,26 +490,32 @@ def test_dead_end_chain_goes_whole_and_never_splits_a_net():
 def test_locked_copper_is_never_touched(): ...              # a locked dead end stays
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_copper.py tests/test_cleanup.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.pcb.copper'`
 
-- [ ] **Step 3: Write `copper.py`, `cleanup.py` and the geometry additions**
+- [x] **Step 3: Write `copper.py`, `cleanup.py` and the geometry additions**
 
 Contact rule for `dangling` (and Task 7): items of one net touch when their copper shapes, grown by 0.02 mm (pcb-kit's `TOUCH`), meet on a shared layer; a via touches on both its layers; a through-hole pad on every copper layer. Fill islands come from the board text given (the caller refills first).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_copper.py tests/test_cleanup.py tests/test_geometry.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add NOTICE kernel/src/pino_kernel/pcb/copper.py kernel/src/pino_kernel/pcb/cleanup.py kernel/src/pino_kernel/geometry.py kernel/tests/copper_boards.py kernel/tests/test_copper.py kernel/tests/test_cleanup.py
 git commit -m "kernel: copper read, merge, hashed UUIDs and cleanup in the board text (cleanup plan ported from pcb-kit, MIT)"
 ```
+
+**Plan fixes (implementation):**
+- `test_pad_polygons_turn_and_flip` uses the helper's R0603 (pads at x = ±0.8, 0.9 x 0.8 mm), so a 90 degree turn shows: pad 1 of R1 at (10, 5, 90) spans (9.6, 3.75, 10.4, 4.65). The plan's box assumed a pad at the footprint origin.
+- Additive: `PadShape.centre`, `Copper.unfilled` (zone outlines with no fill on a layer: a track touching one is never peeled, as in pcb-kit), `geometry.polygon_distance`, and in `copper.py` the contact rule shared with Task 7 (`Item`, `items_of`, `touch`, `holds`, `contact_map`, `TOUCH = 0.02`).
+- Merged copper is sorted in KiCad's save order (`writer.track_order`) and goes before the first zone. A routed node equal to a kept locked item (either direction) is dropped.
+- `cleanup` runs the ported plan first, then peels dangling leaves on the copper the plan left, and edits the parsed text by UUID.
 
 ---
 
