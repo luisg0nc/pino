@@ -1127,7 +1127,7 @@ git commit -m "kernel: ratsnest scorer ported from pcb-kit (MIT)"
   - `place(circuit: Circuit, footprints: FootprintLibrary, *, rounds: int = 2) -> PlaceResult`.
   - Findings: source `placement`, codes `placement_no_room` (warning, with the best invalid spot as `at`), `placement_loop` (error).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_fixed_position_is_exact(fixture_libs, fp_lib):
@@ -1163,12 +1163,12 @@ def test_hundred_parts_in_under_five_seconds(fixture_libs, fp_lib):
     assert place(many_parts(100, outline=(80, 60)), fp_lib).seconds < 5.0
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_placer.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write the placer**
+- [x] **Step 3: Write the placer**
 
 The algorithm, which the tests do not fully fix:
 
@@ -1197,12 +1197,12 @@ improve: `rounds` rounds over non-fixed parts (edge parts only along their edge)
          candidates with the others held; keep a move only if the total score drops
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_placer.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/placement/placer.py kernel/tests/test_placer.py
