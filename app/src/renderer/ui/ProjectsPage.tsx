@@ -46,7 +46,7 @@ function CardPicture({ name }: { name: string }) {
  * move between the cards, Enter opens one, and typing filters them by name. Written after torno's page of projects
  * (`ShowPage.tsx`), without its bench, shelves, git or session signs.
  */
-export function ProjectsPage({ busy, onOpen }: { busy: boolean; onOpen: (name: string) => void }) {
+export function ProjectsPage({ busy, onOpen, onNew }: { busy: boolean; onOpen: (name: string) => void; onNew: () => void }) {
   const workspace = useStore((s) => s.workspace)
   const said = useStore((s) => s.problem ?? s.notice)
   const [filter, setFilter] = useState('')
@@ -125,7 +125,7 @@ export function ProjectsPage({ busy, onOpen }: { busy: boolean; onOpen: (name: s
       )}
       <ul ref={list} className="projects-list" role="list" aria-label={`Projects in ${workspace.name}`} onKeyDown={onCardKey}>
         <li>
-          <button type="button" className="project-card project-card-new" aria-label="New project" disabled title="The New project page is not here yet">
+          <button type="button" className="project-card project-card-new" aria-label="New project" disabled={busy} onClick={onNew}>
             <span className="project-picture" aria-hidden="true">
               +
             </span>

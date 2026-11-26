@@ -1,5 +1,5 @@
 // A workspace of boards: first run, the page of projects, the two crumbs and their menus.
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
@@ -28,7 +28,7 @@ async function launchOn(config: { workspace?: string; project?: string; workspac
   return launch({ ...opts, env: { PINO_CONFIG: path } })
 }
 
-test("first run offers ~/boards, makes it in the run's home and opens its page", async () => {
+test("first run offers ~/boards, makes it in the run's home and opens the New project page on it", async () => {
   const { app, page } = await launch()
   try {
     // The folder is made where main's home is: it is the run's own, and only then is the button pressed.
@@ -36,11 +36,17 @@ test("first run offers ~/boards, makes it in the run's home and opens its page",
     expect(home.startsWith(join(realpathSync(tmpdir()), 'pino-e2e-home-'))).toBe(true)
     await expect(page.getByRole('heading', { name: 'Choose a folder for your boards' })).toBeVisible()
     await page.getByRole('button', { name: 'Use ~/boards' }).click()
-    await expect(all(page)).toContainText('No boards here yet.')
+    // An empty folder of boards opens on the New project page.
+    const fresh = page.getByRole('region', { name: 'New project' })
+    await expect(fresh).toBeVisible()
     expect(statSync(join(home, 'boards')).isDirectory()).toBe(true)
     expect((await state(page)).workspace?.root).toBe(join(home, 'boards'))
-    // What is missing on the machine stands at the page's foot: no agent was asked for.
+    // What is missing on the machine stands by the buttons: no agent was asked for.
+    await expect(fresh.getByRole('list', { name: 'What pino needs' }).getByRole('listitem')).toHaveText([/^Claude Code was not found/])
+    await fresh.getByRole('button', { name: 'Discard' }).click()
+    await expect(all(page)).toContainText('No boards here yet.')
     await expect(all(page).getByRole('list', { name: 'What pino needs' }).getByRole('listitem')).toHaveText([/^Claude Code was not found/])
+    expect(readdirSync(join(home, 'boards'))).toEqual([])
   } finally {
     await app.close()
   }
@@ -52,17 +58,17 @@ test('the page lists the boards; Enter opens one; the crumbs name both', async (
   try {
     await expect(names(page)).toHaveText(['New project', 'a', 'b', 'empty'])
     const list = all(page).getByRole('list', { name: `Projects in ${basename(root)}` })
-    await expect(list.getByRole('button', { name: 'New project' })).toBeDisabled()
+    await expect(list.getByRole('button', { name: 'New project' })).toBeEnabled()
     await expect(list.getByRole('button', { name: 'b', exact: true })).toContainText('No board yet')
     await expect(list.getByRole('button', { name: 'empty' })).toContainText('Empty')
     await expect(page.getByRole('button', { name: /^Project / })).toHaveCount(0)
-    // Arrows move between the cards, and never to the one that cannot be pressed.
+    // Arrows move between the cards.
     await list.getByRole('button', { name: 'a', exact: true }).focus()
     await page.keyboard.press('ArrowRight')
     await expect(list.getByRole('button', { name: 'b', exact: true })).toBeFocused()
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
-    await expect(list.getByRole('button', { name: 'a', exact: true })).toBeFocused()
+    await expect(list.getByRole('button', { name: 'New project' })).toBeFocused()
     // A letter typed on the page filters; Escape clears it.
     await page.keyboard.press('e')
     const filter = all(page).getByRole('searchbox', { name: 'Filter projects' })
@@ -101,7 +107,7 @@ test('the project menu lists every board with the open one current, and switches
     await page.getByRole('button', { name: 'Project a' }).click()
     const menu = page.getByRole('menu', { name: 'Projects' })
     await expect(menu.getByRole('menuitem')).toHaveText(['New project…', 'All projects', 'acurrent', 'b', 'emptyempty'])
-    await expect(menu.getByRole('menuitem', { name: 'New project…' })).toBeDisabled()
+    await expect(menu.getByRole('menuitem', { name: 'New project…' })).toBeEnabled()
     await expect(menu.locator('[aria-current="true"]')).toContainText('a')
     await menu.getByRole('menuitem', { name: 'b', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Project b' })).toBeVisible()
@@ -132,7 +138,7 @@ test('the workspace menu lists the recent workspaces and opens another', async (
     await page.getByRole('button', { name: `Workspace ${basename(second)}` }).click()
     await page.getByRole('menuitem', { name: 'Open workspace…' }).click()
     await expect(page.getByRole('button', { name: `Workspace ${basename(third)}` })).toBeVisible()
-    await expect(all(page)).toContainText('No boards here yet.')
+    await expect(page.getByRole('region', { name: 'New project' })).toBeVisible()
   } finally {
     await app.close()
   }

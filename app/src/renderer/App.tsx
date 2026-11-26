@@ -8,6 +8,7 @@ import { cardsActions, connectCards } from './state/cards'
 import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
 import { useKeepThumb } from './state/keepThumb'
 import { actions, store, useStore } from './state/store'
+import { NewProject, openNewProject } from './ui/onboard/NewProject'
 import { nameOf, openProblem } from './ui/openFolder'
 import { ProjectsPage } from './ui/ProjectsPage'
 import { RouteCard } from './ui/RouteCard'
@@ -211,6 +212,7 @@ export function App() {
       chatActions.dropAll()
       actions.closeProject()
     })
+  const newProject = (): void => void openNewProject()
 
   if (page === 'first') {
     return (
@@ -227,14 +229,24 @@ export function App() {
       onWorkspace={(choice) => void (choice === 'pick' ? pick() : openWorkspace(choice.root))}
       onProject={(name) => void openProject(name)}
       onAll={() => void allProjects()}
+      onNew={newProject}
     />
   )
+
+  if (page === 'new') {
+    return (
+      <div className="shell shell-projects">
+        {titleBar}
+        <NewProject onShow={showProject} />
+      </div>
+    )
+  }
 
   if (page === 'projects' || !project) {
     return (
       <div className="shell shell-projects">
         {titleBar}
-        <ProjectsPage busy={busy} onOpen={(name) => void openProject(name)} />
+        <ProjectsPage busy={busy} onOpen={(name) => void openProject(name)} onNew={newProject} />
       </div>
     )
   }

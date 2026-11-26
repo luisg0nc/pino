@@ -5,7 +5,7 @@ import type { CardsFile, FabAsk, PartReading, PersonChange } from './cards'
 import type { SizeFact } from './size'
 import type { ConnectionRow, PartHad, PowerRow } from './slots'
 import type { Seen } from './brief'
-import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode, PromptRow } from './chat'
+import type { AgentChoice, ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode, PromptRow } from './chat'
 import type { FabProfile, FabState, Readiness } from './fab'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
@@ -50,6 +50,41 @@ export interface CreateRequest {
   rules: string
   /** Links (`http`, `https`; at most 20), never opened by pino on its own. */
   links: Array<{ url: string; note: string }>
+}
+
+/**
+ * What the New project page hands main once the project is made and open (`project.onboard`): the slots it was made
+ * from, for the first prompt. The pictures are the window's, scaled to a long edge of 1280 px.
+ */
+export interface OnboardDraft extends Pick<CreateRequest, 'description' | 'power' | 'connections' | 'sizes' | 'enclosure' | 'edges' | 'parts' | 'fab' | 'rules' | 'links'> {
+  /** The photos, then the doodles, as `create` named them. A doodle drawn over a photo has `over`: the prompt reads that, never the note's words. */
+  items: Array<{ file: string; note: string; image?: Uint8Array; over?: true }>
+  /** The PDFs, as `create` named them in `reference/` (`referenceFiles`). */
+  pdfs: Array<{ file: string; note: string }>
+  /** The model and effort to start the session on, for it alone; absent, or what is not one: the person's own default. */
+  choice?: AgentChoice
+}
+
+/** A draft as `project.previewPrompt` takes it: what the prompt says of it, and no picture data (`hasImage`: the window holds one fit to attach). */
+export interface PromptPreviewDraft extends Omit<OnboardDraft, 'items' | 'choice'> {
+  items: Array<{ file: string; note: string; hasImage: boolean; over?: true }>
+}
+
+/** The first prompt of a draft as it would be sent. `attached[i]` is the number of the picture of `items[i]` in it, none when it is named only. */
+export interface PromptPreview {
+  text: string
+  attached: Array<number | null>
+}
+
+/** What came of `project.onboard`. The project is made and open whatever it says. */
+export interface Onboarded {
+  /** The chat session started in the project; null when it could not be (then `problem` says why). */
+  sessionId: string | null
+  /** The text of the first prompt as it was (or would have been) sent, with its pictures. */
+  prompt: string
+  /** The same text for a later session when the prompt was not sent: it does not say that pictures are attached. */
+  held: string
+  problem?: string
 }
 
 /** `window.pino`, as the preload script exposes it. The channels are those of `main/ipc.ts`. */

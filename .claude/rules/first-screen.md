@@ -77,8 +77,7 @@ paths:
 - With a workspace open, the title bar (`ui/TitleBar.tsx`) has the logo and the workspace's crumb
   (`ui/FolderMenu.tsx`; button "Workspace <name>", menu "Workspaces": the recent workspaces, the open one marked
   "current", and "Open workspace…"). On a project, a slash and its crumb ("Project <name>", menu "Projects": "New
-  project…", disabled until its page is there, "All projects", then every project, the open one "current", an empty one
-  "empty"). Both lists are read when the menu opens (`useMenu` for the keys). The menus and their rows are `.menu` and
+  project…", "All projects", then every project, the open one "current", an empty one "empty"). Both lists are read when the menu opens (`useMenu` for the keys). The menus and their rows are `.menu` and
   `.menu-item` (`viewbars.css`), as are the view cube's. A recent workspace's row is two lines (name, path), so its
   style is `.menu-item.folder-item` (`titlebar.css`): `.folder-item` alone loses its height and padding to
   `.menu-item`, which comes later in the cascade (`e2e/menus.spec.ts` holds the rows apart).
@@ -86,6 +85,8 @@ paths:
   <workspace>"): New project first, then a card a board, "No board yet" or "Empty" where there is no `board.py`. Arrows
   move between cards (`boards.move`), Enter opens, a typed letter goes to "Filter projects", Escape clears it. The
   listing is read again whenever the window is come back to. What pino needs and does not have stands at the foot.
+- A workspace with no projects opens on the New project page (`ui/onboard/NewProject.tsx`, see `new-project`); so do
+  "New project…" and the New project card.
 
 ## Quitting
 

@@ -8,7 +8,7 @@
  */
 
 /** Where the sheet lists a row. */
-export type KeyContext = 'Everywhere' | 'All projects' | 'The views' | 'Session' | 'In a field, a menu or a sheet'
+export type KeyContext = 'Everywhere' | 'All projects' | 'New project' | 'The views' | 'Session' | 'In a field, a menu or a sheet'
 
 /**
  * Where a key is listened to. Two rows of one scope would answer the same press.
@@ -17,9 +17,10 @@ export type KeyContext = 'Everywhere' | 'All projects' | 'The views' | 'Session'
  * - `composer`: in the box a chat prompt is written in. `ask`: on a card of the chat that asks the person.
  * - `tabs`: on a focused tab of the views. `view`: over a view of the board, outside a field.
  * - `separator`: on the focused edge of the session dock. `cards`: on a focused card of the page of projects.
+ *   `newproject`: on the New project page.
  * - `field`, `menu`, `sheet`: in a field, an open menu, a sheet or a question.
  */
-export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'separator' | 'cards' | 'field' | 'menu' | 'sheet'
+export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'separator' | 'cards' | 'newproject' | 'field' | 'menu' | 'sheet'
 
 interface Row<Id extends string> {
   id: Id
@@ -39,6 +40,9 @@ const ROWS = [
   row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
 
   row('boards.move', ['Left', 'Right', 'Up', 'Down'], 'On a board of the page: the card that way', 'All projects', 'cards'),
+
+  row('new.back', ['Esc'], 'Leave the page, which keeps what is in it; on the ink pad, put the pad away', 'New project', 'newproject'),
+  row('new.sketch', ['S'], 'Doodle: open the ink pad (not heard in a field)', 'New project', 'newproject'),
 
   row('board.layer', ['1', '2', '3', '4', '5', '6', '7', '8'], 'Board: look at the copper layer of that number, from the top', 'The views', 'view'),
   row('board.fit', ['F'], 'Fit the whole drawing in the view', 'The views', 'view'),
@@ -60,6 +64,8 @@ const ROWS = [
   row('field.keep', ['Enter'], 'Field: keep what was typed', 'In a field, a menu or a sheet', 'field'),
   row('field.leave', ['Esc'], 'Field: leave it as it was', 'In a field, a menu or a sheet', 'field'),
   row('sheet.close', ['Esc'], 'Sheet or question: put it away', 'In a field, a menu or a sheet', 'sheet'),
+  row('ink.undo', ['Ctrl+Z'], 'The ink pad (a doodle): undo the last stroke', 'In a field, a menu or a sheet', 'sheet'),
+  row('sheet.round', ['Tab'], 'Sheet: to its next control, and round', 'In a field, a menu or a sheet', 'sheet', true),
 
   row('menu.next', ['Down', 'Right'], 'Menu: the next item', 'In a field, a menu or a sheet', 'menu'),
   row('menu.previous', ['Up', 'Left'], 'Menu: the one before', 'In a field, a menu or a sheet', 'menu'),
@@ -77,6 +83,7 @@ export const KEYS: readonly KeyRow[] = ROWS
 export const CONTEXTS: ReadonlyArray<{ name: KeyContext; when: string }> = [
   { name: 'Everywhere', when: 'Also while typing' },
   { name: 'All projects', when: 'On the page of projects' },
+  { name: 'New project', when: 'While the New project page is up' },
   { name: 'The views', when: 'Over a view, outside a field' },
   { name: 'Session', when: 'In the chat' },
   { name: 'In a field, a menu or a sheet', when: 'Where something is typed, chosen or asked' }

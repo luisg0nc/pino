@@ -10,7 +10,7 @@ import { WindowControls } from './WindowControls'
  * crumb with its menu, on a project `/` and the project as a crumb with the menu of the workspace's projects, and at
  * the right the window controls. On the page of projects only the workspace shows.
  */
-export function TitleBar({ disabled, onWorkspace, onProject, onAll }: { disabled: boolean; onWorkspace: (choice: FolderChoice) => void; onProject: (name: string) => void; onAll: () => void }) {
+export function TitleBar({ disabled, onWorkspace, onProject, onAll, onNew }: { disabled: boolean; onWorkspace: (choice: FolderChoice) => void; onProject: (name: string) => void; onAll: () => void; onNew: () => void }) {
   const workspace = useStore((s) => s.workspace)
   const project = useStore((s) => (s.page === 'project' ? s.project : null))
   return (
@@ -24,7 +24,7 @@ export function TitleBar({ disabled, onWorkspace, onProject, onAll }: { disabled
           <span className="crumb-slash" aria-hidden="true">
             /
           </span>
-          <ProjectMenu name={project.name} disabled={disabled} onOpen={onProject} onAll={onAll} />
+          <ProjectMenu name={project.name} disabled={disabled} onOpen={onProject} onAll={onAll} onNew={onNew} />
         </>
       )}
       <span className="title-grow" />
@@ -34,7 +34,7 @@ export function TitleBar({ disabled, onWorkspace, onProject, onAll }: { disabled
 }
 
 /** The project crumb (`blinky ▾`) and its menu: New project and All projects at its head, then the workspace's projects. */
-function ProjectMenu({ name, disabled, onOpen, onAll }: { name: string; disabled: boolean; onOpen: (name: string) => void; onAll: () => void }) {
+function ProjectMenu({ name, disabled, onOpen, onAll, onNew }: { name: string; disabled: boolean; onOpen: (name: string) => void; onAll: () => void; onNew: () => void }) {
   const projects = useStore((s) => s.workspace?.projects ?? [])
   const { shown, setShown, button, menu, onKeyDown } = useMenu(projects.length)
 
@@ -54,7 +54,15 @@ function ProjectMenu({ name, disabled, onOpen, onAll }: { name: string; disabled
       </button>
       {shown && (
         <div ref={menu} className="menu project-menu" role="menu" aria-label="Projects" onKeyDown={onKeyDown}>
-          <button type="button" role="menuitem" className="menu-item project-item" disabled title="The New project page is not here yet">
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-item project-item"
+            onClick={() => {
+              setShown(false)
+              onNew()
+            }}
+          >
             <span className="project-name">New project…</span>
           </button>
           <button

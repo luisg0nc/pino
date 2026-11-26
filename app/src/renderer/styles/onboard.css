@@ -1,0 +1,1019 @@
+/* ---- The New project page (ui/onboard/NewProject.tsx) and the ink pad (ui/ink/InkPad.tsx) of its doodles ---- */
+
+/* The page: the brief on paper at the left, and at the right the dyed plate of what Claude gets first. It fills the window under the title bar, and each side keeps its own scroll. */
+.new-page {
+  grid-area: 2 / 1 / -1 / -1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.new-page:focus {
+  outline: none;
+}
+
+.new-page[data-dragging] {
+  outline: 2px dashed var(--accent);
+  outline-offset: -10px;
+}
+
+.new-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 540px);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.new-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.new-head .new-lead {
+  margin-right: auto;
+}
+
+/* The slots not opened yet, a dashed tile each. */
+.new-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.new-tiles li {
+  display: grid;
+  min-height: 72px;
+}
+
+/* Size and shape: the offered sizes a press away, and the two fields under the rows. */
+.size-offered {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.shape-field {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shape-label {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.new-missing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  color: var(--ink);
+  font-size: var(--text-small);
+  list-style: none;
+}
+
+.new-column {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  min-height: 0;
+  padding: 28px 52px 32px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+  background: var(--surface);
+}
+
+.new-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.new-lead {
+  color: var(--muted);
+}
+
+/* The name: the folder in muted and the name in ink, at 40 px. */
+.new-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.new-name-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.new-name {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 40px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.new-name-folder {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  color: var(--muted);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.new-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-inline);
+  background: transparent;
+  color: var(--ink);
+  caret-color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: inherit;
+}
+
+.new-name-input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.new-name-input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 4px;
+}
+
+.new-name-input[aria-invalid='true'] {
+  box-shadow: 0 3px 0 var(--fail);
+}
+
+.new-name-input:disabled {
+  color: var(--muted);
+}
+
+.new-brief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.new-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* The brief's box: the person's words at 16 px on the sheet. */
+.new-what {
+  display: block;
+  width: 100%;
+  min-height: 110px;
+  padding: 14px 16px;
+  border: var(--field-border);
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.new-what::placeholder {
+  color: var(--muted);
+}
+
+.new-what:focus-visible {
+  border-color: var(--accent);
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.new-what:disabled {
+  color: var(--muted);
+}
+
+.new-hint {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.new-reading:empty {
+  display: none;
+}
+
+/* A card for each slot opened. */
+.new-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) 14px;
+  border: var(--divider);
+  border-radius: var(--radius-float);
+  background: var(--raise);
+}
+
+.slot[data-wide] {
+  grid-column: 1 / -1;
+}
+
+.slot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+}
+
+.slot-title {
+  font-size: var(--text-size);
+  font-weight: 600;
+}
+
+.slot-hint {
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-wrap: pretty;
+}
+
+.slot-add {
+  margin-left: auto;
+}
+
+.slot .ref-list {
+  margin-top: 0;
+}
+
+.rules-input {
+  min-height: 84px;
+  padding: var(--space-2) var(--space-3);
+  line-height: var(--text-leading);
+  resize: vertical;
+}
+
+/* Sizes: a row each, what it measures, the value as typed, the unit, where it came from, a note. */
+.size-list,
+.link-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.size-list:empty,
+.link-list:empty {
+  display: none;
+}
+
+.size-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--divider);
+}
+
+.size-row:last-child {
+  border-bottom: 0;
+}
+
+.size-what,
+.size-value,
+.size-note,
+.link-add .new-input {
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.size-what {
+  flex: 2 1 160px;
+  min-width: 0;
+}
+
+.size-value {
+  flex: 1 1 100px;
+  min-width: 0;
+}
+
+.size-note {
+  flex: 3 1 180px;
+  min-width: 0;
+}
+
+.size-what:focus-visible,
+.size-value:focus-visible,
+.size-note:focus-visible {
+  border-color: var(--accent);
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.size-help {
+  flex: 1 0 100%;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.size-help[data-tone='warn'] {
+  color: var(--warn);
+}
+
+/* Links: the address typed, then a row each with its note. */
+.link-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.link-add .new-input {
+  flex: 1 1 200px;
+  width: auto;
+  min-width: 0;
+}
+
+.link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.link-url {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.new-help {
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-wrap: pretty;
+}
+
+.new-help[data-tone='fail'],
+.new-problem {
+  color: var(--fail);
+}
+
+.new-help[data-tone='warn'] {
+  color: var(--warn);
+}
+
+.new-input {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+  color: var(--ink);
+  font: inherit;
+}
+
+.new-input::placeholder,
+.ref-note::placeholder {
+  color: var(--muted);
+}
+
+.new-input:focus-visible,
+.ref-note:focus-visible {
+  border-color: var(--accent);
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.new-input[aria-invalid='true'] {
+  border-color: var(--fail);
+}
+
+.new-input:disabled {
+  color: var(--muted);
+}
+
+/* What has been given: a tile for each, with its name and its note, then the dashed tiles that add more. */
+.ref-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref-list:empty {
+  display: none;
+}
+
+.ref-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: var(--divider);
+  border-radius: var(--radius-float);
+  background: var(--raise);
+}
+
+.ref-thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 92px;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.ref-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ref-card[data-kind='doodles'] .ref-thumb img {
+  object-fit: contain;
+}
+
+.ref-thumb svg {
+  width: 32px;
+  height: 32px;
+}
+
+.ref-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+}
+
+.ref-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  min-width: 0;
+}
+
+.ref-kind {
+  flex: 1 0 100%;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.ref-card .ref-file {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-detail {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.ref-note {
+  width: 100%;
+  height: 26px;
+  padding: 0 var(--space-2);
+  border: var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-small);
+}
+
+.ref-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+.ref-actions .button {
+  height: 24px;
+}
+
+.ref-add {
+  display: grid;
+  min-height: 140px;
+}
+
+.pic-tile {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1.5px dashed var(--field-edge);
+  border-radius: var(--radius-float);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pic-tile-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.pic-key {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--field-edge);
+  border-radius: var(--radius-inline);
+  color: var(--ink);
+  font-size: 11px;
+  text-align: center;
+}
+
+.pic-tile:hover:not(:disabled),
+.pic-tile:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  outline: none;
+}
+
+.pic-tile:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.pic-tile:disabled {
+  cursor: default;
+}
+
+.pic-tile:disabled .pic-tile-title {
+  color: var(--muted);
+}
+
+/* The foot of the dyed plate: what is missing, the model and effort, and the buttons that make the project. */
+.new-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Why it could not be made is said on a sheet of its own, in the colours the sheet was made for. */
+.new-foot > .new-problem {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  color: var(--ink);
+}
+
+.new-choice {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.new-choice-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Over the dye: the raised ground at 12 %, the scribed line for an edge, the text of the dye. */
+.new-select {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  height: 34px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--scribe);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--raise) 12%, var(--dye));
+  color: var(--on-dye);
+  font-size: 12.5px;
+}
+
+.new-select:not(.num) {
+  font-family: var(--font-ui);
+}
+
+.new-select option {
+  background: var(--dye);
+  color: var(--on-dye);
+}
+
+.new-select:hover:not(:disabled) {
+  border-color: var(--on-dye);
+}
+
+.new-select:focus-visible,
+.new-start:focus-visible,
+.new-make:focus-visible {
+  outline: 2px solid var(--on-dye);
+  outline-offset: 2px;
+}
+
+.new-select:disabled {
+  color: var(--on-dye-muted);
+}
+
+/* The size selects of a row (on the paper) keep the paper's look. */
+.size-row .new-select {
+  flex: none;
+  height: 28px;
+  border-color: var(--field-edge);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.size-row .new-select option {
+  background: var(--raise);
+  color: var(--ink);
+}
+
+.size-row .new-select:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.size-row .new-select:focus-visible {
+  outline: var(--focus-ring);
+}
+
+.size-row .new-select:disabled {
+  color: var(--muted);
+}
+
+.new-start,
+.new-make {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Start: the raised ground, the accent for its text, 44 px. */
+.new-foot .new-start {
+  height: 44px;
+  border-color: var(--raise);
+  background: var(--raise);
+  color: var(--accent);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.new-foot .new-start:hover {
+  color: var(--accent);
+  filter: none;
+  border-color: var(--on-dye);
+}
+
+.new-foot .new-start:disabled,
+.new-foot .new-make:disabled {
+  border-color: var(--scribe);
+  background: color-mix(in srgb, var(--raise) 12%, var(--dye));
+  color: var(--on-dye-muted);
+  opacity: 1;
+}
+
+.new-foot .new-make {
+  height: 28px;
+  background: transparent;
+  color: var(--on-dye);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.new-foot .new-make:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--raise) 12%, var(--dye));
+  color: var(--on-dye);
+}
+
+.new-foot .new-make:disabled {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* The question over the page, at the foot of the paper side. */
+.new-confirm {
+  position: absolute;
+  bottom: var(--space-5);
+  left: var(--space-5);
+  z-index: 5;
+  width: min(720px, calc(100% - 2 * var(--space-5)));
+  overflow: hidden;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+}
+
+/* A first prompt that was not sent, in the session pane. */
+.session-held {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--divider);
+  color: var(--warn);
+  font-size: var(--text-small);
+}
+
+.session-held p {
+  flex: 1;
+  min-width: 0;
+  text-wrap: pretty;
+}
+
+/* ---- The ink pad: a sheet over the window, for a new project's doodle ---- */
+
+.board-layer {
+  /* The whole window under the title bar, as the export sheet is: the view is a cell of the shell's grid now, so `absolute` would fill that cell alone. */
+  position: fixed;
+  inset: var(--title-h) 0 0;
+  z-index: 30;
+  display: grid;
+  place-items: start center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.board-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-height: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3);
+  border: var(--divider);
+  border-radius: var(--radius-float);
+  background: var(--panel);
+  box-shadow: var(--float-shadow);
+}
+
+.board-sheet:focus {
+  outline: none;
+}
+
+.board-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.board-head h2 {
+  /* The title stays on one line; the hint beside it wraps. */
+  flex: none;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.board-hint {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.board-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.board-stage {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+}
+
+/* The ground is the panel's own colour, or a picture; a doodle's ink is --ink, a drawing's --drawing-ink. Its shape
+   is the board's own (`--board-aspect`, set by Board.tsx). */
+.board-canvas {
+  display: block;
+  width: min(100%, calc((100vh - 230px) * var(--board-aspect, 1.5)));
+  height: auto;
+  aspect-ratio: var(--board-aspect, 1.5);
+  border: var(--divider);
+  border-radius: var(--radius-inline);
+  background: var(--panel);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* "Draw over": the photo a doodle is drawn on, among the tools. */
+.board-over {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* The doodle's grid: a square every 40 board pixels, in the hairline (--grid-x and --grid-y are the squares across and down). */
+.board-canvas[data-grid] {
+  background-image: linear-gradient(to right, var(--hairline) 1px, transparent 1px), linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+  background-size: calc(100% / var(--grid-x, 30)) calc(100% / var(--grid-y, 20));
+}
+
+/* A picture under the ink (a drawing on the view): stretched to the board, which is its very size. */
+.board-canvas[data-ground] {
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.board-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.board-size {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.board-problem {
+  margin-right: auto;
+  color: var(--fail);
+  font-size: var(--text-small);
+}
+
+/* ---- What Claude gets first: the dyed plate at the right of the page of a new project ---- */
+
+.draft-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 32px 34px 26px;
+  background: var(--dye);
+  color: var(--on-dye);
+}
+
+.draft-pane .draft-pane-lead {
+  margin: 0;
+  color: var(--on-dye);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.draft-pane-sub {
+  margin: 2px 0 0;
+  color: var(--on-dye-muted);
+  font-size: 13px;
+}
+
+.draft-pane-none {
+  margin-top: var(--space-4);
+  color: var(--on-dye-muted);
+  font-style: italic;
+}
+
+/* The first prompt, read back (#84): in the muted face of the dye, the person's own words in the full one. */
+.draft-pane .draft-pane-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scribe) transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--on-dye-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.draft-pane .draft-pane-text:focus-visible {
+  border-radius: var(--radius-inline);
+  outline: 2px solid var(--on-dye);
+  outline-offset: 2px;
+}
+
+.draft-pane .draft-pane-mine {
+  color: var(--on-dye);
+}
+
+/* Where the description will go while it is empty (#324): torno's muted face, set apart by a dashed rule. */
+.draft-pane .draft-pane-blank {
+  border-bottom: 1px dashed var(--scribe);
+  color: var(--on-dye-muted);
+  font-style: italic;
+}
+
+/* A reference: outlined, as the design draws it. */
+.draft-pane .draft-pane-chip {
+  padding: 1px 6px;
+  border: 1px solid var(--scribe);
+  border-radius: var(--radius-inline);
+  color: var(--on-dye);
+  font-size: 12px;
+}
+
+/* The sizes the person gave: in the face of numbers. */
+.draft-pane .draft-pane-size {
+  color: var(--on-dye);
+  font-size: 12.5px;
+  margin-inline: 0;
+}
+
+.draft-pane-pictures {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draft-pane-pictures li {
+  display: grid;
+  gap: var(--space-1);
+  width: 96px;
+  font-size: var(--text-small);
+}
+
+.draft-pane-pictures img {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border: 1px solid var(--scribe);
+  border-radius: var(--radius-inline);
+}
+
+.draft-pane-pictures .num {
+  overflow: hidden;
+  color: var(--on-dye);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The foot: what will be made, then the choice and the buttons. */
+.draft-pane-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.new-will {
+  color: var(--on-dye-muted);
+  font-size: 12.5px;
+  text-wrap: pretty;
+}
+
+.new-will .num {
+  color: var(--on-dye);
+}
+
+.draft-pane-state {
+  color: var(--on-dye-muted);
+}

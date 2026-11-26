@@ -36,8 +36,8 @@ function keepTab(projectId: string, tab: PaneTab): void {
 }
 
 export interface PinoState {
-  /** The first screen with no workspace, the page of projects with no project open, or the project. */
-  page: 'first' | 'projects' | 'project'
+  /** The first screen with no workspace, the page of projects with no project open, the project, or the New project page over either. */
+  page: 'first' | 'projects' | 'project' | 'new'
   /** The open folder of boards, as main last listed it. */
   workspace: WorkspaceInfo | null
   project: ProjectInfo | null
@@ -86,9 +86,13 @@ export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 
 const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabOpen: false, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
 
 export const actions = {
-  /** A workspace is opened: its page of projects. */
+  /** A workspace is opened: its page of projects, or the New project page when it holds none. */
   openWorkspace(workspace: WorkspaceInfo): void {
-    store.setState({ page: 'projects', workspace, project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+    store.setState({ page: workspace.projects.length === 0 ? 'new' : 'projects', workspace, project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+  },
+  /** Another page of the open workspace: the project open, if any, stays open. */
+  showPage(page: 'projects' | 'project' | 'new'): void {
+    store.setState({ page })
   },
   /** The open workspace as listed again; another one's listing, come late, is dropped. */
   setWorkspace(workspace: WorkspaceInfo): void {

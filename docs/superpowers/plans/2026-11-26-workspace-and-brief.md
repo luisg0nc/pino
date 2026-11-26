@@ -954,7 +954,7 @@ git commit -m "Make a new project's folder whole or not at all, with brief.md, r
   - Page copy: field `Name` (checked as main checks it, against `project:taken`), `What it does` with photos beside it; tiles `Sketch it`, `Power`, `Connections`, `Size and shape`, `Parts I have`, `Fab and assembly`, `Rules`, `Links and PDFs` (Task 11 fills four of them; here they are tiles that open an empty slot); the right pane `DraftPane` (Task 12 fills its preview; here it shows the folder the project will have, `<workspace>/<name>/`), `SessionChoice`, `Start: make the project and ask Claude` (disabled until Task 12), `or make it without starting Claude`, `Discard`. Size and shape offers `Board width`, `Board height`, `Height limit`, `Mounting holes` as chips that add a row of that name, and the fields `Fits an enclosure` and `Connector edges`.
   - `App.tsx`: page `new` from `New project…`, the `New project` card, and a workspace with no projects.
 
-- [ ] **Step 1: Copy every file, cut what pino has no slot for, then write the failing tests**
+- [x] **Step 1: Copy every file, cut what pino has no slot for, then write the failing tests**
 
 ```ts
 // state/onboard.test.ts (torno's cases for photos, doodles, sizes, links kept; then)
@@ -973,19 +973,19 @@ test('a name another folder has is refused before anything is made', async () =>
 test('a sketch over the photo is a doodle in reference/', async () => { /* S, draw with page.mouse, Done; Make it: reference/doodle-1.png; brief.md says 'drawn over reference/photo-1.png' */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/state/onboard.test.ts src/renderer/ui/onboard src/renderer/ui/ink src/shared/keys.test.ts && pnpm test:e2e -- onboard.spec.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Adapt the copies and wire the page**
+- [x] **Step 3: Adapt the copies and wire the page**
 
-- [ ] **Step 4: Run them to verify they pass**
+- [x] **Step 4: Run them to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm test:e2e`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A app/src app/e2e shared-from-torno.json

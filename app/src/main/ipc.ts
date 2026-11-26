@@ -134,7 +134,9 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
     const { root } = openWorkspace()
     const made = await createProject(req as CreateRequest, { root, readings })
     if (opened.workspace()?.root !== root) throw new Error(`${made.name} was made, but its folder of boards was left before it could be opened.`)
-    return opened.openProject(made.name)
+    return opened.openProject(made.name).catch((e: Error) => {
+      throw new Error(`${made.name} was made, but it could not be opened: ${e.message.replace(/\.$/, '')}.`)
+    })
   })
   handle('project:taken', () => readdir(openWorkspace().root))
   const picked = async (kind: 'photos' | 'pdf'): Promise<string[]> => {
