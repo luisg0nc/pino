@@ -695,6 +695,8 @@ git commit -m "3D tab: the build's GLB in three.js in the solder-mask look, with
 
 ### Task 9: The route card, the status line and the builds strip
 
+> As built: the engine's `model3d` findings have a row of their own, `3D models`, shown only when it has something to say. A finding from a source no row names goes to Engine, so none is dropped. In hand shows the exact reference Claude gets, without a second summary of the part. `status.css` becomes an adapted copy. The em-dash test also covers `domain.ts`, `marks.ts`, `view.ts` and `measure.ts`.
+
 **Files:**
 - Create: `app/src/shared/checks.ts`, `app/src/renderer/ui/route/Head.tsx`, `InHand.tsx`, `ChecksBlock.tsx`, `RoutingBlock.tsx`, `BoardBlock.tsx`, `BlocksBlock.tsx`, `NetBlock.tsx`, `app/src/copy.test.ts`; copy torno's `ui/strip/BuildsStrip.tsx`, `ui/strip/strip.ts`, `strip.test.ts`, `styles/strip.css`
 - Modify: `app/src/renderer/ui/RouteCard.tsx`, `StatusLine.tsx`, `SessionDock.tsx`, `app/src/renderer/styles/route.css`, `shared-from-torno.json`
@@ -709,7 +711,7 @@ git commit -m "3D tab: the build's GLB in three.js in the solder-mask look, with
   - Builds strip (torno's, adapted) at the top of the session dock: "Builds of <project>" and the count kept; nodes `hN` with a 62 x 44 thumbnail drawn by `drawBoard` at that size (kept in memory for the run; a node of a build not kept is greyed with "not kept"); caption `routed`, `stale`, `ok`, `2 errors` or `failed`; a click shows that build (`showBuild`), the shown node is ringed in the accent; a new node lands 0.7 s from 34 px.
   - `copy.test.ts`: no em dash (U+2014) in `app/src/renderer/**/*.tsx`, `app/src/main/prompt.ts`, `app/src/main/mcp/*.ts`, `app/src/shared/checks.ts`, `app/src/shared/board/refs.ts`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('sorts the reference build's findings into the card's rows', () => {
@@ -724,19 +726,19 @@ it('lists open nets from the ratsnest, or from the route when one is current', (
 it('has no em dash in UI copy, prompts or tool text', () => { /* reads the files named above */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/checks.test.ts src/copy.test.ts src/renderer/ui/strip`
 Expected: FAIL.
 
-- [ ] **Step 3: Write `checks.ts`, the card blocks, the status line; copy and adapt the strip**
+- [x] **Step 3: Write `checks.ts`, the card blocks, the status line; copy and adapt the strip**
 
-- [ ] **Step 4: Run them, the unit suite and typecheck**
+- [x] **Step 4: Run them, the unit suite and typecheck**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json

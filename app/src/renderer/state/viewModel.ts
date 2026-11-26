@@ -21,6 +21,8 @@ export interface ViewModel {
   route: string | null
   /** Over a current route, the nets it left open; null while the placement's ratsnest is the whole of it. */
   open: Set<string> | null
+  /** The build the route on the board was made of, by its hash. */
+  routedBuild: string | null
   circuit: Circuit | null
   placement: Placement | null
 }
@@ -48,21 +50,23 @@ async function read(projectId: string, result: BuildResult, key: string): Promis
   let stale = new Set<string>()
   let open: Set<string> | null = null
   let route: string | null = null
+  let routedBuild: string | null = null
   if (routing?.route_key && (routing.state === 'current' || routing.state === 'stale' || routing.state === 'running')) {
     const routed = await window.pino.build.routeFile(projectId, routing.route_key, 'filled').then(readBoard, () => null)
     if (routed) {
       route = routing.route_key
+      const said = await window.pino.build.routeFile(projectId, routing.route_key, 'route').then(
+        (t) => JSON.parse(t) as { build?: string; findings?: Finding[] },
+        () => null
+      )
+      routedBuild = said?.build ?? null
       if (routing.state === 'current') {
         board = routed
-        const left = await window.pino.build.routeFile(projectId, routing.route_key, 'route').then(
-          (t) => (JSON.parse(t) as { findings?: Finding[] }).findings ?? [],
-          () => []
-        )
-        open = new Set(left.filter((f) => f.code === 'net_unrouted').flatMap((f) => f.nets ?? []))
+        open = new Set((said?.findings ?? []).filter((f) => f.code === 'net_unrouted').flatMap((f) => f.nets ?? []))
       } else ({ board, stale } = withStaleCopper(built, routed))
     }
   }
-  return { key, projectId, result, hash, board, stale, route, open, circuit, placement }
+  return { key, projectId, result, hash, board, stale, route, open, routedBuild, circuit, placement }
 }
 
 export function loadViewModel(projectId: string, result: BuildResult): Promise<ViewModel> {

@@ -257,3 +257,39 @@
 .saved-pop .button {
   justify-self: start;
 }
+
+/* ---- the build in the status line ---- */
+
+.status-rebuild {
+  padding: 0 9px;
+  height: 21px;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+  color: var(--ink);
+  font-size: var(--text-small);
+}
+
+.status-rebuild:disabled {
+  color: var(--muted);
+}
+
+.status-found {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--warn);
+  font-size: var(--text-small);
+}
+
+.status-found[data-severity='error'] {
+  color: var(--fail);
+}
+
+.status-found:hover {
+  text-decoration: underline;
+}
+
+.status-kicad {
+  color: var(--muted);
+}
