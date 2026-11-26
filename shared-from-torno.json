@@ -140,6 +140,13 @@
     { "pino": "app/src/renderer/ui/chat/AskCard.tsx", "torno": "app/src/renderer/ui/chat/AskCard.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "TOOL_PREFIX and window.pino" },
     { "pino": "app/src/renderer/ui/chat/ModelMenu.tsx", "torno": "app/src/renderer/ui/chat/ModelMenu.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "window.pino" },
     { "pino": "app/src/renderer/ui/chat/EffortMenu.tsx", "torno": "app/src/renderer/ui/chat/EffortMenu.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "window.pino" },
-    { "pino": "app/src/renderer/ui/chat/ModeMenu.tsx", "torno": "app/src/renderer/ui/chat/ModeMenu.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "window.pino" }
+    { "pino": "app/src/renderer/ui/chat/ModeMenu.tsx", "torno": "app/src/renderer/ui/chat/ModeMenu.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "window.pino" },
+    { "pino": "app/src/renderer/ui/chat/ChatPane.tsx", "torno": "app/src/renderer/ui/chat/ChatPane.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "no builds strip, in-sight, Prompts only, earlier conversations, history join or offers" },
+    { "pino": "app/src/renderer/ui/chat/Items.tsx", "torno": "app/src/renderer/ui/chat/Items.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "user, context, text, thinking, tool, ask, note and task items and a plain end-of-turn line" },
+    { "pino": "app/src/renderer/ui/chat/Composer.tsx", "torno": "app/src/renderer/ui/chat/Composer.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the text box, send, newline, stop, queue and deny-and-send only" },
+    { "pino": "app/src/renderer/ui/chat/StartChat.tsx", "torno": "app/src/renderer/ui/chat/StartChat.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "New session and Resume with the last conversation; no box" },
+    { "pino": "app/src/renderer/ui/QuestionCard.tsx", "torno": "app/src/renderer/ui/QuestionCard.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the question about a folder's own Claude Code settings" },
+    { "pino": "app/e2e/helpers.ts", "torno": "app/e2e/helpers.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "fromMore, newSession, the model menu and moreItems only" },
+    { "pino": ".claude/rules/chat-pane.md", "torno": ".claude/rules/chat-pane.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's dock and chat" }
   ]
 }

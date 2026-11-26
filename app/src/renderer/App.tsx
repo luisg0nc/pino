@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import type { ProjectInfo } from '../shared/project'
+import { chatActions, connectChat } from './state/chat'
 import { actions, store, useStore } from './state/store'
 import type { FolderChoice } from './ui/FolderMenu'
 import { nameOf, openProblem } from './ui/openFolder'
@@ -26,6 +28,16 @@ export function App() {
   const project = useStore((s) => s.project)
   const [busy, setBusy] = useState(false)
 
+  // What main tells of chats and has to say unasked is heard from the start, before any session is begun.
+  useEffect(() => {
+    const offChat = connectChat()
+    const offNotices = window.pino.notices.onNotice((m) => actions.notice(m.text))
+    return () => {
+      offChat()
+      offNotices()
+    }
+  }, [])
+
   // The project main holds open: the one remembered or named at start, and the same one after the window is reloaded.
   useEffect(() => {
     void window.pino.project.current().then(
@@ -48,15 +60,21 @@ export function App() {
       setBusy(false)
     }
   }
+  /** Another project on show: the chats drawn of the one before are let go (main has ended its session). */
+  const show = (opened: ProjectInfo): void => {
+    if (store.getState().project?.id !== opened.id) chatActions.dropAll()
+    actions.openProject(opened)
+  }
   const pick = (): Promise<void> =>
     change('The folder', async () => {
       const opened = await window.pino.project.pick()
-      if (opened) actions.openProject(opened)
+      if (opened) show(opened)
     })
-  const openAt = (root: string): Promise<void> => change(nameOf(root), async () => actions.openProject(await window.pino.project.open(root)))
+  const openAt = (root: string): Promise<void> => change(nameOf(root), async () => show(await window.pino.project.open(root)))
   const close = (): Promise<void> =>
     change('The first screen', async () => {
       await window.pino.project.close()
+      chatActions.dropAll()
       actions.closeProject()
     })
 

@@ -938,6 +938,16 @@ git add -A && git commit -m "Copy torno's chat pieces: store, markdown, diffs, t
 
 ### Task 14: The session dock, end to end
 
+> **Note from the build:** The end of a turn stays as one plain line (`.chat-turn`, which the plan lists among the selectors): done, stopped, or failed with why. Without it an API error would end a turn with nothing said. The rest of `TurnEnd` is gone.
+>
+> **Note from the build:** What pino adds to a prompt still shows under it with "Show text": the engine stage will use it.
+>
+> **Note from the build:** "More" also offers "Resume" once a session has ended: a stopped conversation could otherwise only be resumed by opening the project again.
+>
+> **Note from the build:** `chat.spec.ts` has more cases than listed: a reload keeps the running session, a later launch offers to resume, closing the project mid-turn, and quitting with a stand-in that will not leave.
+>
+> **Note from the build:** `ask Write` in the stand-in writes nothing itself, so the permission case asserts what the tool was answered with.
+
 **Files:**
 - Copy adapted:
   - `app/src/renderer/ui/chat/ChatPane.tsx`: drop the builds strip, in-sight, Prompts only, earlier conversations, history join and offers; keep the item list, ask cards, the composer and scrolling.
@@ -956,7 +966,7 @@ git add -A && git commit -m "Copy torno's chat pieces: store, markdown, diffs, t
 
 Copy, exact: the trust question reads "This folder has Claude Code settings of its own" with the files listed in `num`, and the buttons "Trust and start" and "Not now". Not found: the refusal text from Task 7. A notice from `onNotOwn` is shown once in the status line.
 
-- [ ] **Step 1: Write the failing specs**
+- [x] **Step 1: Write the failing specs**
 
 ```ts
 // chat.spec.ts (launch({ project, agent: true }))
@@ -975,19 +985,19 @@ test('closing the window ends the session: no stand-in is left running in the fo
 test('the MCP address answers 404 without the token, 403 to a request from a web page, and lists project with it', ...) // __pinoMain.mcpFor(id); Origin header gives 403
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm test:e2e`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt the components, helpers and rule; fill `SessionDock`**
+- [x] **Step 3: Copy and adapt the components, helpers and rule; fill `SessionDock`**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS. Afterwards, `pgrep -af fake-agent.mjs` lists nothing under the test temp folders.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Run a Claude Code chat in the session dock, end to end against the stand-in"
