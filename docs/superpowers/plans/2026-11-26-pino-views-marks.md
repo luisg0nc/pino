@@ -363,6 +363,8 @@ git commit -m "Build board.py on every save through the engine's serve mode (cho
 
 ### Task 4: The board model, shared by main and the renderer
 
+> As built: the pad outlines used by crossings, gaps and areas are in one more module, `outlines.ts`. A courtyard whose lines close into one loop keeps its true shape (an L stays an L); otherwise its convex hull. `netColour` takes the supply names as a fifth argument, to give supplies their colours in turn.
+
 **Files:**
 - Create: `app/src/shared/board/sexpr.ts`, `geom.ts`, `board.ts`, `coords.ts`, `hit.ts`, `refs.ts`, `nets.ts`, `measure.ts`, `changes.ts`, `palette.ts`
 - Test: `app/src/shared/board/board.test.ts`, `coords.test.ts`, `hit.test.ts`, `refs.test.ts`, `nets.test.ts`, `measure.test.ts`, `changes.test.ts`, `palette.test.ts`
@@ -391,7 +393,7 @@ git commit -m "Build board.py on every save through the engine's serve mode (cho
   - `changes.ts`: `interface ChangedSet { parts: string[]; tracks: string[]; vias: string[]; zones: string[] }`; `changedItems(prev: Board | null, next: Board): ChangedSet` (a part changed when its position moved over 0.01 mm, its angle or side changed, or it is new; copper by uuid added; nothing on a first build).
   - `palette.ts`: `SIGNAL_COLOURS`, `SUPPLY_COLOURS` (Global Constraints values), `netColour(net: string, kind: 'signal' | 'supply' | 'gnd', signals: readonly string[], dark: boolean): string | null` (null for gnd: the caller uses `--rat`), `hueOf(hex: string): number`.
 
-- [ ] **Step 1: Copy the spike's five modules into `app/src/shared/board/`, then write the failing tests**
+- [x] **Step 1: Copy the spike's five modules into `app/src/shared/board/`, then write the failing tests**
 
 ```ts
 it('reads the tiny board: parts, pads, tracks, an arc, a via and a zone', () => {
@@ -431,21 +433,21 @@ it('keeps every net colour out of the marks' violet hues', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/board`
 Expected: FAIL (missing `coords`, `refs` exports, the courtyard polygon and arc crossings).
 
-- [ ] **Step 3: Make the changes listed in Interfaces**
+- [x] **Step 3: Make the changes listed in Interfaces**
 
 The spike's `render.ts` and `main.ts` are not copied here (Task 5 takes what it needs of `render.ts`). No module in `shared/board/` touches the DOM (`Path2D`, `DOMMatrix`, `document`): `board.test.ts` greps the folder for those names.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `pnpm -C app exec vitest run src/shared/board`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/shared/board
