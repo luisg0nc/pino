@@ -10,7 +10,8 @@
     checks    DRC the routing added, nets left, copper checks, failed steps
     glb       the 3D model of the routed, filled board, exported as a build exports its own
 
-When the newest kept route's board differs from this build's only by its reference labels, the router does not run:
+When the newest kept route's board differs from this build's only by its reference labels, no router is looked
+for or run:
 
     copper    that route's copper (tracks, arcs, vias) put on this build's board
     drc       the board refilled with DRC and schematic parity, as above
@@ -153,8 +154,9 @@ def reuse_copper(work: Path, board_text: str, pro_text: str, plan: RoutePlan, ro
     findings: list[Finding] = list(plan.warnings)
 
     def outcome(stopped, problem=None, text=board_text, copper=None, drc=None, filled=""):
-        return RouteOutcome(text, copper or read_copper(text), drc or {}, share, list(steps), findings, clock.times,
-                            stopped, filled, problem, 0, plan)
+        # a fast route that stops made nothing, so it claims none of the kept route's steps
+        return RouteOutcome(text, copper or read_copper(text), drc or {}, share, [] if stopped else list(steps),
+                            findings, clock.times, stopped, filled, problem, 0, plan)
 
     events({"event": "step", "step": "copper", "index": 0, "of": 0})
     final = clock.run("copper", lambda: merge_copper(board_text, rewrite_uuids(copper_nodes(routed_text))))
@@ -171,6 +173,14 @@ def reuse_copper(work: Path, board_text: str, pro_text: str, plan: RoutePlan, ro
     o = outcome(None, text=final, copper=copper, drc=report, filled=filled)
     o.unrouted = sum(unrouted_nets(report, copper).values())
     return o
+
+
+def _done(folder: Path) -> bool:
+    """A kept route of this key that finished, which the cache answers."""
+    try:
+        return RouteResult.from_json((folder / "route.json").read_text(encoding="utf-8")).state == "done"
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
 
 
 @dataclass
@@ -449,13 +459,6 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                            False, empty_counts(), share, kept, truncated, list(steps), clock.times, {}, False)
 
     try:
-        try:
-            krt = clock.run("router", ensure, allow_install=options.install, cancel=cancel,
-                            on_line=lambda s: events({"event": "log", "step": "router install", "line": s[:300]}))
-        except RouterMissing as e:
-            if cancel.is_set():
-                return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", [e.finding])
-            return failed("failed", "KiCadRoutingTools missing: run pino-kernel router install", [e.finding])
         build_hash = build or latest_build(project)
         build_dir = project / ".pino" / "build" / (build_hash or "")
         if not build_hash or not (build_dir / "board.kicad_pcb").is_file():
@@ -473,6 +476,22 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
         note_lock(key.key)
         final = routes / key.key
         build_number = _build_number(project, build_hash)
+        # A board whose labels alone moved since the newest route takes that route's copper: no router wanted, so
+        # none is looked for or installed. A route of this very key, kept, is answered from the cache below.
+        base = None
+        if options.cache and not _done(final):
+            base = _labels_only_base(routes, history, key)
+        krt = None
+        if base is None:
+            try:
+                krt = clock.run("router", ensure, allow_install=options.install, cancel=cancel,
+                                on_line=lambda s: events({"event": "log", "step": "router install", "line": s[:300]}))
+            except RouterMissing as e:
+                if cancel.is_set():
+                    return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", [e.finding],
+                                  key.key, build_hash)
+                return failed("failed", "KiCadRoutingTools missing: run pino-kernel router install", [e.finding],
+                              key.key, build_hash)
 
         if options.cache and (final / "route.json").is_file():
             try:
@@ -524,7 +543,6 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                 text = filled_src.read_text(encoding="utf-8") if filled_src.is_file() else board_text
                 baseline, _, _ = _drc_into(kicad, tmp / "baseline", text, project_files, tmp / "baseline" / "drc.json",
                                            parity=False, cancel=cancel)
-            base = _labels_only_base(routes, history, key) if options.cache else None
             reused = {"number": base.number, "key": base.key} if base else None
             if base is not None:
                 outcome = reuse_copper(tmp / "work", board_text, pro_text, plan,
@@ -550,7 +568,7 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
             clock.times.append(Timing("glb", seconds))
             if cancel.is_set():
                 return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", outcome.findings,
-                              key.key, build_hash, outcome.steps)
+                              key.key, build_hash, [] if base else outcome.steps)
             if no_model:
                 outcome.findings.append(no_model)
             drc_found = [f for f in outcome.findings if f.source == "drc"]

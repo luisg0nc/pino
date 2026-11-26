@@ -96,9 +96,9 @@ hash of what the copper depends on: nets by pad, placement, footprints, outline,
 instructions, and the router and kernel versions. The reference labels are in it too: the routed board is the
 build's board with the copper on it, and its DRC checks them. A value change keeps the key; moving a part or a label
 does not. When the newest kept route's board differs from the new one only by its labels (`labels moved` and nothing
-else), a route does not run the router: it puts that route's tracks, arcs and vias on the new build's board, fills the
-zones, runs DRC with parity and pino's checks, exports `board.glb` and stores the result as a new route (3 s on the
-reference board, most of it the model export). Its result says so in `reused` (`{"number", "key"}` of the route it
+else), a route does not run the router, nor look for or install one: it puts that route's tracks, arcs and vias on
+the new build's board, fills the zones, runs DRC with parity and pino's checks, exports `board.glb` and stores the
+result as a new route (3 s on the reference board, most of it the model export). Its result says so in `reused` (`{"number", "key"}` of the route it
 took the copper from, else `null`) and in its headline (`copper of r3 kept (labels moved)`), and keeps that route's
 steps, share and log. `--no-cache` always runs the router. The fast build reports routing as `none`, `running`,
 `current` or `stale` (with the reasons), and stale copper is never used as it is: only a new route, by the router or

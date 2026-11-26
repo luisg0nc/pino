@@ -229,12 +229,14 @@ def _hull(points) -> Polygon:
 
 def part_body(p: Placed, side: str) -> Polygon:
     """What of the part a label on side "F" or "B" must keep off, in board mm: the hull of its Fab drawings there, or,
-    for a footprint that draws no Fab outline, the hull of its pads and silk on its own side. [] when nothing."""
-    pts = [q for pts, *_ in _drawings(p, f"{side}.Fab") for q in pts]
-    if not pts and side == ("B" if p.back else "F"):
+    for a footprint that draws no Fab outline (or one with no area, such as a single line), the hull of its pads and
+    silk on its own side. [] when nothing."""
+    body = _hull([q for pts, *_ in _drawings(p, f"{side}.Fab") for q in pts])
+    if not body and side == ("B" if p.back else "F"):
         pts = [q for pad in pad_world(p) if _on_side(pad.layers, side) for q in pad.poly]
         pts += [q for pts, *_ in _drawings(p, f"{side}.SilkS") for q in pts]
-    return _hull(pts)
+        body = _hull(pts)
+    return body
 
 
 def _body(p: Placed, side: str, pad_gap: float) -> Box:

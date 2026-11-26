@@ -12,7 +12,7 @@ from helpers import board_from_text
 from pino.board import CircuitError
 from pino_kernel.circuit import Circuit, PartPose
 from pino_kernel.coords import from_kicad
-from pino_kernel.geometry import bbox
+from pino_kernel.geometry import bbox, polygons_overlap
 from pino_kernel.pcb.footprint import FootprintLibrary, courtyard_world, pad_world, rotate
 from pino_kernel.pcb.labels import Label, label_box, part_body, place_labels, spots, text_size
 from pino_kernel.pcb.writer import fab_of, placed_parts, write_board
@@ -381,3 +381,52 @@ def test_a_footprint_with_no_fab_outline_uses_its_pads_and_silk(fixture_libs):
     # the pads reach 1.2 mm either side, the silk lines run 0.55 mm above and below
     assert bbox(part_body(r1, "F")) == (2 - PAD_X, round(1 - 0.55, 6), 2 + PAD_X, 1 + 0.55)
     assert part_body(r1, "B") == []
+
+
+# A lopsided F.Fab outline (local KiCad frame, y down): off to one side of the origin, one corner cut.
+LOPSIDED = [(0.2, -0.4), (2.6, -0.4), (2.6, 1.0), (0.6, 1.0), (0.2, 0.6)]
+
+
+def with_fab(p, shapes):
+    """The part's F.Fab drawings replaced by `shapes` (each a list of local points, drawn as an fp_poly)."""
+    node = [c for c in p.footprint.node if not is_fab(c)]
+    node += [["fp_poly", ["pts", *[["xy", x, y] for x, y in pts]], ["layer", "F.Fab"]] for pts in shapes]
+    p.footprint = dataclasses.replace(p.footprint, node=node)
+    return p
+
+
+def on_board(p, lx, ly):
+    """A footprint-local point on the board, worked out here from the pose: mirrored in y on the back, then turned."""
+    from pino_kernel.coords import to_kicad
+
+    X, Y = to_kicad(p.x, p.y)
+    dx, dy = rotate(lx, -ly if p.back else ly, p.rot)
+    x, y = from_kicad(X + dx, Y + dy)
+    return (round(x, 4), round(y, 4))
+
+
+@pytest.mark.parametrize("rot", [30, 90])
+@pytest.mark.parametrize("back", [False, True])
+def test_a_lopsided_body_follows_the_part_turned_and_flipped(fixture_libs, rot, back):
+    _, _, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (3, -2, rot, back)})
+    r1 = with_fab(placed[0], [LOPSIDED])
+    side, other = ("B", "F") if back else ("F", "B")
+    body = part_body(r1, side)
+    assert {(round(x, 4), round(y, 4)) for x, y in body} == {on_board(r1, x, y) for x, y in LOPSIDED}
+    assert part_body(r1, other) == []
+    # its label keeps off it
+    circuit = board_from_text(parts_py(2)).to_circuit()
+    labels, _ = place_labels(circuit, [r1, placed[1]], fab_of(circuit))
+    assert not labels["R1"].hidden and not polygons_overlap(_rect(boxed("R1", labels["R1"])), body)
+
+
+def _rect(b):
+    return [(b[0], b[1]), (b[2], b[1]), (b[2], b[3]), (b[0], b[3])]
+
+
+@pytest.mark.parametrize("shapes", [[[(0.0, 0.0), (1.0, 0.0)]], [[(-0.8, 0.0), (0.0, 0.0), (0.8, 0.0)]]],
+                         ids=["one line", "points in a row"])
+def test_a_fab_drawing_with_no_area_falls_back_to_the_pads_and_silk(fixture_libs, shapes):
+    _, _, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (2, 1, 0)})
+    r1 = with_fab(placed[0], shapes)
+    assert bbox(part_body(r1, "F")) == (2 - PAD_X, round(1 - 0.55, 6), 2 + PAD_X, 1 + 0.55)

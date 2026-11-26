@@ -59,7 +59,7 @@ def test_a_label_only_change_keeps_the_copper_and_the_router_does_not_run(routed
     assert r.reused == {"number": 1, "key": first.key}
     assert "copper of r1 kept (labels moved)" in r.headline
     jsonschema.validate(json.loads(r.to_json()), ROUTE_SCHEMA)
-    assert [t.step for t in r.timings] == ["router", "plan", "copper", "drc", "checks", "glb"]
+    assert [t.step for t in r.timings] == ["plan", "copper", "drc", "checks", "glb"]  # no router looked for
     assert r.counts == first.counts and r.share == first.share and r.verdict == first.verdict
 
     old, new = routed_project / ".pino/routes" / first.key, routed_project / ".pino/routes" / r.key
@@ -173,9 +173,37 @@ def test_a_cancel_during_it_leaves_the_kept_route(routed_project, monkeypatch, t
     started = time.monotonic()
     r = route_project(routed_project, cancel=cancel)
     assert r.state == "cancelled" and time.monotonic() - started < 20
+    assert r.steps == [] and r.reused is None  # nothing of the kept route's is claimed
     assert folder_digests(kept) == before
     assert [d.name for d in (routed_project / ".pino/routes").iterdir() if d.is_dir()] == [first.key]
     assert RouteHistory(routed_project).latest_done()["key"] == first.key
+
+
+def test_a_failed_fast_route_reports_no_steps_and_leaves_the_kept_route(routed_project, monkeypatch, tmp_path):
+    first = route_project(routed_project)
+    assert first.steps
+    kept = routed_project / ".pino/routes" / first.key
+    before = folder_digests(kept)
+    rebuild(routed_project, LABELLED)
+    monkeypatch.setenv("FAKE_KICAD_DRC", str(tmp_path / "no-such-report.json"))  # the stand-in's DRC fails
+    r = route_project(routed_project)
+    assert r.state == "failed" and "DRC failed" in r.headline and r.steps == []
+    assert folder_digests(kept) == before and RouteHistory(routed_project).latest_done()["key"] == first.key
+
+
+def test_the_fast_path_neither_needs_nor_installs_the_router(routed_project, monkeypatch, tmp_path):
+    first = route_project(routed_project)
+    rebuild(routed_project, LABELLED)
+    monkeypatch.delenv("PINO_KRT_DIR")
+    monkeypatch.delenv("PINO_KRT_PYTHON")
+    monkeypatch.setenv("PINO_CACHE_DIR", str(tmp_path / "empty"))
+    r = route_project(routed_project)  # install allowed: it must not be wanted
+    assert r.state == "done" and r.reused == {"number": 1, "key": first.key}
+    assert not (tmp_path / "empty" / "krt").exists()
+    # anything else still needs it
+    rebuild(routed_project, MOVED)
+    r = route_project(routed_project, options=RouteOptions(install=False))
+    assert r.state == "failed" and r.findings[0].code == "router_missing"
 
 
 @pytest.mark.kicad_cli

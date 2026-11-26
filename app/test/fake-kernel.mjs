@@ -215,7 +215,7 @@ function routeResult(state, number, key, build, nets, seconds) {
     key, build, number, state, verdict: state === 'done' ? 'ok' : 'failed',
     headline: state === 'done' ? `Route r${number}: router ${nets}/${nets} nets in ${seconds} s, 0 left, DRC clean` : `Route r${number}: cancelled after ${seconds} s`,
     complete: state === 'done', counts: { nets, unrouted: state === 'done' ? 0 : nets, tracks: nets, vias: 0, track_mm: 100, drc_errors: 0, drc_warnings: 0, copper_errors: 0, copper_warnings: 0 },
-    share: null, findings: [], truncated: 0, steps: [], timings: [], artifacts: {}, cached: false
+    share: null, findings: [], truncated: 0, steps: [], timings: [], artifacts: {}, cached: false, reused: null
   }
 }
 
