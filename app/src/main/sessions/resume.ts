@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { lstatSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ensureIgnored } from '../ignored'
 import { FOLDER, writeOwn } from '../own'
@@ -23,6 +23,8 @@ function conversationOf(value: unknown): string | null {
 export function storedConversation(dir: string): string | null {
   let file: Record<string, unknown>
   try {
+    // Not through a link in the place of `.pino` (a copied project may hold one): what it leads to is another folder's.
+    if (!lstatSync(join(dir, FOLDER)).isDirectory()) return null
     const read: unknown = JSON.parse(readFileSync(join(dir, FOLDER, SESSION_FILE), 'utf8'))
     if (typeof read !== 'object' || read === null) return null
     file = read as Record<string, unknown>
