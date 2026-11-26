@@ -461,8 +461,10 @@ class Board:
         """Where one part's reference label goes, by hand.
 
         pino places every label itself after placement: beside the part (top, bottom, left, right, then turned 90
-        degrees), clear of pads, courtyards, other labels and the board edge; smaller when nothing fits, never below
-        the fab's minimum text; hidden, with an info finding, when still nothing fits. This call wins over that:
+        degrees), clear of pads, part bodies, other labels and the board edge (a neighbour's courtyard margin is
+        fine); smaller when nothing fits, never below the fab's minimum text; hidden, with an info finding, when still
+        nothing fits. Moving a label keeps the routed copper: the next route puts it on the new board without the
+        router. This call wins over that:
 
             b.label(r1, side="left")           # centred on that side of the part
             b.label(u1, at=(0, -4.5), rot=90)  # its centre 4.5 mm below the part's origin, reading upward

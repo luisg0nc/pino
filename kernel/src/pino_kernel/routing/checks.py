@@ -146,6 +146,13 @@ class Share:
             return None
         return (self.after_router - self.before) / (self.nets - self.before)
 
+    @staticmethod
+    def from_json(d: dict) -> "Share":
+        before = d["done_before"]
+        after_router = before + d["router"]["routed"]
+        return Share(d["nets"], before, after_router, after_router + d["finish"]["routed"], d["router"]["seconds"],
+                     d["finish"]["seconds"])
+
     def to_json(self) -> dict:
         share = self.router_share()
         return {"nets": self.nets, "done_before": self.before,

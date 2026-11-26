@@ -1,4 +1,4 @@
-"""The label step: each part's reference label beside it, clear of pads, courtyards, labels and the edge."""
+"""The label step: each part's reference label beside it, clear of pads, part bodies, labels and the edge."""
 
 import dataclasses
 import os
@@ -12,16 +12,20 @@ from helpers import board_from_text
 from pino.board import CircuitError
 from pino_kernel.circuit import Circuit, PartPose
 from pino_kernel.coords import from_kicad
-from pino_kernel.geometry import bbox
+from pino_kernel.geometry import bbox, polygons_overlap
 from pino_kernel.pcb.footprint import FootprintLibrary, courtyard_world, pad_world, rotate
-from pino_kernel.pcb.labels import Label, label_box, place_labels, spots, text_size
+from pino_kernel.pcb.labels import Label, label_box, part_body, place_labels, spots, text_size
 from pino_kernel.pcb.writer import fab_of, placed_parts, write_board
 from pino_kernel.sexpr import find, find_all, parse
 
 TESTS = Path(__file__).resolve().parent
 
-# The fixture R_0603's courtyard is 3.0 by 1.5 mm round its origin.
+# The fixture R_0603's courtyard is 3.0 by 1.5 mm round its origin, its F.Fab body 1.6 by 0.8, its pads reach 1.2 mm
+# either side and 0.475 mm up and down, and its silk lines sit 0.55 mm above and below the origin, 0.12 mm wide.
 CY_W, CY_H = 3.0, 1.5
+FAB_W, FAB_H = 1.6, 0.8
+PAD_X = 1.2
+SILK_Y = 0.55 + 0.06
 
 
 def parts_py(n: int, extra: str = "", outline=(40, 30)) -> str:
@@ -50,9 +54,15 @@ def overlaps(a, b) -> bool:
 
 
 def boxed_in(n, gap):
-    """R1 at the origin, R2 and R3 right on its top and bottom, R4 and R5 `gap` mm off its left and right."""
+    """R1 at the origin, R2 and R3 right on its top and bottom, R4 and R5 off its left and right with `gap` mm between
+    their pads and R1's."""
     return {"R1": (0, 0, 0), "R2": (0, CY_H, 0), "R3": (0, -CY_H, 0),
-            "R4": (-CY_W - gap, 0, 0), "R5": (CY_W + gap, 0, 0)}
+            "R4": (-2 * PAD_X - gap, 0, 0), "R5": (2 * PAD_X + gap, 0, 0)}
+
+
+def fab_box(p) -> tuple:
+    """The fixture R_0603's F.Fab rectangle on the board (the tests turn it by 0 only)."""
+    return (p.x - FAB_W / 2, p.y - FAB_H / 2, p.x + FAB_W / 2, p.y + FAB_H / 2)
 
 
 def test_text_size_follows_kicads_stroke_font():
@@ -77,7 +87,7 @@ def test_a_lone_part_gets_its_label_above_and_clear(fixture_libs):
     lab = labels["R1"]
     assert not lab.hidden and lab.angle == 0 and lab.size == 1.0 and lab.x == 0
     box = boxed("R1", lab)
-    assert box[1] > CY_H / 2  # above the courtyard
+    assert box[1] > SILK_Y  # above its own silk, inside its own courtyard's margin
     r1 = next(p for p in placed if p.ref == "R1")
     assert not any(overlaps(box, bbox(q.poly)) for q in pad_world(r1))
     assert findings == []
@@ -90,8 +100,7 @@ def test_each_label_keeps_off_the_other_parts_and_labels(fixture_libs):
     assert len(boxes) == 6
     for ref, box in boxes.items():
         for p in placed:
-            for poly in courtyard_world(p)["F"]:
-                assert not overlaps(box, bbox(poly)), (ref, p.ref)
+            assert not overlaps(box, fab_box(p)), (ref, p.ref)
         for other, ob in boxes.items():
             assert other == ref or not overlaps(box, ob), (ref, other)
 
@@ -104,27 +113,27 @@ def test_a_blocked_top_falls_to_below_then_left(fixture_libs):
 
 
 def test_a_gap_too_narrow_for_the_text_takes_it_turned(fixture_libs):
-    labels, findings, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.5))
+    labels, findings, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.8))
     lab = labels["R1"]
     assert (lab.angle, lab.size, lab.y, lab.hidden) == (90, 1.0, 0, False)
-    assert -CY_W / 2 - 1.5 < lab.x < -CY_W / 2  # in the gap on the left
+    assert -PAD_X - 1.8 < lab.x < -PAD_X  # in the gap on the left
     assert "R1" not in {r for f in findings for r in f.refs}
 
 
 def test_shrinks_to_fit_and_never_below_the_fab_minimum(fixture_libs):
     base = fab_of(board_from_text(parts_py(5)).to_circuit())
     small = dataclasses.replace(base, silk_min_text_height=0.6)
-    labels, _, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.2), fab=small)
+    labels, _, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.5), fab=small)
     lab = labels["R1"]
     assert (lab.angle, lab.size, lab.hidden) == (90, 0.8, False)
     assert lab.thickness >= small.silk_min_width
     # the same gap with JLC's 1 mm floor: no smaller text, so the label is hidden
-    labels, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.2))
+    labels, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.5))
     assert labels["R1"].hidden and labels["R1"].size == 1.0
 
 
 def test_a_hidden_label_is_an_info_finding_naming_the_parts(fixture_libs):
-    _, findings, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.2))
+    _, findings, *_ = labels_of(fixture_libs, 5, boxed_in(5, 1.5))
     hid = [f for f in findings if f.code == "label_hidden"]
     assert len(hid) == 1 and hid[0].severity == "info" and hid[0].source == "placement"
     assert "R1" in hid[0].refs and "R1" in hid[0].message and "b.label()" in hid[0].message
@@ -221,7 +230,7 @@ def test_the_board_file_hides_a_hidden_label(fixture_libs):
 
 
 def test_write_board_reports_the_hidden_labels(fixture_libs):
-    _, _, _, circuit, placement = labels_of(fixture_libs, 5, boxed_in(5, 1.2))
+    _, _, _, circuit, placement = labels_of(fixture_libs, 5, boxed_in(5, 1.5))
     files = write_board(circuit, placement, FootprintLibrary(fixture_libs))
     assert [f.code for f in files.findings] == ["label_hidden"]
 
@@ -281,14 +290,14 @@ def test_a_slanted_label_fits_beside_a_lone_part(fixture_libs, rot):
     assert not lab.hidden and lab.angle == rot and findings == []
     box = boxed("R1", lab)
     r1 = next(p for p in placed if p.ref == "R1")
-    assert box[1] > CY_H / 2 and not any(overlaps(box, bbox(poly)) for poly in courtyard_world(r1)["F"])
+    assert box[1] > SILK_Y and not overlaps(box, fab_box(r1))
 
 
 @pytest.mark.parametrize("rot", [30, 45])
 def test_a_slanted_hand_label_on_a_side_stands_clear_of_its_part(fixture_libs, rot):
     labels, *_ = labels_of(fixture_libs, 2, {"R1": (0, 0, 0)}, f'b.label(r1, side="left", rot={rot})\n')
     box = boxed("R1", labels["R1"])
-    assert labels["R1"].angle == rot and box[2] < -CY_W / 2 and labels["R1"].y == 0
+    assert labels["R1"].angle == rot and box[2] < -PAD_X and labels["R1"].y == 0
 
 
 def test_spots_take_a_slanted_texts_whole_box():
@@ -314,3 +323,110 @@ def test_a_hand_label_on_a_part_with_no_silk_reference_is_a_finding(fixture_libs
     assert "R1" not in labels
     f = [f for f in findings if f.code == "label_not_drawn"]
     assert len(f) == 1 and f[0].refs == ("R1",) and f[0].severity == "warning" and "R1" in f[0].message
+
+
+# --- what a label keeps off: a part's body, not its courtyard ---------------------------------------------------
+
+
+def test_a_label_may_sit_over_a_neighbours_courtyard_margin(fixture_libs):
+    # R2 2.71 mm above R1: their courtyards are 1.21 mm apart, too little for R1's label (1.25 mm high), but R2's
+    # body, pads and silk leave room for it
+    labels, findings, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (0, 0, 0), "R2": (0, 2.71, 0)})
+    lab = labels["R1"]
+    assert not lab.hidden and (lab.x, lab.angle, lab.size) == (0, 0, 1.0) and lab.y > 0
+    r2 = next(p for p in placed if p.ref == "R2")
+    box = boxed("R1", lab)
+    assert overlaps(box, bbox(courtyard_world(r2)["F"][0]))
+    assert not overlaps(box, fab_box(r2))
+    assert not any(overlaps(box, bbox(q.poly)) for q in pad_world(r2))
+    assert findings == []
+
+
+def test_a_label_never_sits_over_a_neighbours_body(fixture_libs):
+    # as above, but R2's body reaches 1 mm down from its origin, past its pads and silk: R1's label goes below
+    circuit = board_from_text(parts_py(2)).to_circuit()
+    placement = {"R1": PartPose(0, 0, 0, False), "R2": PartPose(0, 2.71, 0, False)}
+    placed = placed_parts(circuit, placement, FootprintLibrary(fixture_libs))
+    r2 = placed[1]
+    tall = [["fp_rect", ["start", -0.8, -1.0], ["end", 0.8, 1.0], ["layer", "F.Fab"]] if is_fab(c) else c
+            for c in r2.footprint.node]
+    r2.footprint = dataclasses.replace(r2.footprint, node=tall)
+    labels, _ = place_labels(circuit, placed, fab_of(circuit))
+    assert labels["R1"].y < 0 and labels["R1"].x == 0
+    assert not overlaps(boxed("R1", labels["R1"]), bbox(part_body(r2, "F")))
+
+
+def is_fab(c) -> bool:
+    return isinstance(c, list) and bool(c) and str(c[0]).startswith("fp_") and find(c, "layer") is not None \
+        and find(c, "layer")[1] == "F.Fab"
+
+
+def without_fab(p):
+    node = [c for c in p.footprint.node if not is_fab(c)]
+    p.footprint = dataclasses.replace(p.footprint, node=node)
+    return p
+
+
+def test_a_parts_body_is_its_fab_outline(fixture_libs):
+    _, _, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (2, 1, 0), "R2": (0, 0, 0, True)})
+    r1, r2 = placed
+    assert bbox(part_body(r1, "F")) == (2 - FAB_W / 2, 1 - FAB_H / 2, 2 + FAB_W / 2, 1 + FAB_H / 2)
+    assert part_body(r1, "B") == []
+    assert bbox(part_body(r2, "B")) == (-FAB_W / 2, -FAB_H / 2, FAB_W / 2, FAB_H / 2) and part_body(r2, "F") == []
+
+
+def test_a_footprint_with_no_fab_outline_uses_its_pads_and_silk(fixture_libs):
+    _, _, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (2, 1, 0)})
+    r1 = without_fab(placed[0])
+    # the pads reach 1.2 mm either side, the silk lines run 0.55 mm above and below
+    assert bbox(part_body(r1, "F")) == (2 - PAD_X, round(1 - 0.55, 6), 2 + PAD_X, 1 + 0.55)
+    assert part_body(r1, "B") == []
+
+
+# A lopsided F.Fab outline (local KiCad frame, y down): off to one side of the origin, one corner cut.
+LOPSIDED = [(0.2, -0.4), (2.6, -0.4), (2.6, 1.0), (0.6, 1.0), (0.2, 0.6)]
+
+
+def with_fab(p, shapes):
+    """The part's F.Fab drawings replaced by `shapes` (each a list of local points, drawn as an fp_poly)."""
+    node = [c for c in p.footprint.node if not is_fab(c)]
+    node += [["fp_poly", ["pts", *[["xy", x, y] for x, y in pts]], ["layer", "F.Fab"]] for pts in shapes]
+    p.footprint = dataclasses.replace(p.footprint, node=node)
+    return p
+
+
+def on_board(p, lx, ly):
+    """A footprint-local point on the board, worked out here from the pose: mirrored in y on the back, then turned."""
+    from pino_kernel.coords import to_kicad
+
+    X, Y = to_kicad(p.x, p.y)
+    dx, dy = rotate(lx, -ly if p.back else ly, p.rot)
+    x, y = from_kicad(X + dx, Y + dy)
+    return (round(x, 4), round(y, 4))
+
+
+@pytest.mark.parametrize("rot", [30, 90])
+@pytest.mark.parametrize("back", [False, True])
+def test_a_lopsided_body_follows_the_part_turned_and_flipped(fixture_libs, rot, back):
+    _, _, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (3, -2, rot, back)})
+    r1 = with_fab(placed[0], [LOPSIDED])
+    side, other = ("B", "F") if back else ("F", "B")
+    body = part_body(r1, side)
+    assert {(round(x, 4), round(y, 4)) for x, y in body} == {on_board(r1, x, y) for x, y in LOPSIDED}
+    assert part_body(r1, other) == []
+    # its label keeps off it
+    circuit = board_from_text(parts_py(2)).to_circuit()
+    labels, _ = place_labels(circuit, [r1, placed[1]], fab_of(circuit))
+    assert not labels["R1"].hidden and not polygons_overlap(_rect(boxed("R1", labels["R1"])), body)
+
+
+def _rect(b):
+    return [(b[0], b[1]), (b[2], b[1]), (b[2], b[3]), (b[0], b[3])]
+
+
+@pytest.mark.parametrize("shapes", [[[(0.0, 0.0), (1.0, 0.0)]], [[(-0.8, 0.0), (0.0, 0.0), (0.8, 0.0)]]],
+                         ids=["one line", "points in a row"])
+def test_a_fab_drawing_with_no_area_falls_back_to_the_pads_and_silk(fixture_libs, shapes):
+    _, _, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (2, 1, 0)})
+    r1 = with_fab(placed[0], shapes)
+    assert bbox(part_body(r1, "F")) == (2 - PAD_X, round(1 - 0.55, 6), 2 + PAD_X, 1 + 0.55)

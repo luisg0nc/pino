@@ -3,8 +3,10 @@
 A footprint's Reference text sits where its library drew it, which on a packed board is on a neighbour's pads or
 label. This step moves each label to the first clear spot beside its part: above, below, left, right (centred, then
 flush with either end of that side), then the same four turned 90 degrees. A spot is clear when the text keeps off
-every pad (by the fab's silk to pad distance), every courtyard (so no label hides under a part), every other label
-and footprint silk line, and the board edge. Tracks and zones do not count: silk over copper is fine for the fab.
+every pad (by the fab's silk to pad distance), every part's body (so no label hides under a part once it is
+assembled), every other label and footprint silk line, and the board edge. A part's body is its Fab outline, or for a
+footprint that draws none, the outline round its pads and silk. The courtyard's margin outside the body does not
+block: a label there can still be read. Tracks and zones do not count: silk over copper is fine for the fab.
 When no spot fits, the text gets smaller, never below the fab's minimum height and line width; when still nothing
 fits, the label is hidden and one info finding names those parts.
 
@@ -26,7 +28,7 @@ from ..geometry import (Point, Polygon, arc_points, bbox, circle_polygon, point_
                         segment_polygon_distance)
 from ..outline import polygon as outline_polygon
 from ..sexpr import find, find_all
-from .footprint import Placed, _world, courtyard_world, flip_layer, pad_world
+from .footprint import Placed, _world, flip_layer, pad_world
 
 # KiCad's stroke font at 1 mm: each glyph's ink width, and the space between two glyphs (measured from kicad-cli 10's
 # SVG plot). Wider glyphs than these are taken as W.
@@ -36,10 +38,10 @@ GLYPH = {**dict.fromkeys("EFL", 0.476), **dict.fromkeys("BDHKNPRSTU0156890", 0.5
 GLYPH_GAP = 0.381
 INK_HEIGHT = 1.1  # cap height plus Q's tail, per mm of size
 
-BODY_GAP = 0.02  # beyond the gaps the part's own courtyard, pads and silk keep
+BODY_GAP = 0.02  # beyond the gaps the part's own body, pads and silk keep
 LABEL_GAP = 0.2  # between two labels
 SILK_GAP = 0.1  # from a footprint's silk line
-COURTYARD_GAP = 0.05
+FAB_GAP = 0.05  # from a part's body, and a mounting hole's courtyard
 SHRINK = 0.8  # each smaller try is this much of the last
 TURNS = (0.0, 90.0)
 SIDE_ORDER = ("top", "bottom", "left", "right")
@@ -169,8 +171,8 @@ class _Obstacles:
         return False
 
 
-def _silk_pieces(p: Placed, layer: str):
-    """The footprint's own silk drawings on `layer` as (segments, stroke width, filled polygon or None), board mm."""
+def _drawings(p: Placed, layer: str):
+    """The footprint's own drawings on `layer` as (points, closed, stroke width, filled polygon or None), board mm."""
     out = []
     for item in p.footprint.node:
         if not (isinstance(item, list) and item and item[0] in ("fp_line", "fp_rect", "fp_circle", "fp_arc", "fp_poly")):
@@ -206,12 +208,44 @@ def _on_side(layers, side: str) -> bool:
     return any(s in (f"{side}.Cu", f"{side}.Mask", "*.Cu", "*.Mask", "F&B.Cu") for s in layers)
 
 
+def _hull(points) -> Polygon:
+    """The convex hull of the points, counter-clockwise (Andrew's monotone chain)."""
+    pts = sorted(set(points))
+    if len(pts) < 3:
+        return []
+
+    def half(seq):
+        out: list[Point] = []
+        for q in seq:
+            while len(out) >= 2 and ((out[-1][0] - out[-2][0]) * (q[1] - out[-2][1])
+                                     - (out[-1][1] - out[-2][1]) * (q[0] - out[-2][0])) <= 0:
+                out.pop()
+            out.append(q)
+        return out[:-1]
+
+    hull = half(pts) + half(reversed(pts))
+    return hull if len(hull) >= 3 else []
+
+
+def part_body(p: Placed, side: str) -> Polygon:
+    """What of the part a label on side "F" or "B" must keep off, in board mm: the hull of its Fab drawings there, or,
+    for a footprint that draws no Fab outline (or one with no area, such as a single line), the hull of its pads and
+    silk on its own side. [] when nothing."""
+    body = _hull([q for pts, *_ in _drawings(p, f"{side}.Fab") for q in pts])
+    if not body and side == ("B" if p.back else "F"):
+        pts = [q for pad in pad_world(p) if _on_side(pad.layers, side) for q in pad.poly]
+        pts += [q for pts, *_ in _drawings(p, f"{side}.SilkS") for q in pts]
+        body = _hull(pts)
+    return body
+
+
 def _body(p: Placed, side: str, pad_gap: float) -> Box:
-    """The part's extent on its own side, with the gap a label keeps from each: its courtyard, its pads and its own
-    silk drawings."""
-    boxes = [_grow(bbox(poly), COURTYARD_GAP) for poly in courtyard_world(p).get(side, [])]
+    """The part's extent on a side, with the gap a label keeps from each: its body, its pads and its own silk
+    drawings. Its courtyard's margin is left out."""
+    body = part_body(p, side)
+    boxes = [_grow(bbox(body), FAB_GAP)] if body else []
     boxes += [_grow(bbox(pad.poly), pad_gap) for pad in pad_world(p) if _on_side(pad.layers, side)]
-    boxes += [_grow(bbox(pts), w / 2 + SILK_GAP) for pts, _, w, _ in _silk_pieces(p, f"{side}.SilkS")]
+    boxes += [_grow(bbox(pts), w / 2 + SILK_GAP) for pts, _, w, _ in _drawings(p, f"{side}.SilkS")]
     if not boxes:
         return (p.x, p.y, p.x, p.y)
     return (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
@@ -296,19 +330,18 @@ def place_labels(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> tup
     for layer, obs in obstacles.items():
         side = layer[0]
         for p in placed:
-            for poly in courtyard_world(p).get(side, []):
-                obs.polygon(poly, COURTYARD_GAP)
+            obs.polygon(part_body(p, side), FAB_GAP)
             for pad in pad_world(p):
                 if _on_side(pad.layers, side):
                     obs.polygon(pad.poly, fab.silk_to_pad)
-            for pts, closed, w, filled in _silk_pieces(p, layer):
+            for pts, closed, w, filled in _drawings(p, layer):
                 n = len(pts)
                 for i in range(n if closed else n - 1):
                     obs.segment(pts[i], pts[(i + 1) % n], w / 2, SILK_GAP)
                 if filled:
                     obs.polygon(filled, SILK_GAP)
         for h in circuit.outline.holes:
-            obs.polygon(circle_polygon(h.x, h.y, max(h.courtyard, h.drill) / 2, 24), COURTYARD_GAP)
+            obs.polygon(circle_polygon(h.x, h.y, max(h.courtyard, h.drill) / 2, 24), FAB_GAP)
         for i in range(len(board)):
             obs.segment(board[i], board[(i + 1) % len(board)], 0.0, fab.copper_to_edge)
 
