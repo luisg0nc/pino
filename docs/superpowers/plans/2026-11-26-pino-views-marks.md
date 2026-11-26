@@ -1300,6 +1300,8 @@ git commit -m "End to end on the reference board: build, click, stroke, send, Cl
 
 ### Task 19: Rules, manifest, audit, the draft PR and the two reviews
 
+> As built: the three screenshots are committed under `docs/screenshots/views/` so that the draft PR can show them (the director's brief asks for that, where this step says they are not committed). The reviews ran before the push, in the brief's order. The code review (Opus, read only): no Critical, 2 Important, 5 Minor, of which three were re-graded to Important; all five fixed test first. The design review (Opus): fixed the slit lines across pours, touching pins and chips over pads, the sentence-long card head, the band naming another build than Claude is told, the 3D tag over its part, the tool pill over a line being drawn and the whole payloads in the marks list. Left for later, with the rest, in the PR.
+
 **Files:**
 - Create: `.claude/rules/views.md`, `.claude/rules/marks.md`, `.claude/rules/engine-client.md`
 - Modify: `CLAUDE.md`, `README.md` (what the app now does), `shared-from-torno.json` (check every copy of this stage is listed), `docs/superpowers/plans/2026-11-26-pino-roadmap.md` (stages 5 and 6 state)
@@ -1309,18 +1311,18 @@ git commit -m "End to end on the reference board: build, click, stroke, send, Cl
 - Consumes: the whole branch.
 - Produces: rules with `paths:` frontmatter (`views.md`: `app/src/shared/board/**`, `app/src/renderer/board/**`, `sheet/**`, `three/**`; `marks.md`: `app/src/shared/marks.ts`, `app/src/main/marks/**`, `app/src/renderer/board/marks/**`; `engine-client.md`: `app/src/main/kernel/**`, `app/src/main/builds.ts`, `app/test/fake-kernel.mjs`), each stating the constraints of this plan that bind its files (frames, colours, motion, only writer, stand-in kernel in tests). `CLAUDE.md` loses "Stage 2 has no engine" and the placeholder-logo line, and names the new rules.
 
-- [ ] **Step 1: Run the rule, manifest and drift tests**
+- [x] **Step 1: Run the rule, manifest and drift tests**
 
 Run: `pnpm -C app exec vitest run src/rules.test.ts src/manifest.test.ts src/tornoSync.test.ts && node scripts/torno-sync`
 Expected: PASS, `0 drifted`.
 
-- [ ] **Step 2: Run humanizer on README, the rules and the PR body; fix what it finds**
+- [x] **Step 2: Run humanizer on README, the rules and the PR body; fix what it finds**
 
-- [ ] **Step 3: Leak audit over every commit of the branch**
+- [x] **Step 3: Leak audit over every commit of the branch**
 
 Search files and messages for personal names, home paths, hosts, e-mail addresses, tokens and other projects' data, as the shell plan's Task 16 did (`git log -p origin/main..HEAD`), the fixture's `result.json` and `.kicad_pcb` files included (they must hold no absolute path: `normalize.py` takes them out; check).
 
-- [ ] **Step 4: Push and open the draft PR**
+- [x] **Step 4: Push and open the draft PR**
 
 ```bash
 git push -u origin views
@@ -1329,11 +1331,11 @@ gh pr create --draft --base main --title "Stages 5 and 6: live views and marks" 
 
 The body says: it contains #1 and #2 until they merge; what it adds; the test results; the screenshots are attached to the design review, not committed. No Claude attribution.
 
-- [ ] **Step 5: The two reviews**
+- [x] **Step 5: The two reviews**
 
 One whole-branch code review (Opus, read only, the `reviewer` agent) and one design review (Opus) given the shots folder, the mock PNGs and the picks document, asked to compare each shot with its mock and list what differs, most visible first. Fix Critical and Important findings test first; note the rest in the PR.
 
-- [ ] **Step 6: Commit the docs and fixes**
+- [x] **Step 6: Commit the docs and fixes**
 
 ```bash
 git add .claude CLAUDE.md README.md shared-from-torno.json docs/superpowers/plans/2026-11-26-pino-roadmap.md
