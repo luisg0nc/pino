@@ -48,7 +48,15 @@ export function App() {
 
   // The build loop of the project on show: what main tells from now on, and how it stands already.
   useEffect(() => window.pino.build.onState(actions.setBuild), [])
+  useEffect(() => window.pino.fab.onState(actions.setFab), [])
   const projectId = project?.id
+  // The fab's limits, once an engine with fab files is there: they are in the Brief from the first build.
+  const makesFab = useStore((s) => s.build?.engine.state === 'ready' && s.build.engine.serve >= 3)
+  useEffect(() => {
+    if (!projectId || !makesFab) return
+    void window.pino.fab.profiles().then(actions.setFabProfiles, () => {})
+    void window.pino.fab.state(projectId).then((s) => s && actions.setFab(s), () => {})
+  }, [projectId, makesFab])
   useEffect(() => {
     if (!projectId) return
     void window.pino.build.state(projectId).then((s) => s && actions.setBuild(s), () => {})

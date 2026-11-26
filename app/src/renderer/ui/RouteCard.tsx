@@ -1,9 +1,11 @@
 import type { ProjectInfo } from '../../shared/project'
+import { releaseFindings } from '../../shared/checks'
 import { useStore } from '../state/store'
 import { useViewModel } from '../state/viewModel'
 import { BlocksBlock } from './route/BlocksBlock'
 import { BoardBlock } from './route/BoardBlock'
 import { ChecksBlock } from './route/ChecksBlock'
+import { FabBlock } from './route/FabBlock'
 import { Head } from './route/Head'
 import { InHand } from './route/InHand'
 import { MarkInHand } from './route/MarkInHand'
@@ -15,8 +17,8 @@ import { Section } from './route/Section'
 /**
  * The route card at the left of an open project: the project read top to bottom. Its head says the newest build; under
  * it what is in hand, how far the routing is, every check, the board in numbers and, over the sheet, its blocks and the
- * net in hand; and last the brief, which Claude keeps in `brief.md`. The Brief page and the fab limits come with later
- * stages.
+ * net in hand; and last the brief, which Claude keeps in `brief.md`, with the fab's limits under it. The Brief page
+ * comes with a later stage.
  */
 export function RouteCard({ project }: { project: ProjectInfo }) {
   const build = useStore((s) => s.build)
@@ -35,7 +37,11 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
   // What the checks say is of the newest build, which a failed one is; the board in numbers is of the one drawn.
   const latest = useStore((s) => (s.shown === null ? (s.build?.latest ?? null) : null))
   // The drawn build holds the router's findings with its own: where it is the newest, it is the one read.
-  const result = latest && model?.result.number !== latest.number ? latest : (model?.result ?? latest)
+  const checked = latest && model?.result.number !== latest.number ? latest : (model?.result ?? latest)
+  // The newest release's findings join the checks of the build it was made from, in the order the views pin them.
+  const fab = useStore((s) => s.fab)
+  const released = releaseFindings(fab, checked)
+  const result = checked && released.length ? { ...checked, findings: [...checked.findings, ...released] } : checked
   return (
     <div className="route-card">
       <Head project={project} build={build} />
@@ -63,6 +69,7 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
         <p className="muted">
           Tell Claude what the board is for. It keeps the brief in <span className="num">brief.md</span>.
         </p>
+        <FabBlock />
       </Section>
     </div>
   )

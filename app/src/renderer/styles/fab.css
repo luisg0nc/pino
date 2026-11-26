@@ -1,0 +1,155 @@
+/* Fab files: the status line's pill and its popover (`ui/FabPopover.tsx`), and the fab's limits in the route card's
+   Brief (`ui/route/FabBlock.tsx`). The popover, the buttons and the rows are the ones there are. */
+
+.status-fab {
+  height: 21px;
+  padding: 0 10px;
+  border: var(--divider);
+  border-radius: var(--radius-full);
+  background: var(--raise);
+  color: var(--accent);
+  font-size: var(--text-small);
+  font-weight: 500;
+}
+
+.status-fab:hover,
+.status-fab[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.fab-pop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-small);
+  animation: fab-drop 0.32s var(--ease) backwards;
+}
+
+/* The body scrolls, not the card, so that the card's stem is never cut off. */
+.fab-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-height: calc(100vh - var(--status-h) - var(--title-h) - 80px);
+  overflow-y: auto;
+}
+
+@keyframes fab-drop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-pop {
+    animation: none;
+  }
+}
+
+.fab-pop h4,
+.fab-pop p {
+  margin: 0;
+}
+
+.fab-pop h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fab-pop h4:focus {
+  outline: none;
+}
+
+.fab-pop [data-tone='warn'] {
+  color: var(--warn);
+}
+
+.fab-pop [data-tone='fail'] {
+  color: var(--fail);
+}
+
+.fab-headline {
+  font-weight: 500;
+}
+
+.fab-files,
+.fab-blockers,
+.fab-findings {
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fab-files li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px 0;
+  border-bottom: var(--divider);
+}
+
+.fab-file {
+  overflow-wrap: anywhere;
+}
+
+.fab-blockers li {
+  padding: 2px 0;
+  color: var(--fail);
+}
+
+.fab-finding {
+  width: 100%;
+  padding: 3px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-inline);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-small);
+  text-align: left;
+}
+
+.fab-finding[data-severity='error'] {
+  color: var(--fail);
+}
+
+.fab-finding[data-severity='warning'] {
+  color: var(--warn);
+}
+
+.fab-finding:hover,
+.fab-finding[data-hot] {
+  background: var(--accent-wash);
+}
+
+/* ---- the fab's limits, in the Brief ---- */
+
+.fab-limits {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+}
+
+.fab-limits-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-row);
+  font-weight: 600;
+}
+
+/* A limit is a sentence: its value goes under its name rather than squeezed beside it. */
+.fab-limits .route-row {
+  flex-direction: column;
+  gap: 0;
+  padding: 3px 0;
+}
+
+.fab-limits .route-row .route-grow {
+  color: var(--muted);
+}
+
+.fab-limits .route-row .route-value {
+  text-align: left;
+  white-space: normal;
+}

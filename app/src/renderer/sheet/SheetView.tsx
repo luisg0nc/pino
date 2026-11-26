@@ -3,6 +3,7 @@ import type { Pt } from '../../shared/board/geom'
 import { describeTarget, shortLabel, type Target } from '../../shared/board/refs'
 import { pressed } from '../../shared/keys'
 import type { Sheet } from '../../shared/sheet'
+import { releaseFindings } from '../../shared/checks'
 import type { View } from '../board/draw'
 import { FindingPins } from '../board/FindingPins'
 import { ChipLayer } from '../board/marks/ChipLayer'
@@ -75,6 +76,7 @@ export function SheetView({ model }: { model: ViewModel }) {
   const hotBlock = useStore((s) => s.hotBlock)
   const pointing = useStore((s) => s.tool === 'point')
   const marks = useStore((s) => s.marks)
+  const fab = useStore((s) => s.fab)
   const [drawing, setDrawing] = useState<Drawing | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const [view, setView] = useState<View | null>(() => kept.get(model.projectId) ?? null)
@@ -270,7 +272,7 @@ export function SheetView({ model }: { model: ViewModel }) {
         )}
       </div>
       <MarkReed tools={SHEET_TOOLS} />
-      {onView && <FindingPins findings={model.result.findings} space="sheet" place={onView} />}
+      {onView && <FindingPins findings={[...model.result.findings, ...releaseFindings(fab, model.result)]} space="sheet" place={onView} />}
       {onView && sheet && <ChipLayer marks={drawnMarks} place={(m) => { const at = m.kind === 'point' ? sheetChipAt(sheet, m) : null; return at && onView(at) }} />}
       {words && tagAt && onView && hot === null && (
         <Tag key={heldSymbol ? 'part' : 'point'} id="selection" subject={onView(tagAt)} prefer={heldSymbol ? 'below' : 'right'}>

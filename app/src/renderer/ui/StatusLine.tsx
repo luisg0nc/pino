@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import { buildSeconds, clock, netGauge, openNets } from '../../shared/checks'
 import type { ProjectInfo } from '../../shared/project'
 import { actions, useStore } from '../state/store'
 import { useViewModel } from '../state/viewModel'
+import { FabPopover } from './FabPopover'
 import { numbered } from './numbered'
 import { sessionWord } from './sessionWords'
 import { useNow } from './useNow'
@@ -17,6 +19,11 @@ export function StatusLine({ project }: { project: ProjectInfo }) {
   const notice = useStore((s) => s.notice)
   const build = useStore((s) => s.build)
   const { model } = useViewModel()
+  const fab = useStore((s) => s.fab)
+  const fabOpen = useStore((s) => s.fabOpen)
+  const fabButton = useRef<HTMLButtonElement>(null)
+  // Only an engine of protocol 3 makes fab files.
+  const makesFab = build?.engine.state === 'ready' && build.engine.serve >= 3
   const latest = build?.latest ?? null
   const good = build?.lastGood ?? null
   const words = build?.building
@@ -69,6 +76,12 @@ export function StatusLine({ project }: { project: ProjectInfo }) {
       {latest && found('error', latest.counts.errors)}
       {latest && latest.verdict !== 'failed' && found('warning', latest.counts.warnings)}
       {good && <span>{numbered(count(good.counts.parts, 'part'))}</span>}
+      {makesFab && (
+        <button ref={fabButton} type="button" className="status-fab" aria-haspopup="dialog" aria-expanded={fabOpen} onClick={() => (fabOpen ? actions.closeFab() : actions.openFab())}>
+          {fab?.running ? numbered(`Fab files: ${fab.step}`) : 'Fab files…'}
+        </button>
+      )}
+      {makesFab && fabOpen && <FabPopover project={project} anchor={fabButton.current} />}
       {/* There before anything is said, so that what is said later is announced. */}
       <span className="status-notice" role="status" title={notice ?? undefined}>
         {notice}

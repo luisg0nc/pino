@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
  * build (`h12`), or a part's face or edge (`tub/F25`), whole. A ref is one thing: half of it in another face
  * reads as two.
  */
-const SET = /(\b[A-Z]{1,4}\d+(?:\.[A-Z]?\d+)?\b|\+?\b\d+V\d+\b|\b[hr]\d+\b|(?<![\w.-])[\w.-]+\/(?:[FE]\d+|@[A-Za-z_]\w*(?:[.-]\w+)*)\b|-?\d[\d.,]*\d|-?\d)/
+const SET = /(\bv\d+(?:\.\d+)+\b|\b[A-Z]{1,4}\d+(?:\.[A-Z]?\d+)?\b|\+?\b\d+V\d+\b|\b[hr]\d+\b|(?<![\w.-])[\w.-]+\/(?:[FE]\d+|@[A-Za-z_]\w*(?:[.-]\w+)*)\b|-?\d[\d.,]*\d|-?\d)/
 
 /** A sentence in pieces: every second one, from the second, is a number or a ref. (`['', 'S1', ' is aligned by ', '4', ' pairs']`.) */
 export function numberedPieces(text: string): string[] {

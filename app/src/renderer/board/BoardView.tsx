@@ -8,6 +8,7 @@ import { centreOf, describeTarget, findTarget, layerWords, shortLabel, targetOf,
 import type { NewMark } from '../../shared/marks'
 import { pressed, which } from '../../shared/keys'
 import { ratsFor } from '../../shared/view'
+import { releaseFindings } from '../../shared/checks'
 import { actions, store, useStore } from '../state/store'
 import { registerView } from '../state/testHooks'
 import type { ViewModel } from '../state/viewModel'
@@ -87,6 +88,7 @@ export function BoardView({ model }: { model: ViewModel }) {
   const size = useSize(root)
   const dark = useDark()
   const look = useStore((s) => s.look)
+  const fab = useStore((s) => s.fab)
   const selection = useStore((s) => s.selection)
   const hot = useStore((s) => s.hotFinding)
   const tool = useStore((s) => s.tool)
@@ -388,7 +390,7 @@ export function BoardView({ model }: { model: ViewModel }) {
           <span className="pen-more">{liveReadout(strokeOf(drawing!.screen, view), board, active)}</span>
         </p>
       )}
-      {onBoard && !arriving && <FindingPins findings={model.result.findings} space="board" place={onBoard} />}
+      {onBoard && !arriving && <FindingPins findings={[...model.result.findings, ...releaseFindings(fab, model.result)]} space="board" place={onBoard} />}
       {words && selected && onBoard && hot === null && (
         <Tag id="selection" subject={onBoard(selected)} prefer="right">
           <p className="tag-head">{numbered(words.head)}</p>

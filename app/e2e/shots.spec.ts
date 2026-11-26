@@ -72,7 +72,27 @@ const routed = async (run: Launched): Promise<void> => {
   await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().board?.route ?? null)).not.toBeNull()
 }
 
+/** An engine that makes fab files. */
+const FABBED = { FAKE_KERNEL_SERVE: '3' }
+
+/** The board with the "Fab files…" popover open: ready for a release, or just after one. */
+const fabPopover = (release: boolean) => async (run: Launched): Promise<void> => {
+  await onBoard(run)
+  await run.page.getByRole('button', { name: 'Fab files…' }).click()
+  const dialog = run.page.getByRole('dialog', { name: 'Fab files for JLCPCB' })
+  await expect(dialog).toContainText('Next: v1.0.0')
+  if (release) {
+    await dialog.getByRole('button', { name: 'Make fab files' }).click()
+    await expect(dialog).toContainText('Show in folder', { timeout: 20_000 })
+  }
+  await run.page.mouse.move(5, 5)
+}
+
 const SHOTS: Record<string, Shot> = {
+  'fab-ready': { env: FABBED, at: fabPopover(false) },
+  'fab-ready-dark': { env: FABBED, dark: true, at: fabPopover(false) },
+  'fab-released': { env: FABBED, at: fabPopover(true) },
+  'fab-released-dark': { env: FABBED, dark: true, at: fabPopover(true) },
   'first-light': { first: true },
   'first-dark': { first: true, dark: true },
   'marks-dense': {

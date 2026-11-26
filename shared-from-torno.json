@@ -109,7 +109,7 @@
     { "pino": "app/src/renderer/ui/Popover.tsx", "torno": "app/src/renderer/ui/Popover.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/popoverPlace.ts", "torno": "app/src/renderer/ui/popoverPlace.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/popoverPlace.test.ts", "torno": "app/src/renderer/ui/popoverPlace.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
-    { "pino": "app/src/renderer/ui/numbered.tsx", "torno": "app/src/renderer/ui/numbered.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "a build's name is h12, and a board's refs (U2.1) and rails (+3V3) are set whole" },
+    { "pino": "app/src/renderer/ui/numbered.tsx", "torno": "app/src/renderer/ui/numbered.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "a build's name is h12, and a board's refs (U2.1), rails (+3V3) and release versions (v1.2.0) are set whole" },
     { "pino": "app/src/renderer/ui/numbered.test.ts", "torno": "app/src/renderer/ui/numbered.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "a case for pino's build names" },
     { "pino": "app/src/renderer/ui/typing.ts", "torno": "app/src/renderer/ui/typing.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/chat/Diff.tsx", "torno": "app/src/renderer/ui/chat/Diff.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },

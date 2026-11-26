@@ -4,6 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla'
 import type { MarkTool } from '../board/marks/tools'
 import type { SessionStatus } from '../../shared/bridge'
 import type { BuildState } from '../../shared/build'
+import type { FabProfile, FabState } from '../../shared/fab'
 import type { Mark } from '../../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../../shared/project'
 import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../../shared/view'
@@ -29,6 +30,12 @@ export interface PinoState {
   hotBlock: string | null
   /** The build, by its hash, whose stale copper the person chose to keep without the band that says it is stale. */
   keptStale: string | null
+  /** The release of the open project, as main tells it. */
+  fab: FabState | null
+  /** The fab's limits for each profile the engine builds; empty until an engine with fab files says them. */
+  fabProfiles: FabProfile[]
+  /** The status line's "Fab files…" popover is open. */
+  fabOpen: boolean
   /** The project's marks, as main holds them. */
   marks: Mark[]
   /** The marking tool in hand. */
@@ -45,10 +52,10 @@ export interface PinoState {
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabProfiles: [], fabOpen: false, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
-const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
+const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabOpen: false, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
 
 export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
@@ -68,6 +75,19 @@ export const actions = {
   /** What main says of a build loop: heard only for the project on show. */
   setBuild(build: BuildState): void {
     if (store.getState().project?.id === build.projectId) store.setState({ build })
+  },
+  /** What main says of the release: heard only for the project on show. */
+  setFab(fab: FabState): void {
+    if (store.getState().project?.id === fab.projectId) store.setState({ fab })
+  },
+  setFabProfiles(fabProfiles: FabProfile[]): void {
+    store.setState({ fabProfiles })
+  },
+  openFab(): void {
+    store.setState({ fabOpen: true })
+  },
+  closeFab(): void {
+    store.setState({ fabOpen: false, hotFinding: null })
   },
   showBuild(shown: number | null): void {
     store.setState({ shown, hotFinding: null })
