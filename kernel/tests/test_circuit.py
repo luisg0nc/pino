@@ -1,3 +1,4 @@
+import json
 import pytest
 
 from pino_kernel.circuit import (
@@ -69,3 +70,30 @@ def test_finding_json_drops_empty_fields():
     assert f.to_json() == {"source": "fit", "code": "outside_outline", "severity": "error",
                            "message": "R1 is outside the outline", "at": {"space": "board", "x": 1.0, "y": 2.0, "layer": "F.Cu"}, "refs": ["R1"]}
     assert Finding.from_json(f.to_json()) == f
+
+
+def _with_routes(c):
+    import dataclasses
+
+    from pino_kernel.circuit import FixedVia, KeptRoute, PairSpec, PinRef, RouteHint, RouteStep
+
+    return dataclasses.replace(
+        c, pairs=[PairSpec("USB_D", "USB_D+", "USB_D-", 0.2, None, 4)],
+        kept_routes=[KeptRoute("VBUS", PinRef("J1", "1"), (1.5, -2.0), "F.Cu", 0.5,
+                               [RouteStep("point", 1.0, 2.0, None), RouteStep("via", 3.0, 2.0, "B.Cu")], 7)],
+        fixed_vias=[FixedVia("GND", 1.0, 2.0, None, 0.3, 8)],
+        route_hints=[RouteHint("SDA", (-5.0, -5.0, 5.0, 5.0), ["B.Cu"], [(0.0, 0.0), (1.0, 1.0)], ["SCL"], 9)])
+
+
+def test_old_circuit_json_still_loads(sample_circuit):
+    data = json.loads(sample_circuit.to_json())
+    for k in ("pairs", "kept_routes", "fixed_vias", "route_hints"):
+        data.pop(k)
+    c = Circuit.from_json(json.dumps(data))
+    assert (c.pairs, c.kept_routes, c.fixed_vias, c.route_hints) == ([], [], [], [])
+
+
+def test_round_trip_with_routes(sample_circuit):
+    c = _with_routes(sample_circuit)
+    text = c.to_json()
+    assert Circuit.from_json(text) == c and Circuit.from_json(text).to_json() == text

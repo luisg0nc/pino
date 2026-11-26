@@ -20,9 +20,10 @@ from pathlib import Path
 from pino_kernel import fab as fab_profiles
 from pino_kernel import outline as outlines
 from pino_kernel.circuit import (
-    SCHEMA, BlockSpec, Circuit, Expect, GroupSpec, Intent, Keepout, NetClassSpec, NetSpec, OutlineSpec, PartSpec,
-    PinInfo, PinRef, ZoneSpec,
+    SCHEMA, BlockSpec, Circuit, Expect, FixedVia, GroupSpec, Intent, Keepout, KeptRoute, NetClassSpec,
+    NetSpec, OutlineSpec, PairSpec, PartSpec, PinInfo, PinRef, RouteHint, RouteStep, ZoneSpec, pair_base,
 )
+from pino_kernel.sexpr import num
 from pino_kernel.libraries import Libraries, LibrariesNotFound, discover
 from pino_kernel.symbols import Symbol, SymbolLibrary, SymbolNotFound, UnsupportedSymbol
 
@@ -84,6 +85,22 @@ def _symbols() -> SymbolLibrary:
 
 class PinSet(tuple):
     """Every pad that one name or number stands for ("VBUS" on USB-C is four pads)."""
+
+
+def via(x: float, y: float, *, to: str) -> RouteStep:
+    """A via in a kept route's points: the route goes down (or up) to layer `to` at (x, y)."""
+    try:
+        return RouteStep("via", float(x), float(y), str(to))
+    except (TypeError, ValueError):
+        raise _fail("via(x, y, to=layer) takes x and y in mm") from None
+
+
+def _pt(p) -> str:
+    return f"({num(p[0])}, {num(p[1])})"
+
+
+def _net_name(net) -> str:
+    return net.name if isinstance(net, NetSpec) else str(net)
 
 
 class Group:
@@ -219,6 +236,10 @@ class Board:
         self._zones: list[ZoneSpec] = []
         self._net_classes: list[NetClassSpec] = []
         self._expects: list[Expect] = []
+        self._pairs: list[PairSpec] = []
+        self._kept: list[KeptRoute] = []
+        self._fixed_vias: list[FixedVia] = []
+        self._hints: list[RouteHint] = []
         _BOARDS.append(self)
 
     @property
@@ -452,6 +473,161 @@ class Board:
         """a and b must never be on one net."""
         self._expect("apart", a, b, ())
 
+    # -- routing --------------------------------------------------------------
+
+    def _route_end(self, what: str, end, net: str, where):
+        if isinstance(end, PinRef):
+            return end
+        if isinstance(end, PinSet):
+            if len(end) != 1:
+                pins = ", ".join(str(p) for p in end)
+                raise _fail(f"keep_route {net}: {what} must be one pin; that name stands for {len(end)} pins "
+                            f"({pins}): pick one by number", where)
+            return end[0]
+        try:
+            x, y = end
+            return (float(x), float(y))
+        except (TypeError, ValueError):
+            raise _fail(f"keep_route {net}: {what} takes one pin, such as part[1], or a point (x, y) in mm",
+                        where) from None
+
+    def keep_route(self, net, *, frm, to, layer: str, points=(), width=None) -> None:
+        """Keep a route on `net`: from a pin (or a point on the net's copper) through `points` to a pin.
+        Points are (x, y) in mm, or via(x, y, to=layer) where the route changes layer."""
+        where = _caller()
+        name = _net_name(net)
+        (layer,) = self._layers(layer, where)
+        start, end = self._route_end("frm", frm, name, where), self._route_end("to", to, name, where)
+        steps: list[RouteStep] = []
+        current = layer
+        for p in points:
+            if isinstance(p, RouteStep):
+                (to_layer,) = self._layers(p.layer, where)
+                if to_layer == current:
+                    raise _fail(f"keep_route {name}: via at {_pt((p.x, p.y))} does not change layer "
+                                f"(the route is on {current} there)", where)
+                current = to_layer
+                steps.append(p)
+                continue
+            try:
+                x, y = p
+                steps.append(RouteStep("point", float(x), float(y), None))
+            except (TypeError, ValueError):
+                raise _fail(f"keep_route {name}: points take (x, y) in mm or via(x, y, to=layer)", where) from None
+        self._kept.append(KeptRoute(name, start, end, layer, None if width is None else float(width), steps,
+                                    where[1]))
+
+    def fixed_via(self, net, *, at, diameter=None, drill=None) -> None:
+        """A via that stays where it is (stitching, a thermal via); sizes default to the net's class."""
+        where = _caller()
+        try:
+            x, y = float(at[0]), float(at[1])
+        except (TypeError, ValueError, IndexError):
+            raise _fail("fixed_via: at= takes (x, y) in mm", where) from None
+        self._fixed_vias.append(FixedVia(_net_name(net), x, y, None if diameter is None else float(diameter),
+                                         None if drill is None else float(drill), where[1]))
+
+    def route_hint(self, net, *, region=None, layers=None, corridor=None, rip=()) -> None:
+        """Route `net` again after the router, inside `region` (x0, y0, x1, y1), on `layers`, along `corridor`,
+        allowed to move the nets in `rip` (names or patterns such as "SDA*")."""
+        where = _caller()
+        name = _net_name(net)
+        box = None
+        if region is not None:
+            try:
+                x0, y0, x1, y1 = (float(v) for v in region)
+            except (TypeError, ValueError):
+                x0 = y0 = x1 = y1 = 0.0
+            if not (x0 < x1 and y0 < y1):
+                raise _fail(f"route_hint {name}: region must be (x0, y0, x1, y1) with x0 < x1 and y0 < y1", where)
+            box = (x0, y0, x1, y1)
+        names = None if layers is None else self._layers(layers, where)
+        if names == ["*.Cu"]:
+            names = None
+        path = None
+        if corridor is not None:
+            try:
+                path = [(float(p[0]), float(p[1])) for p in corridor]
+            except (TypeError, ValueError, IndexError):
+                raise _fail(f"route_hint {name}: corridor takes a list of (x, y) points in mm", where) from None
+            if len(path) < 2:
+                raise _fail(f"route_hint {name}: a corridor needs at least two points", where)
+        patterns = [rip] if isinstance(rip, str) else list(rip)
+        if any(not isinstance(r, str) or not r.strip() for r in patterns):
+            raise _fail(f"route_hint {name}: rip patterns must not be empty", where)
+        self._hints.append(RouteHint(name, box, names, path, patterns, where[1]))
+
+    def diff_pair(self, positive, negative, *, width=None, gap=None) -> None:
+        """Route two nets as a coupled differential pair."""
+        where = _caller()
+        p, n = _net_name(positive), _net_name(negative)
+        base = pair_base(p, n)
+        if base is None:
+            raise _fail(f"diff_pair {p}, {n}: the two nets must be named like USB_D+ and USB_D- or USB_D_P and "
+                        "USB_D_N (positive first), so the router can pair them", where)
+        for pair in self._pairs:
+            for net in (p, n):
+                if net in (pair.positive, pair.negative):
+                    raise _fail(f"net {net} is in two diff pairs (lines {pair.line} and {where[1]})", where)
+        self._pairs.append(PairSpec(base, p, n, None if width is None else float(width),
+                                    None if gap is None else float(gap), where[1]))
+
+    def _routing_problems(self) -> list[Problem]:
+        out: list[Problem] = []
+        file = self._where[0]
+        f = self._fab_profile()
+        try:
+            spec = self._outline_spec()
+            hw, hh = spec.width / 2, spec.height / 2
+        except Exception:  # noqa: BLE001 - outline problems are reported on their own
+            hw = hh = float("inf")
+
+        def outside(pt) -> bool:
+            return abs(pt[0]) > hw + 1e-9 or abs(pt[1]) > hh + 1e-9
+
+        for k in self._kept:
+            if k.net not in self._nets:
+                out.append(Problem(f"keep_route: no net {k.net}", file, k.line))
+                continue
+            for what, end in (("frm", k.frm), ("to", k.to)):
+                if isinstance(end, PinRef):
+                    if end.ref not in self._parts or not self._parts[end.ref].symbol.pins_for(end.number):
+                        out.append(Problem(f"keep_route {k.net}: {end} is not a pin of this board", file, k.line))
+                        continue
+                    on = self._pin_net.get(end)
+                    if on != k.net:
+                        out.append(Problem(f"keep_route {k.net}: {end} is on net {on or 'none'}, not {k.net}",
+                                           file, k.line))
+                elif outside(end):
+                    out.append(Problem(f"keep_route {k.net}: {what} {_pt(end)} is outside the board", file, k.line))
+            for s in k.steps:
+                if outside((s.x, s.y)):
+                    out.append(Problem(f"keep_route {k.net}: point {_pt((s.x, s.y))} is outside the board",
+                                       file, k.line))
+            if k.width is not None and k.width < f.min_track - 1e-9:
+                out.append(Problem(f"keep_route {k.net}: width {num(k.width)} mm is below the fab's "
+                                   f"{num(f.min_track)} mm", file, k.line))
+        for v in self._fixed_vias:
+            if v.net not in self._nets:
+                out.append(Problem(f"fixed_via: no net {v.net}", file, v.line))
+                continue
+            if outside((v.x, v.y)):
+                out.append(Problem(f"fixed_via {v.net}: {_pt((v.x, v.y))} is outside the board", file, v.line))
+            if v.diameter is not None and v.diameter < f.min_via_diameter - 1e-9:
+                out.append(Problem(f"fixed_via {v.net}: diameter {num(v.diameter)} mm is below the fab's "
+                                   f"{num(f.min_via_diameter)} mm", file, v.line))
+            if v.drill is not None and v.drill < f.min_via_drill - 1e-9:
+                out.append(Problem(f"fixed_via {v.net}: drill {num(v.drill)} mm is below the fab's "
+                                   f"{num(f.min_via_drill)} mm", file, v.line))
+        for h in self._hints:
+            if h.net not in self._nets:
+                out.append(Problem(f"route_hint: no net {h.net}", file, h.line))
+        for pr in self._pairs:
+            for net in (pr.positive, pr.negative):
+                if net not in self._nets:
+                    out.append(Problem(f"diff_pair {pr.name}: no net {net}", file, pr.line))
+        return out
+
     # -- checks ---------------------------------------------------------------
 
     def _problems(self) -> list[Problem]:
@@ -488,6 +664,7 @@ class Board:
                 out.append(Problem(f"net {net.name} has only {len(net.pins)} pin; join it to another pin, "
                                    "or pass external=True if it leaves the board", net.file, net.line))
         out += self._rule_problems()
+        out += self._routing_problems()
         return out
 
     def _rule_problems(self) -> list[Problem]:
@@ -561,7 +738,8 @@ class Board:
         keepouts += self._keepouts
         return {"intents": list(self._intents.values()), "groups": list(self._groups.values()),
                 "keepouts": keepouts, "zones": list(self._zones), "net_classes": list(self._net_classes),
-                "expects": list(self._expects)}
+                "expects": list(self._expects), "pairs": list(self._pairs), "kept_routes": list(self._kept),
+                "fixed_vias": list(self._fixed_vias), "route_hints": list(self._hints)}
 
     def to_circuit(self) -> Circuit:
         self.validate()

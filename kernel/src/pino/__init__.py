@@ -2,6 +2,6 @@
 
 from pino_kernel import fab
 
-from .board import Block, Board, CircuitError, Group, Part, PinSet
+from .board import Block, Board, CircuitError, Group, Part, PinSet, via
 
-__all__ = ["Board", "Block", "Part", "PinSet", "Group", "CircuitError", "fab"]
+__all__ = ["Board", "Block", "Part", "PinSet", "Group", "CircuitError", "fab", "via"]

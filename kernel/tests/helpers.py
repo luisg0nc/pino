@@ -85,3 +85,43 @@ def usb_circuit():
     return Circuit(SCHEMA, "usb", 2, "jlc-standard-2layer", OutlineSpec(20.0, 20.0, [], [], None, "board.py"),
                    [BlockSpec("usb", "USB", [p.ref for p in parts])], parts, nets, [], {}, [], [], [], [], [], [],
                    "board.py")
+
+
+class _AnyLine:
+    """Equal to any positive line number."""
+
+    def __eq__(self, other):
+        return isinstance(other, int) and other > 0
+
+    def __repr__(self):
+        return "ANY_LINE"
+
+
+ANY_LINE = _AnyLine()
+
+
+def usb_nets_board_py(*, pair: bool = False, names=("USB_D+", "USB_D-")) -> str:
+    """The small board plus two data nets from U2 through R2 and R3 (named `names`), with a diff_pair if asked."""
+    p, n = names
+    extra = (f'r2 = mcu.path("R2", "pino_test:R", "22")\nr3 = mcu.path("R3", "pino_test:R", "22")\n'
+             f'b.net("{p}", u2.IO2, r2[1])\nb.net("{n}", u2.IO3, r3[1])\nb.nc(r2[2], r3[2])\n')
+    if pair:
+        extra += f'b.diff_pair("{p}", "{n}")\n'
+    return SMALL_BOARD_PY.replace("b.nc(u2.IO2)\n", extra)
+
+
+def board_from_text(text: str):
+    """A live pino.Board from board.py text (fixture libraries must be active)."""
+    import pino.board
+
+    scope: dict = {"__name__": "__main__"}
+    exec(compile(text, "board.py", "exec"), scope)
+    return scope["b"]
+
+
+def board_with_usb_nets():
+    return board_from_text(usb_nets_board_py())
+
+
+def board_with_usb_pair():
+    return board_from_text(usb_nets_board_py(pair=True))

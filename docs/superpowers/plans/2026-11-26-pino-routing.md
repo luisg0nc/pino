@@ -249,7 +249,7 @@ git commit -m "kernel: KiCadRoutingTools pinned, installed on first use into the
   - `Board.diff_pair(positive: str | NetSpec, negative: str | NetSpec, *, width: float | None = None, gap: float | None = None) -> None`.
   - `pino` exports `via`. `width`, `diameter`, `drill` and `gap` left as `None` are resolved by the board writer (Task 3) from the net's class.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_keep_route_records_pins_steps_and_line(fixture_libs):
@@ -302,28 +302,35 @@ def test_round_trip_with_routes(sample_circuit_with_routes):
     assert Circuit.from_json(text) == sample_circuit_with_routes and Circuit.from_json(text).to_json() == text
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_pino_routes.py tests/test_circuit.py -v`
 Expected: FAIL with `ImportError: cannot import name 'via' from 'pino'`
 
-- [ ] **Step 3: Extend the model and the library**
+- [x] **Step 3: Extend the model and the library**
 
 - Pair names: positive and negative must be `<base>+`/`<base>-` or `<base>_P`/`<base>_N` with one base (KRT pairs nets by these suffixes). The pair's name is the base.
 - Checks that need the whole board (nets exist, pins on the net, layers, widths against `fab.min_track`, via sizes against `fab.min_via_diameter` and `fab.min_via_drill`) run in `validate()`; argument shape checks (one pin, region order, corridor of at least two points, empty rip pattern) raise at the call. Every problem carries the call's line.
 - `frm`/`to` given as a point is allowed (a route that joins copper at a T); its own check is only "inside the outline's bounding box".
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_pino_routes.py tests/test_circuit.py tests/test_pino_parts.py tests/test_pino_intent.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino kernel/src/pino_kernel/circuit.py kernel/src/pino_kernel/__init__.py kernel/tests/test_pino_routes.py kernel/tests/test_circuit.py kernel/tests/helpers.py
 git commit -m "pino: keep_route, fixed_via, route_hint and diff_pair in the board.py library"
 ```
+
+**Plan fixes (implementation):**
+- `test_keep_route_pin_on_another_net`: U2.6 is on `+3V3`, which `\w+` cannot match; the test uses `\S+`.
+- Layer names are checked at the call (the engine's `_layers` helper already raises there); nets, pins on the net, widths, via sizes and points inside the outline are checked in `validate()`.
+- `KeptRoute` has its own JSON form: an end is `[ref, number]` (strings) for a pin or `[x, y]` (numbers) for a point. `circuit.pair_base()` holds the pair-name rule for Task 3 and Task 5.
+- The engine's `test_cli.py` asserted the kernel version `0.1.0`; it now compares with `__version__`.
+- Helpers: `ANY_LINE`, `usb_nets_board_py`, `board_from_text`, `board_with_usb_nets`, `board_with_usb_pair` in `tests/helpers.py`; the round-trip test builds its circuit with `_with_routes(sample_circuit)`.
 
 ---
 
