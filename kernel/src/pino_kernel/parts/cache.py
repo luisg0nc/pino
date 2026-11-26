@@ -2,6 +2,7 @@
 
     stock/<LCSC>.json     a pino.part/1 entry; fresh for 24 h (jlcsearch syncs stock nightly)
     unknown/<LCSC>.json   jlcsearch had no such part; remembered for 6 h
+    down/jlcsearch.json   jlcsearch could not be reached; the fast build waits 5 minutes before asking again
 
 Every write is a temp file and a rename, so a killed run never leaves half an entry.
 """
@@ -20,6 +21,7 @@ from .model import PART_SCHEMA, PartInfo
 
 STOCK_MAX_AGE = timedelta(hours=24)
 UNKNOWN_MAX_AGE = timedelta(hours=6)
+DOWN_FOR = timedelta(minutes=5)
 
 
 def utc_now() -> datetime:
@@ -80,6 +82,22 @@ class PartsCache:
             return data is not None and self.now() - datetime.fromisoformat(data["fetched_at"]) < UNKNOWN_MAX_AGE
         except (KeyError, TypeError, ValueError):
             return False
+
+    def unreachable(self) -> str | None:
+        """Why jlcsearch could not be reached, when that was less than DOWN_FOR ago."""
+        data = self._read("down", "jlcsearch")
+        try:
+            if data is None or self.now() - datetime.fromisoformat(data["at"]) >= DOWN_FOR:
+                return None
+            return str(data["why"])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def put_unreachable(self, why: str) -> None:
+        self._write("down", "jlcsearch", {"at": self.now().isoformat(), "why": why})
+
+    def reachable(self) -> None:
+        (self.root / "down" / "jlcsearch.json").unlink(missing_ok=True)
 
     def put_unknown(self, lcsc: str) -> None:
         self._write("unknown", lcsc, {"fetched_at": self.now().isoformat()})

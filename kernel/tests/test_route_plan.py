@@ -23,8 +23,7 @@ def test_rules_from_pro_and_dru():
 
 
 def test_dru_raises_the_minimums():
-    dru = DRU_2L.replace('(rule "pino: clearance"\n\t(constraint clearance (min 0.1mm))',
-                         '(rule "pino: clearance"\n\t(constraint clearance (min 0.18mm))')
+    dru = DRU_2L + '(rule "pino: clearance"\n\t(constraint clearance (min 0.18mm)))\n'
     assert router_rules(PRO_2L, dru).min_clearance == 0.18
 
 

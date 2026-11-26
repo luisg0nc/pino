@@ -425,3 +425,50 @@ def test_serve_release_bad_options(released_project, options, want):
     out = serve([{"id": 1, "op": "release", "project": str(released_project), "options": options},
                  {"id": 2, "op": "shutdown"}])
     assert out[0]["ok"] is False and want in out[0]["error"]
+
+
+def test_the_readme_asks_to_check_where_each_part_sits_too(released_project):
+    release_project(released_project)
+    text = (released_project / "fab/v1.0.0/README.md").read_text()
+    assert "on its pads" in text and "pin 1" in text
+    assert "- U1 SOT23: pino has no rule for this footprint, so it keeps KiCad's angle" in text
+
+
+def test_the_readme_says_how_far_a_rule_turned_a_part():
+    from helpers import usb_circuit
+    from pino_kernel.fab import jlc_standard_2layer
+    from pino_kernel.release.jlc import CplRow
+    from pino_kernel.release.readme import readme
+
+    m = {"board": "usb", "version": "1.0.0", "previous": None, "why": [], "slug": "usb", "kernel": "k",
+         "build": {"number": 1, "hash": "h"}, "route": {"number": 1, "key": "r"}, "kicad_cli": "10"}
+    c = usb_circuit()
+    c.part("U1").lcsc = "C1"
+    rows = [CplRow("U1", "MCU", "SOT-23-5", 0, 0, 90, "top", "^SOT", None, True, False, 180.0)]
+    text = readme(m, rows, c, {}, jlc_standard_2layer)
+    assert "- U1 SOT-23-5: pino turned it 180 degrees by a rule not yet checked in JLC's preview" in text
+
+
+def test_cancel_during_the_plot_is_cancelled_not_failed(released_project, monkeypatch):
+    from pino_kernel.kicad_cli import CliRun, KicadCli
+
+    cancel = threading.Event()
+
+    def cancelled_gerbers(self, *a, **kw):
+        cancel.set()                                  # Cancel pressed while kicad-cli plots: it is killed
+        return CliRun("gerbers", [], 0.1, -15, "cancelled")
+
+    monkeypatch.setattr(KicadCli, "gerbers", cancelled_gerbers)
+    r = release_project(released_project, cancel=cancel)
+    assert r.state == "cancelled" and not r.findings and not (released_project / "fab").exists()
+    assert nothing_half_done(released_project)
+
+
+def test_unconfirmed_stock_is_named_in_the_readme_and_the_headline(released_project, monkeypatch):
+    monkeypatch.delenv("PINO_PARTS_RECORDED")
+    monkeypatch.setenv("PINO_PARTS_OFFLINE", "1")
+    r = release_project(released_project)
+    assert r.headline.endswith("fab/v1.0.0/; stock of 3 parts not confirmed"), r.headline
+    text = (released_project / "fab/v1.0.0/README.md").read_text()
+    assert "Stock pino could not confirm (check it before you order): C900003 (C1, C2), C900002 (U1), C900001 (R1)." \
+        in text

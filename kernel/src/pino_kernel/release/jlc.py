@@ -55,6 +55,7 @@ class CplRow:
     checked: str | None  # when that rule was seen right in JLC's preview
     needs_check: bool
     override: bool  # the rotation came from board.py's rotation=
+    correction: float = 0.0  # degrees added to the footprint's angle: the rule's, or board.py's rotation=
 
 
 @dataclass(frozen=True)
@@ -111,10 +112,11 @@ def cpl_rows(parts: Sequence[BoardPart], circuit: Circuit, rules: Sequence[Rule]
         dx, dy = cpl_offset(rule, part.angle, part.back)
         x0, y0, x1, y1 = part.pad_box
         override = spec.rotation is not None
+        correction = spec.rotation if override else rule.rotation if rule else 0.0
         rows.append(CplRow(part.ref, spec.value, name, (x0 + x1) / 2 + dx, (y0 + y1) / 2 + dy,
                            cpl_angle(part.angle, part.back, rule, spec.rotation), "bottom" if part.back else "top",
                            rule.pattern if rule else None, rule.checked if rule else None,
-                           override or rule is None or rule.needs_check, override))
+                           override or rule is None or rule.needs_check, override, correction))
     return sorted(rows, key=lambda r: natural(r.ref))
 
 

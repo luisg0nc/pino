@@ -82,6 +82,9 @@ def _no_lookups(url: str, timeout: float):
     raise OfflineError("parts lookups are off for this build")
 
 
+_no_lookups.deliberate = True
+
+
 def _parts_client(options: BuildOptions) -> Jlcsearch:
     transport = transport_from_env() if options.parts_network else _no_lookups
     return Jlcsearch(transport, PartsCache(parts_root()))
@@ -210,7 +213,7 @@ def _fetch(client: Jlcsearch, numbers: list[str]) -> None:
     wanted = [n for n in numbers if needs(n, client.cache) is not None]
     if wanted:
         try:
-            client.parts(wanted, budget=FETCH_BUDGET)
+            client.parts(wanted, budget=FETCH_BUDGET, breaker=True)
         except (JlcSearchError, OSError) as e:
             print(f"pino-kernel: parts could not be looked up: {e}", file=sys.stderr)
 
@@ -237,7 +240,7 @@ def _run_board(project: Path, libs: Libraries, options: BuildOptions, client: Jl
 def _check_parts(circuit: Circuit, poses, client: Jlcsearch) -> list[Finding]:
     numbers = [n for n in (lcsc_of(p) for p in circuit.parts if assembled(p)) if n]
     try:
-        lookups = client.parts(numbers, budget=PARTS_BUDGET)
+        lookups = client.parts(numbers, budget=PARTS_BUDGET, breaker=True)
     except OSError as e:  # the cache folder cannot be read or written
         print(f"pino-kernel: parts could not be checked: {e}", file=sys.stderr)
         lookups = {}

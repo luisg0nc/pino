@@ -149,3 +149,33 @@ def test_kicad_parity_holds_with_a_hand_fit_part(make_project, fixture_libs):
     r = build(make_project(board))
     assert r.verdict == "ok", [f.to_json() for f in r.findings if f.severity == "error"]
     assert not [f for f in r.findings if "parity" in f.code or "mismatch" in f.code]
+
+
+def test_a_hanging_jlcsearch_slows_one_build_not_every_save(make_project, fixture_libs, kicad_fake, monkeypatch):
+    import time
+
+    import pino_kernel.build as B
+    from pino_kernel.parts.transport import OfflineError
+
+    calls = []
+
+    def hang(url, timeout):
+        calls.append(url)
+        time.sleep(min(timeout, 2.0))
+        raise OfflineError("timed out")
+
+    monkeypatch.delenv("PINO_PARTS_OFFLINE")
+    monkeypatch.setattr(B, "transport_from_env", lambda: hang)
+    monkeypatch.setattr(B, "PARTS_BUDGET", 1.0)
+    monkeypatch.setattr(B, "FETCH_BUDGET", 1.0)
+    old = utc_now() - timedelta(days=3)
+    PartsCache(parts_root(), now=lambda: old).put_stock(
+        PartInfo("C900001", "m", "0603", "d", 1000, 0.1, "basic", None, old.isoformat()))
+    project = make_project(SMALL_WITH_NUMBER)
+    build(project, kicad_fake)
+    asked = len(calls)
+    again = build(project, kicad_fake)
+    assert len(calls) == asked
+    assert seconds_of(again, "parts") < 0.5 and seconds_of(again, "fetch parts") < 0.5
+    f = next(f for f in parts_of(again) if f.refs == ("R1",))
+    assert f.code == "part_stock_unknown" and old.date().isoformat() in f.message

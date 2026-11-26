@@ -41,6 +41,20 @@ def _upload(m: dict, rows: Sequence[CplRow], circuit: Circuit, profile: FabProfi
     return out
 
 
+def unconfirmed_stock(circuit: Circuit, rows: Sequence[CplRow], lookups: Mapping[str, PartLookup]) -> dict[str, list[str]]:
+    """The placed LCSC numbers whose stock jlcsearch did not confirm just now, each with its parts."""
+    placed = {r.ref for r in rows}
+    out: dict[str, list[str]] = {}
+    for part in circuit.parts:
+        lcsc = lcsc_of(part)
+        if part.ref not in placed or lcsc is None:
+            continue
+        lookup = lookups.get(lcsc)
+        if lookup is None or lookup.error or lookup.info is None or lookup.info.stock is None:
+            out.setdefault(lcsc, []).append(part.ref)
+    return out
+
+
 def _parts(rows: Sequence[CplRow], circuit: Circuit, lookups: Mapping[str, PartLookup]) -> list[str]:
     placed = {r.ref for r in rows}
     by_class: dict[str, set[str]] = {}
@@ -59,6 +73,10 @@ def _parts(rows: Sequence[CplRow], circuit: Circuit, lookups: Mapping[str, PartL
     out = [f"JLC places {len(rows)} parts. Part types: {counts or 'none'}."]
     if extended:
         out += ["", "Extended parts (JLC charges a setup fee per part type):", *extended]
+    unsure = unconfirmed_stock(circuit, rows, lookups)
+    if unsure:
+        named = ", ".join(f"{lcsc} ({_refs(refs)})" for lcsc, refs in unsure.items())
+        out += ["", f"Stock pino could not confirm (check it before you order): {named}."]
     hand = [p.ref for p in circuit.parts if p.hand_fit and not p.dnp]
     unfitted = [p.ref for p in circuit.parts if p.dnp]
     if hand:
@@ -68,20 +86,25 @@ def _parts(rows: Sequence[CplRow], circuit: Circuit, lookups: Mapping[str, PartL
     return out
 
 
+def _turned(r: CplRow) -> str:
+    if r.override:
+        return f"its rotation comes from board.py ({r.correction:g} degrees)"
+    if r.rule is None:
+        return "pino has no rule for this footprint, so it keeps KiCad's angle"
+    done = f"turned it {r.correction:g} degrees" if r.correction else "keeps KiCad's angle"
+    return f"pino {done} by a rule not yet checked in JLC's preview"
+
+
 def _checks(rows: Sequence[CplRow]) -> list[str]:
     unsure = [r for r in rows if r.needs_check]
     if not unsure:
-        return ["Every part here has a rotation that needs no check. Still look at the preview before you pay."]
-    out = ["JLC shows where each part will go before you pay. Check these there: pin 1, or the polarity mark, must "
-           "match the silkscreen. If one is turned, add rotation= for that part in board.py and release again.", ""]
-    for r in unsure:
-        if r.override:
-            why = "its rotation comes from board.py"
-        elif r.rule is None:
-            why = "pino has no rule for this footprint"
-        else:
-            why = "pino's rule has not been checked in JLC's preview"
-        out.append(f"- {r.ref} {r.package}: {why}")
+        return ["No rotation here needs a check. Still look at the preview before you pay, and check that each part "
+                "sits on its pads."]
+    out = ["JLC shows where each part will go before you pay. For each part below, check there that it sits on its "
+           "pads and that pin 1, or the polarity mark, matches the silkscreen. If one is turned, add rotation= for "
+           "that part in board.py and release again. If one sits off its pads, move it in JLC's preview before you "
+           "order.", ""]
+    out += [f"- {r.ref} {r.package}: {_turned(r)}" for r in unsure]
     return out
 
 

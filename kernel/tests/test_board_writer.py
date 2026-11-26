@@ -153,11 +153,14 @@ def parse_rules(text):
 def test_dru_carries_the_fab_limits():
     two, four = parse_rules(kicad_dru(fab.jlc_standard_2layer)), parse_rules(kicad_dru(fab.jlc_standard_4layer))
     assert two["track_width"][1] == "0.1mm" and four["track_width"][1] == "0.09mm"
-    assert set(two) == {"track_width", "clearance", "pad_to_pad", "hole_size", "via_diameter", "via annular_width",
+    # no blanket clearance rule: in KiCad a custom rule replaces every net class's clearance (the fab's floor is
+    # .kicad_pro's min_clearance)
+    assert set(two) == {"track_width", "pad_to_pad", "hole_size", "via_diameter", "via annular_width",
                         "pth annular_width", "via hole_to_hole", "pad hole_to_hole", "via hole_clearance",
                         "pth hole_clearance", "edge_clearance", "silk_clearance", "text_height"}
     assert two["edge_clearance"][1] == "0.2mm" and two["silk_clearance"][1] == "0mm"
-    assert two["pad_to_pad"] == ("clearance", "0.15mm", "A.Type == 'Pad' && B.Type == 'Pad'")
+    assert two["pad_to_pad"] == ("clearance", "0.15mm",
+                                 "A.Type == 'Pad' && B.Type == 'Pad' && A.NetClass == 'Default' && B.NetClass == 'Default'")
 
 
 def test_dru_splits_annular_ring_by_vias_and_pads():
@@ -397,3 +400,47 @@ def test_kicads_own_footprints_pass_the_silkscreen_rules(kicad, tmp_path):
     c = real_circuit(2, parts=parts, nets={}, holes=False, keepout=False, zone=False, dnp=())
     report = drc_json(kicad, write_real(tmp_path, c, {"R1": (0, 0, 0, False)}))
     assert [v["description"] for v in report["violations"] if "silk" in v["type"]] == []
+
+
+def clearance_violations(kicad, tmp_path, name, parts=None, nets=None, poses=None, classes=(), vias=()):
+    from pino_kernel.circuit import FixedVia
+
+    folder = tmp_path / name
+    folder.mkdir()
+    c = real_circuit(2, parts=parts or {}, nets=nets or {"A": [], "B": []}, holes=False, keepout=False, zone=False,
+                     dnp=())
+    c.net_classes = list(classes)
+    c.fixed_vias = [FixedVia(n, x, 0, 0.6, 0.3) for n, x in vias]
+    report = drc_json(kicad, write_real(folder, c, poses or {}))
+    return [v["description"] for v in report["violations"] if v["type"] == "clearance"]
+
+
+@pytest.mark.kicad_cli
+@pytest.mark.kicad_libs
+def test_kicad_holds_every_net_class_to_its_own_clearance(kicad, tmp_path):
+    from pino_kernel.circuit import NetClassSpec
+
+    # two 0.6 mm vias of two nets, 0.12 mm apart: over the fab's 0.1, under the Default class's 0.2
+    found = clearance_violations(kicad, tmp_path, "default", vias=[("A", 0), ("B", 0.72)])
+    assert found and "netclass 'Default'" in found[0]
+    wide = [NetClassSpec("wide", ["A"], 0.25, 0.4, 0.6, 0.3)]
+    found = clearance_violations(kicad, tmp_path, "wide", classes=wide, vias=[("A", 0), ("B", 0.9)])
+    assert found and "netclass 'wide'" in found[0]
+    # and nothing goes under the fab's floor, whatever a class asks for
+    thin = [NetClassSpec("thin", ["A", "B"], 0.25, 0.05, 0.6, 0.3)]
+    assert clearance_violations(kicad, tmp_path, "floor", classes=thin, vias=[("A", 0), ("B", 0.68)])
+
+
+@pytest.mark.kicad_cli
+@pytest.mark.kicad_libs
+def test_default_class_pads_may_sit_as_close_as_the_fab_lets_them(kicad, tmp_path):
+    from pino_kernel.circuit import NetClassSpec
+
+    # two 0402s end to end, 0.17 mm between pads of two nets: fine-pitch footprints do this in the Default class
+    parts = {r: ("Resistor_SMD:R_0402_1005Metric", ["1", "2"]) for r in ("R1", "R2")}
+    nets = {"A": [("R1", "2")], "B": [("R2", "1")]}
+    poses = {"R1": (0, 0, 0, False), "R2": (1.73, 0, 0, False)}
+    assert clearance_violations(kicad, tmp_path, "pads", parts=parts, nets=nets, poses=poses) == []
+    wide = [NetClassSpec("wide", ["A"], 0.25, 0.4, 0.6, 0.3)]
+    found = clearance_violations(kicad, tmp_path, "classed", parts=parts, nets=nets, poses=poses, classes=wide)
+    assert found and "netclass 'wide'" in found[0]

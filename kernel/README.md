@@ -128,7 +128,8 @@ preferred or extended (an extended part costs a setup fee per part type). `pino-
 not know, which includes many basic parts, so look those up by number.
 
 What jlcsearch said is cached under `<cache>/parts/` with its date. Stock is fresh for 24 hours, and "no such part"
-is remembered for 6 hours. `PINO_CACHE_DIR` moves the cache, `PINO_JLCSEARCH_URL` points at another server,
+is remembered for 6 hours. When jlcsearch cannot be reached, the fast build waits 5 minutes before asking again,
+so a bad connection slows one build and not every save; `parts` and `release` always ask. `PINO_CACHE_DIR` moves the cache, `PINO_JLCSEARCH_URL` points at another server,
 `PINO_PARTS_OFFLINE=1` makes pino ask nothing, and `PINO_PARTS_RECORDED=<folder>` answers from recorded files (tests
 use it; `scripts/record_parts.py` records them by hand). A request carries pino's version in its User-Agent and
 nothing about you.
@@ -174,7 +175,7 @@ Release refuses, and says why, when:
 
 Before plotting, it puts the route's copper onto the newest build's board, refills it and runs DRC with parity once
 more, so the Gerbers match the BOM and CPL even when only a value changed after the route. It asks jlcsearch for
-stock again, and says which stock it could not confirm.
+stock again, and the headline and the README name the parts whose stock it could not confirm.
 
 The first release is 1.0.0. A change to the circuit (parts, values, footprints, numbers, what is fitted, or which
 pins share a net) makes a minor release; anything else that changes the files makes a patch. `--major`, `--minor`
@@ -191,6 +192,13 @@ the preview before you pay.
 `diff` compares two build folders that are still kept and answers
 `{"id": 4, "ok": true, "changes": {"circuit": [...], "layout": [...]}}`, in the words a build's own `changes` uses.
 A folder that was pruned answers `build <hash> is no longer kept`.
+
+## Design rules
+
+`board.kicad_pro` holds each net class's widths and clearance, with the fab's smallest track and clearance as floors.
+`board.kicad_dru` adds the fab limits that differ for vias and pads, plus the copper-to-edge and silkscreen limits.
+It has no blanket clearance rule: in KiCad a custom clearance rule replaces every net class's clearance. JLC's
+0.15 mm pad to pad rule applies to pads of the Default class only, for the same reason.
 
 ## Libraries and kicad-cli
 

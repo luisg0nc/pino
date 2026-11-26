@@ -126,9 +126,10 @@ class Jlcsearch:
         return PartLookup(entry[0] if entry else None, False, why)
 
     def parts(self, lcscs: Sequence[str], *, budget: float = 6.0, workers: int = 8,
-              max_age: timedelta = STOCK_MAX_AGE) -> dict[str, PartLookup]:
+              max_age: timedelta = STOCK_MAX_AGE, breaker: bool = False) -> dict[str, PartLookup]:
         """Many parts at once, within `budget` seconds; max_age=0 asks again about every one. What cannot be asked
-        in time comes from the cache, however old, marked with the reason."""
+        in time comes from the cache, however old, marked with the reason. With `breaker` (the fast build's), nothing
+        is asked for a few minutes after jlcsearch could not be reached, so that not every save waits for it."""
         wanted = list(dict.fromkeys(lcscs))
         out: dict[str, PartLookup] = {}
         todo: queue.SimpleQueue = queue.SimpleQueue()
@@ -142,6 +143,13 @@ class Jlcsearch:
             else:
                 todo.put(lcsc)
         pending = len(wanted) - len(out)
+        deliberate = getattr(self.transport, "deliberate", False)
+        down = self.cache.unreachable() if breaker and pending and not deliberate else None
+        if down:
+            why = f"jlcsearch could not be reached a few minutes ago, so it is not asked again yet: {down}"
+            return {lcsc: out.get(lcsc) or self._stale(lcsc, why) for lcsc in wanted}
+        asked, answered = pending, 0
+        unreached: list[str] = []
         deadline = time.monotonic() + budget
 
         def work() -> None:
@@ -152,20 +160,32 @@ class Jlcsearch:
                     return
                 try:
                     left = max(0.5, min(self.timeout, deadline - time.monotonic()))
-                    done.put((lcsc, PartLookup(self.part(lcsc, max_age=max_age, timeout=left), True, None)))
-                except (JlcSearchError, OSError) as e:
-                    done.put((lcsc, self._stale(lcsc, str(e))))
+                    done.put((lcsc, PartLookup(self.part(lcsc, max_age=max_age, timeout=left), True, None), None))
+                except JlcSearchError as e:
+                    done.put((lcsc, self._stale(lcsc, str(e)), e.code))
+                except OSError as e:
+                    done.put((lcsc, self._stale(lcsc, str(e)), None))
 
         # daemon threads: a request that outlives the budget never keeps pino running
         for _ in range(min(workers, pending)):
             threading.Thread(target=work, daemon=True).start()
         while pending:
             try:
-                lcsc, lookup = done.get(timeout=max(0.0, deadline - time.monotonic()))
+                lcsc, lookup, code = done.get(timeout=max(0.0, deadline - time.monotonic()))
             except queue.Empty:
                 break
             out[lcsc] = lookup
             pending -= 1
+            if lookup.error is None:
+                answered += 1
+            elif code in ("offline", "unavailable"):
+                unreached.append(lookup.error)
+        if asked and not deliberate:
+            # one answer shows jlcsearch is there; none, with a refusal or silence, starts the wait
+            if answered:
+                self.cache.reachable()
+            elif unreached or pending:
+                self.cache.put_unreachable(unreached[0] if unreached else "jlcsearch did not answer in time")
         for lcsc in wanted:
             if lcsc not in out:
                 out[lcsc] = self._stale(lcsc, "jlcsearch did not answer in time")

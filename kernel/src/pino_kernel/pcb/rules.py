@@ -72,6 +72,8 @@ def kicad_pro(circuit: Circuit, fab: FabProfile) -> str:
 
 
 _VIA = "A.Type == 'Via'"
+# a custom rule replaces a net class's clearance, so the fab's pad to pad distance applies to Default class pads only
+_DEFAULT_PADS = "A.Type == 'Pad' && B.Type == 'Pad' && A.NetClass == 'Default' && B.NetClass == 'Default'"
 _PAD = "A.Type == 'Pad'"
 _PTH = "A.Type == 'Pad' && A.Pad_Type == 'Through-hole'"
 _SILK_TEXT = "A.Layer == 'F.SilkS' || A.Layer == 'B.SilkS'"
@@ -81,11 +83,13 @@ _SILK_SILK = "(A.Layer == 'F.SilkS' && B.Layer == 'F.SilkS') || (A.Layer == 'B.S
 
 def dru_rules(fab: FabProfile) -> list[tuple[str, str, float, str | None]]:
     """(rule name, constraint, min mm, condition). Where KiCad's constraint is shared by vias and pads and JLC
-    gives them different limits, there is one rule for each. A later rule wins where two match."""
+    gives them different limits, there is one rule for each. A later rule wins where two match.
+
+    There is no blanket clearance rule: in KiCad a custom rule's clearance replaces every net class's. The fab's
+    floor is .kicad_pro's min_clearance, and each net class keeps its own."""
     return [
         ("track_width", "track_width", fab.min_track, None),
-        ("clearance", "clearance", fab.min_clearance, None),
-        ("pad_to_pad", "clearance", fab.pad_to_pad, "A.Type == 'Pad' && B.Type == 'Pad'"),
+        ("pad_to_pad", "clearance", fab.pad_to_pad, _DEFAULT_PADS),
         ("hole_size", "hole_size", fab.min_hole, None),
         ("via_diameter", "via_diameter", fab.min_via_diameter, None),
         ("via annular_width", "annular_width", fab.min_annular, _VIA),

@@ -84,6 +84,10 @@ def no_network(url: str, timeout: float) -> Response:
     raise OfflineError("offline: PINO_PARTS_OFFLINE is set")
 
 
+# offline on purpose: it says nothing about whether jlcsearch can be reached
+no_network.deliberate = True
+
+
 def transport_from_env(env: Mapping[str, str] = os.environ) -> Transport:
     if env.get("PINO_PARTS_RECORDED"):
         return RecordedTransport(Path(env["PINO_PARTS_RECORDED"]))

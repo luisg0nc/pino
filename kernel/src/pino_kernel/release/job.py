@@ -50,7 +50,7 @@ from ..routing.result import RouteResult
 from ..routing.state import build_routing, route_running
 from .gerbers import ExportError, export, slug, zip_bytes
 from .jlc import CplRow, board_parts, bom_rows, cpl_rows, write_bom, write_cpl
-from .readme import readme
+from .readme import readme, unconfirmed_stock
 from .result import RELEASE_SCHEMA, ReleaseResult, empty_counts, order_and_cap
 from .rotations import load_rules
 from .versions import (BUMPS, FAB_SCHEMA, circuit_changes, circuit_fingerprint, circuit_summary, fab_fingerprint,
@@ -217,6 +217,9 @@ def _no_lookups(url: str, timeout: float):
     raise OfflineError("offline: release was asked not to look parts up")
 
 
+_no_lookups.deliberate = True
+
+
 def _lookups(circuit: Circuit, network: bool) -> dict[str, PartLookup]:
     numbers = [n for n in (lcsc_of(p) for p in circuit.parts if assembled(p)) if n]
     client = Jlcsearch(transport_from_env() if network else _no_lookups, PartsCache(parts_root()))
@@ -366,8 +369,11 @@ def _release_locked(project: Path, options: ReleaseOptions, steps: _Steps) -> Re
         result.state = "refused"
         result.headline = _refusal([f for f in order_and_cap(found)[0] if f.severity == "error"])
     except (_Failed, ExportError) as e:
-        result.state, result.headline = "failed", f"Release failed: {e}"
-        found.append(_gate("release_failed", str(e)))
+        if steps.cancel.is_set():  # the cancel stopped kicad-cli: that is no failure
+            result.state, result.headline = "cancelled", "Release cancelled: nothing was written"
+        else:
+            result.state, result.headline = "failed", f"Release failed: {e}"
+            found.append(_gate("release_failed", str(e)))
     except Exception as e:  # noqa: BLE001 - an engine fault is a failed release in words, never a traceback
         traceback.print_exc(file=sys.stderr)
         result.state, result.headline = "failed", "Release failed inside the engine"
@@ -495,8 +501,10 @@ def _release(project: Path, options: ReleaseOptions, steps: _Steps, work: Path, 
     result.files = steps.run("write", _write, project, number, manifest, contents)
     result.state = "released"
     hand = f", {result.counts['hand_fit']} by hand" if result.counts["hand_fit"] else ""
+    unsure = unconfirmed_stock(circuit, rows, lookups)
+    stock = f"; stock of {plural(len(unsure), 'part')} not confirmed" if unsure else ""
     result.headline = (f"Release v{number} (h{board.build['number']}, r{board.route['number']}): JLC places "
-                       f"{plural(len(rows), 'part')} in {plural(len(lines), 'BOM line')}{hand}: fab/v{number}/")
+                       f"{plural(len(rows), 'part')} in {plural(len(lines), 'BOM line')}{hand}: fab/v{number}/{stock}")
 
 
 def _counts(circuit: Circuit, rows, lines, lookups, gerbers) -> dict[str, int]:

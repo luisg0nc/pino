@@ -186,3 +186,54 @@ def test_a_refresh_asks_again_even_when_the_cache_is_fresh(recorded, parts_cache
     assert c.parts(["C25804", "C99999999"]) and len(t.calls) == calls
     c.parts(["C25804", "C99999999"], max_age=timedelta(0))
     assert len(t.calls) == calls + 2
+
+
+def failing(why, calls):
+    def transport(url, timeout):
+        calls.append(url)
+        raise OfflineError(why)
+    return transport
+
+
+def test_after_a_failure_the_fast_path_waits_a_while_before_asking_again(recorded, parts_cache):
+    calls = []
+    c = Jlcsearch(failing("timed out", calls), parts_cache)
+    c.parts(["C25804"], breaker=True)
+    assert len(calls) == 1
+    again = c.parts(["C25804", "C14663"], breaker=True)
+    assert len(calls) == 1 and all("a few minutes ago" in x.error and not x.fresh for x in again.values())
+    c.parts(["C25804"])                                   # release and `parts` always ask
+    assert len(calls) == 2
+    parts_cache.now = lambda: utc_now() + timedelta(minutes=6)
+    c.parts(["C25804"], breaker=True)
+    assert len(calls) == 3
+
+
+def test_an_answer_ends_the_wait(recorded, parts_cache):
+    Jlcsearch(failing("timed out", []), parts_cache).parts(["C25804"])
+    assert parts_cache.unreachable()
+    Jlcsearch(RecordedTransport(recorded), parts_cache).parts(["C25804"])
+    assert parts_cache.unreachable() is None
+
+
+def test_only_a_real_failure_to_reach_starts_the_wait(recorded, parts_cache):
+    unavailable = lambda url, t: Response(503, b"{}", {})
+    Jlcsearch(unavailable, parts_cache).parts(["C25804"])
+    assert parts_cache.unreachable()
+    parts_cache.reachable()
+    Jlcsearch(lambda url, t: Response(400, b"{}", {}), parts_cache).parts(["C25804"])
+    assert parts_cache.unreachable() is None
+    Jlcsearch(no_network, parts_cache).parts(["C25804"])           # offline on purpose says nothing about jlcsearch
+    assert parts_cache.unreachable() is None
+
+
+def test_a_request_that_outlives_the_budget_starts_the_wait(parts_cache):
+    release = threading.Event()
+
+    def hang(url, t):
+        release.wait(5)
+        raise OfflineError("late")
+
+    Jlcsearch(hang, parts_cache).parts(["C25804"], budget=0.3)
+    assert parts_cache.unreachable()
+    release.set()
