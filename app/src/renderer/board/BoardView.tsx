@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { changedItems, type ChangedSet } from '../../shared/board/changes'
 import { toKicad } from '../../shared/board/coords'
 import type { Board } from '../../shared/board/board'
@@ -32,11 +32,16 @@ import { DRAG_SLOP, fit, INSET, scaleBar, toModel, toScreen, zoomAt } from './vi
 const NEAR = 4
 const WHEEL = 1.0015
 const WASH_MS = 700
+/** A route that lands is drawn in net by net from the pads out: after half a second, in 1.6 s. */
+const REVEAL_MS = 1600
+const REVEAL_AFTER_MS = 500
 
 /** Where the person left each project's board: kept across the tabs and across builds, for the run. */
 const kept = new Map<string, View>()
 /** The board each project's view drew last, to say what a new build changed. */
-const lastDrawn = new Map<string, { key: string; board: Board }>()
+const lastDrawn = new Map<string, { key: string; board: Board; routed: string | null }>()
+/** The route whose copper each project's view drew last (null: none), to see one land. */
+const lastRoute = new Map<string, string | null>()
 
 const BOARD_TOOLS: readonly MarkTool[] = ['select', 'point', 'arrow', 'stroke', 'region']
 
@@ -104,12 +109,31 @@ export function BoardView({ model }: { model: ViewModel }) {
   // A layer the board does not have (another project's choice) falls back to the top.
   const active = board.copper.includes(look.active) ? look.active : (board.copper[0] ?? 'F.Cu')
 
+  // ---- a route that lands: its copper is drawn in, then what is still open appears and the pins with it
+  /** 0 to 1 while the copper arrives. */
+  const [arrived, setArrived] = useState(1)
+  const routed = model.result.routing?.state === 'current' ? model.route : null
+  useLayoutEffect(() => {
+    const before = lastRoute.get(model.projectId)
+    lastRoute.set(model.projectId, routed)
+    // Copper that was there when the view first drew has not landed.
+    if (before === undefined || !routed || before === routed) return
+    const stop = once(REVEAL_MS, setArrived, REVEAL_AFTER_MS)
+    return () => {
+      stop()
+      setArrived(1)
+    }
+  }, [model.projectId, routed])
+  const arriving = arrived < 1
+
   const [changed, setChanged] = useState<ChangedSet>(NOTHING)
   useEffect(() => {
     const before = lastDrawn.get(model.projectId)
     if (before?.key === model.key) return
-    lastDrawn.set(model.projectId, { key: model.key, board })
+    lastDrawn.set(model.projectId, { key: model.key, board, routed })
     const next = changedItems(before?.board ?? null, board)
+    // New copper is not washed over: a route that lands is drawn in instead.
+    if (before && before.routed !== routed) next.tracks = next.vias = []
     setChanged(next)
     if (!changedTargets(next).length) return
     return once(WASH_MS, setWashed)
@@ -136,14 +160,15 @@ export function BoardView({ model }: { model: ViewModel }) {
       layers: board.copper,
       pours: look.pours,
       silk: look.silk,
-      ratsnest: look.ratsnest,
+      ratsnest: look.ratsnest && !arriving,
+      ...(arriving ? { reveal: arrived } : {}),
       netColours: look.netColours,
       stale: model.stale.size ? { tracks: model.stale } : null,
       dark,
       netColourOf: netColourFor(model.circuit, dark, colours.rat)
     }
     drawBoard(target.getContext('2d')!, scene, view, size.dpr, opts, colours, rats)
-  }, [scene, view, size, look, active, dark, rats, model.stale, model.circuit, board])
+  }, [scene, view, size, look, active, dark, rats, model.stale, model.circuit, board, arrived, arriving])
 
   // ---- what lies over it: what changed, and what is selected
   useEffect(() => {
@@ -323,6 +348,7 @@ export function BoardView({ model }: { model: ViewModel }) {
           return { x: at.x + box.left, y: at.y + box.top }
         },
         drawn: () => ({
+          revealing: arriving,
           hash: model.hash,
           route: model.route,
           layers: board.copper,
@@ -333,7 +359,7 @@ export function BoardView({ model }: { model: ViewModel }) {
           stale: model.stale.size
         })
       }),
-    [board, view, model, active, scene, changed, open]
+    [board, view, model, active, scene, changed, open, arriving]
   )
 
   const onBoard = view ? (p: { x: number; y: number }) => toScreen(view, toKicad(p)) : null
@@ -361,7 +387,7 @@ export function BoardView({ model }: { model: ViewModel }) {
           <span className="pen-more">{liveReadout(strokeOf(drawing!.screen, view), board, active)}</span>
         </p>
       )}
-      {onBoard && <FindingPins findings={model.result.findings} space="board" place={onBoard} />}
+      {onBoard && !arriving && <FindingPins findings={model.result.findings} space="board" place={onBoard} />}
       {words && selected && onBoard && hot === null && (
         <Tag id="selection" subject={onBoard(selected)} prefer="right">
           <p className="tag-head">{numbered(words.head)}</p>

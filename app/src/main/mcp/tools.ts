@@ -9,6 +9,7 @@ import type { ProjectInfo } from '../../shared/project'
 import type { LookRequest, LookResult } from '../../shared/view'
 import type { MarkStore } from '../marks/store'
 import type { BuildModel } from '../model'
+import type { Routing } from '../routing'
 import { registerMarkTools } from './markTools'
 import { registerReadTools } from './readTools'
 import { refused, text, type Reply } from './reply'
@@ -31,6 +32,8 @@ export interface ToolDeps {
   look(project: ProjectInfo, request: LookRequest): Promise<LookResult>
   /** The project's marks: Claude reads them, adds its own and resolves what it has done. */
   marks: Pick<MarkStore, 'list' | 'add' | 'resolve'>
+  /** The router in the background, and its trials. */
+  routing: Pick<Routing, 'available' | 'start' | 'cancel' | 'progress' | 'lastWords' | 'trial'>
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
 }

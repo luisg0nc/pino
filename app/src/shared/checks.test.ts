@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readBoard } from './board/board'
 import type { BuildResult, Finding, RoutingState } from './build'
 import { circuitOf, placementOf } from './circuit'
-import { boardFacts, buildSeconds, checkRows, checksSummary, netGauge, netVerdict, openNets, waitingWords } from './checks'
+import { boardFacts, buildSeconds, checkRows, checksSummary, netGauge, netVerdict, openNets, waitingWords, withRouteFindings, cellsRouted, clock } from './checks'
 import { fx, read, readJson } from '../test/fixtures'
 
 const ref = readJson<BuildResult>(fx('result.json'))
@@ -123,5 +123,41 @@ describe('what the card says beside a net, and of what waits', () => {
     expect(waitingWords(['routing: not started'])).toBe('Not routed yet.')
     expect(waitingWords(['routing: stale (parts moved)'])).toBe('Routing: stale (parts moved).')
     expect(waitingWords([])).toBe('')
+  })
+})
+
+describe('a routed board', () => {
+  const routing = (state: RoutingState['state']) => ({ state, number: 1 }) as RoutingState
+  const copper = finding('copper', 'copper_stub', 'warning')
+  const word = (r: BuildResult, label: string) => checkRows(r).find((row) => row.label === label)!.word
+
+  it("takes in what the router's own checks said while the route is current, each once", () => {
+    const current = { ...ref, routing: routing('current') }
+    const merged = withRouteFindings(current, [copper])
+    expect(merged.findings).toEqual([...ref.findings, copper])
+    expect(word(merged, 'Copper')).toBe('warn')
+    expect(withRouteFindings(merged, [copper]).findings).toEqual(merged.findings)
+    expect(withRouteFindings({ ...ref, routing: routing('stale') }, [copper]).findings).toEqual(ref.findings)
+    expect(withRouteFindings(current, null)).toBe(current)
+  })
+
+  it('says the copper checks were not run unless the copper is of this board', () => {
+    expect(word({ ...ref, routing: routing('current') }, 'Copper')).toBe('pass')
+    for (const state of ['none', 'stale', 'running'] as const) expect(word({ ...ref, routing: routing(state) }, 'Copper')).toBe('skipped')
+  })
+})
+
+describe('a route under way', () => {
+  it('fills the gauge by how far through its nets the router is', () => {
+    expect(cellsRouted({ index: 7, of: 13 }, 13)).toBe(7)
+    expect(cellsRouted({ index: 7, of: 26 }, 13)).toBe(3)
+    expect(cellsRouted({ index: 0, of: 0 }, 13)).toBe(0)
+  })
+
+  it('says how long it has been at it in minutes and seconds', () => {
+    expect(clock(0)).toBe('0:00')
+    expect(clock(12_900)).toBe('0:12')
+    expect(clock(83_000)).toBe('1:23')
+    expect(clock(-5)).toBe('0:00')
   })
 })

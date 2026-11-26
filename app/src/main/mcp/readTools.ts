@@ -8,7 +8,7 @@ import { measure, type Measure } from '../../shared/board/measure'
 import { copperGroups, naturalCompare } from '../../shared/board/nets'
 import { centreOf, netMembers, type Target } from '../../shared/board/refs'
 import { verdictWords, type BuildResult, type Finding } from '../../shared/build'
-import { checkRows } from '../../shared/checks'
+import { checkRows, withRouteFindings } from '../../shared/checks'
 import type { Circuit } from '../../shared/circuit'
 import type { LookRequest } from '../../shared/view'
 import type { BuildModel } from '../model'
@@ -69,7 +69,7 @@ function capped(lines: string[], more: (left: number) => string): string[] {
   return lines.length <= MOST_LINES ? lines : [...lines.slice(0, MOST_LINES), more(lines.length - MOST_LINES)]
 }
 
-function findingLine(f: Finding): string {
+export function findingLine(f: Finding): string {
   const place =
     f.at?.space === 'board' && f.at.x !== undefined
       ? `at ${at({ x: f.at.x, y: f.at.y! })} mm`
@@ -209,9 +209,7 @@ export function registerReadTools(server: McpServer, deps: ToolDeps, onProject: 
       const latest: BuildResult | null = deps.state(project.id)?.latest ?? null
       if (!latest) return refused(NOTHING_BUILT)
       const model = await deps.model(project)
-      // While a route is current its findings are checks of this board too.
-      const routed = latest.routing?.state === 'current' ? (model?.routeFindings ?? []) : []
-      const result = { ...latest, findings: [...latest.findings, ...routed] }
+      const result = withRouteFindings(latest, model?.routeFindings ?? null)
       let found = result.findings
       if (input.source) found = found.filter((f) => f.source === input.source)
       if (input.severity) found = found.filter((f) => f.severity === input.severity)

@@ -1141,6 +1141,8 @@ git commit -m "MCP: Claude points at parts, pads and gaps in orange, reads the m
 
 ### Task 16: Routing in the views and Claude's route tools
 
+> As built: the `routing` branch had not merged, so its serve protocol, schemas and trial arguments were read with git and the app and stand-in follow them (the real engine's keys match `RoutingState`). `Routing` reads the engine's protocol from the build state, so it takes no `engine` dependency. Before it asks the engine for a route or a trial, `.pino` and the engine's folders must be the project's own. A closed project's route is cancelled. The engine keeps a route's findings apart from the build's, so `withRouteFindings` joins them for the card, the pins and `check`, and the copper rows read "not run" unless the route is current. The routing band also shows a clock, and the gauge fills, as the mock does. The stale band says why in the engine's words ("Parts moved since"), not which part.
+
 **Files:**
 - Create: `app/src/main/mcp/routeTools.ts`, `app/src/main/routing.ts`
 - Modify: `app/src/main/mcp/tools.ts`, `app/src/main/mcp/schemas.ts`, `app/src/main/builds.ts`, `app/src/main/index.ts`, `app/src/shared/bridge.ts`, `app/src/preload/index.ts`, `app/src/renderer/board/BoardView.tsx`, `app/src/renderer/board/draw.ts`, `app/src/renderer/ui/view/Band.tsx`, `app/src/renderer/ui/route/RoutingBlock.tsx`
@@ -1154,7 +1156,7 @@ git commit -m "MCP: Claude points at parts, pads and gaps in orange, reads the m
   - Tools: `route { action: 'start' | 'status' | 'cancel' }` (start answers `Routing h7 started. It takes minutes; the view shows its progress. Call route with status to follow it.`; status answers the routing state in words, with the open nets by name; cancel says whether one was running); `route_net { net, region?: [number, number, number, number], layers?: string[], corridor?: Array<[number, number]>, rip?: string[] }`, `nudge { part, by?: [number, number], rot?: number, back?: boolean, route?: boolean }`, `keep { net }`: each answers the trial's headline, `before` and `after`, its findings (capped), and `Write this into board.py:` with the `snippet` (and `It replaces line N.` when `replaces_line` is set). Every route tool answers `ROUTING_UNAVAILABLE` when `available()` is false.
   - Views: `routing` band "Routing in the background, 18 of 31" with a 120 px progress bar and "Cancel"; when routing lands, its copper is drawn in net by net from the pads out (`revealOrder`, 1.6 s linear after 0.5 s), then the open connections appear and finding pins pop; `stale` band "Copper from h15. U4 moved since." with "Route again" and "Keep it" ("Keep it" closes the band for this build and leaves the faded copper on show; it changes no file); stale copper faded, pads in ink; the Routing block's gauge from the route's counts, router and time from `router_seconds`, the open nets by name.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('says routing is not available when the engine speaks serve 1', async () => {
@@ -1169,21 +1171,21 @@ it('a save after a route makes the copper stale and says why', async () => { /* 
 it('route_net answers the snippet to write into board.py', async () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/routing.test.ts src/main/mcp/routeTools.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the routing holder, the tools and the view states**
+- [x] **Step 3: Write the routing holder, the tools and the view states**
 
 If `routing` has merged into `views`, also run the real engine's `route_status` once by hand on the reference fixture copy and compare its JSON keys with `RoutingState`; fix `shared/build.ts` if they differ.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src

@@ -4,10 +4,10 @@
 // Each picture is a launch of its own: a hidden window's `capturePage()` gives one picture, and the next call never
 // returns (torno found the same).
 
-import { mkdirSync } from 'node:fs'
+import { appendFileSync, mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { capture, clickTarget, markScene, resize, screenOf, settled, waitForBuild, zoomOn } from './helpers'
+import { capture, clickTarget, markScene, markTrack, resize, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
 import { launch, referenceProject, type Launched } from './launch'
 
 const folder = process.env.PINO_SHOTS ? resolve(process.env.PINO_SHOTS) : null
@@ -23,8 +23,8 @@ interface Shot {
   height?: number
   dark?: boolean
   env?: Record<string, string>
-  /** Drives the window to what the picture is of. */
-  at?(run: Launched): Promise<void>
+  /** Drives the window to what the picture is of; `project` is the folder it has open. */
+  at?(run: Launched, project: string): Promise<void>
 }
 
 const onBoard = async (run: Launched): Promise<void> => {
@@ -59,7 +59,45 @@ const onMarks = async (run: Launched): Promise<void> => {
   await run.page.mouse.move(5, 5)
 }
 
+/** An engine that routes, over a stand-in whose copper is a straight track for each open line. */
+const ROUTES = { FAKE_KERNEL_SERVE: '2' }
+
+/** The routed board, drawn: the route is started as the band's button does it. */
+const routed = async (run: Launched): Promise<void> => {
+  await onBoard(run)
+  await startRoute(run.page)
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.state().build?.lastGood?.routing?.state ?? null), { timeout: 20_000 }).toBe('current')
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().board?.route ?? null)).not.toBeNull()
+}
+
 const SHOTS: Record<string, Shot> = {
+  'board-routing': {
+    env: { ...ROUTES, FAKE_KERNEL_ROUTE_MS: '700' },
+    at: async (run) => {
+      await onBoard(run)
+      await startRoute(run.page)
+      await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.state().build?.route?.index ?? 0), { timeout: 20_000 }).toBeGreaterThanOrEqual(6)
+    }
+  },
+  'board-routed': { env: ROUTES, at: routed },
+  'board-stale': {
+    env: { ...ROUTES, FAKE_KERNEL_MOVE: 'U2:2.5,0' },
+    at: async (run, project) => {
+      await routed(run)
+      appendFileSync(join(project, 'board.py'), '\n# moved\n')
+      await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().board?.stale ?? 0), { timeout: 20_000 }).toBeGreaterThan(0)
+    }
+  },
+  'marks-routed': {
+    env: ROUTES,
+    at: async (run) => {
+      await routed(run)
+      await markScene(run.page)
+      await markTrack(run.page)
+      await zoomOn(run.page, { kind: 'part', ref: 'U2' }, 900)
+      await run.page.mouse.move(5, 5)
+    }
+  },
   marks: { at: onMarks },
   'marks-dark': { dark: true, at: onMarks },
   'marks-drawing': {
@@ -91,7 +129,8 @@ test.beforeAll(() => {
 
 for (const [name, shot] of Object.entries(SHOTS)) {
   test(name, async () => {
-    const run = await launch({ project: referenceProject(), env: shot.env })
+    const project = referenceProject()
+    const run = await launch({ project, env: shot.env })
     try {
       const scheme = shot.dark ? ('dark' as const) : ('light' as const)
       await run.app.evaluate(({ nativeTheme }, source) => void (nativeTheme.themeSource = source), scheme)
@@ -99,7 +138,7 @@ for (const [name, shot] of Object.entries(SHOTS)) {
       await run.page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme })
       await resize(run.app, run.page, shot.width ?? 1440, shot.height ?? 900)
       await waitForBuild(run.page, 1)
-      await shot.at?.(run)
+      await shot.at?.(run, project)
       await run.page.evaluate(() => document.fonts.ready.then(() => undefined))
       await settled(run.page)
       // The canvas of a hidden window reaches the compositor a frame or two after it is drawn.

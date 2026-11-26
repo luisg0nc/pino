@@ -86,6 +86,11 @@ export interface PinoBridge {
     onAsk(cb: (m: { id: number; kind: 'look'; req: LookRequest }) => void): () => void
     answer(id: number, result: LookResult | { error: string }): void
   }
+  route: {
+    /** The band's "Route again": routes the newest build in the background. */
+    start(projectId: string): Promise<void>
+    cancel(projectId: string): Promise<void>
+  }
   marks: {
     list(projectId: string): Promise<Mark[]>
     /** A mark of the person's, a draft until it goes with a prompt. Main works out its id, label and exact line. */

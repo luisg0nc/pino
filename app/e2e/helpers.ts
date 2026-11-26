@@ -106,3 +106,16 @@ export async function markScene(page: Page): Promise<void> {
   })
   await expect.poll(() => page.evaluate(() => window.__pinoTest!.state().marks.length)).toBe(5)
 }
+
+/** A route of the open project, started as the band's "Route again" does it. */
+export async function startRoute(page: Page): Promise<void> {
+  await page.evaluate(() => window.pino.route.start(window.__pinoTest!.state().project!.id))
+}
+
+/** The scene's sixth mark, on routed copper: the first track of the stand-in's route. */
+export async function markTrack(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const id = window.__pinoTest!.state().project!.id
+    await window.pino.marks.add(id, { kind: 'point', space: 'board', target: { kind: 'track', uuid: 'dddddddd-0000-4000-8000-000000000001' }, at: { x: 0, y: 0 }, note: 'widen this track' })
+  })
+}

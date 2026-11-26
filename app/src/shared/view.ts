@@ -64,15 +64,43 @@ export interface LookResult {
   said: string
 }
 
-export type BandKind = 'failed' | 'older'
+export type BandKind = 'failed' | 'older' | 'routing' | 'stale'
 
-/** The sentence at the foot of a view when what it draws is not the latest build. `shown`: an older build chosen in the strip. */
-export function bandFor(state: BuildState | null, shown: number | null): { kind: BandKind; text: string } | null {
+export interface BandSaid {
+  kind: BandKind
+  text: string
+  /** Of a route in the background: the nets it is through. */
+  progress?: { done: number; of: number }
+}
+
+export interface StaleSaid {
+  /** The build, by its hash, whose stale copper the person chose to keep on show without being told. */
+  kept?: string | null
+  /** The number of the build the stale copper was made for, when it is known. */
+  from?: number
+}
+
+const sentence = (words: string) => words.charAt(0).toUpperCase() + words.slice(1)
+
+/**
+ * The sentence at the foot of a view for what is true of the whole of it, the most pressing first. `shown`: an older
+ * build chosen in the strip.
+ */
+export function bandFor(state: BuildState | null, shown: number | null, stale: StaleSaid = {}): BandSaid | null {
   const latest = state?.latest
   if (!state || !state.lastGood) return null
   if (shown !== null && latest && shown !== latest.number) return { kind: 'older', text: `Showing h${shown}. The latest is h${latest.number}.` }
   if (state.problem) return { kind: 'failed', text: `Drawn from h${state.lastGood.number}. ${state.problem}` }
-  return null
+  const route = state.route
+  if (route) {
+    if (!route.of) return { kind: 'routing', text: `Routing in the background: ${route.step}` }
+    return { kind: 'routing', text: `Routing in the background, ${route.index} of ${route.of}`, progress: { done: route.index, of: route.of } }
+  }
+  const routing = state.lastGood.routing
+  if (routing?.state !== 'stale' || stale.kept === state.lastGood.hash) return null
+  const from = stale.from !== undefined ? `h${stale.from}` : `route r${routing.number}`
+  const why = routing.stale_because.join(' and ') || 'the board changed'
+  return { kind: 'stale', text: `Copper from ${from}. ${sentence(why)} since.` }
 }
 
 /**

@@ -20,6 +20,7 @@ const TABS: readonly ViewTab[] = ['schematic', 'board', '3d']
 export function ViewPane() {
   const chosen = useStore((s) => s.tab)
   const selection = useStore((s) => s.selection)
+  const build = useStore((s) => s.build)
   const { model } = useViewModel()
   const tabs = useRef<Partial<Record<ViewTab, HTMLButtonElement | null>>>({})
 
@@ -65,7 +66,7 @@ export function ViewPane() {
       <div className="views-panel" role="tabpanel" id="view-panel" aria-labelledby={`view-tab-${chosen}`} data-view={chosen}>
         {model ? <Drawn tab={chosen} model={model} /> : <Empty />}
       </div>
-      {model && <ViewBand />}
+      {model && <ViewBand from={build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
     </main>
   )
 }

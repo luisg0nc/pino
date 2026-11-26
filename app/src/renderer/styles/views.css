@@ -102,6 +102,33 @@
   background: var(--fail);
 }
 
+.band[data-band='stale'] .band-dot {
+  background: var(--warn);
+}
+
+.band-progress {
+  flex: none;
+  width: 120px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--hairline);
+}
+
+.band-progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s var(--ease);
+}
+
+.band-clock {
+  flex: none;
+  min-width: 4ch;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
 .band-button {
   flex: none;
   height: 26px;
@@ -133,6 +160,10 @@
 @media (prefers-reduced-motion: reduce) {
   .band {
     animation: none;
+  }
+
+  .band-progress i {
+    transition: none;
   }
 }
 

@@ -39,6 +39,30 @@ describe('the band at the foot of the view', () => {
     expect(bandFor(state({}), 12)).toEqual({ kind: 'older', text: 'Showing h12. The latest is h15.' })
     expect(bandFor(state({}), 15)).toBeNull()
   })
+
+  const route = (over: Record<string, unknown>) => ({ job: 1, step: 'signals', index: 18, of: 31, startedAt: 0, ...over })
+
+  it('says how far a route in the background is, or which step it is at', () => {
+    expect(bandFor(state({ route: route({}) }), null)).toEqual({ kind: 'routing', text: 'Routing in the background, 18 of 31', progress: { done: 18, of: 31 } })
+    expect(bandFor(state({ route: route({ step: 'fanout', index: 0, of: 0 }) }), null)).toEqual({ kind: 'routing', text: 'Routing in the background: fanout' })
+  })
+
+  const stale = state({ lastGood: { ...result(15), routing: { state: 'stale', number: 2, stale_because: ['parts moved', 'rules changed'] } } })
+
+  it('says that the copper no longer fits, where it is from and why, until the person keeps it', () => {
+    expect(bandFor(stale, null, { from: 12 })).toEqual({ kind: 'stale', text: 'Copper from h12. Parts moved and rules changed since.' })
+    expect(bandFor(stale, null)).toEqual({ kind: 'stale', text: 'Copper from route r2. Parts moved and rules changed since.' })
+    expect(bandFor(stale, null, { kept: 'aaaaaaaa0001' })).toBeNull()
+    expect(bandFor(stale, null, { kept: 'bbbbbbbb0002' })?.kind).toBe('stale')
+  })
+
+  it('says one thing at a time: an older build, then a failure, then the router, then stale copper', () => {
+    const all = state({ ...stale, problem: 'h16 failed', route: route({}) })
+    expect(bandFor(all, 12)?.kind).toBe('older')
+    expect(bandFor(all, null)?.kind).toBe('failed')
+    expect(bandFor({ ...all, problem: null }, null)?.kind).toBe('routing')
+    expect(bandFor({ ...all, problem: null, route: null }, null)?.kind).toBe('stale')
+  })
 })
 
 describe('the ratsnest', () => {

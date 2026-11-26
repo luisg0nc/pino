@@ -21,6 +21,7 @@ import type { LookResult } from '../shared/view'
 import { openProject } from './project'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
+import { Routing } from './routing'
 import { type Config, configOf, listed, recentWith } from './recent'
 import { claudeAdapter } from './sessions/claude'
 import { Sessions } from './sessions/manager'
@@ -116,6 +117,7 @@ const kernel = kernelHolder(() =>
   startKernel(kernelCommand(process.env, app.getAppPath()), { env: process.env, cwd: app.getPath('userData') })
 )
 const builds = new Builds({ kernel: () => kernel.get() })
+const routing = new Routing({ kernel: () => kernel.get(), builds })
 /** What the person has on screen, for what Claude is told of it. */
 const views = new ViewHolder()
 /** Each build as main reads it, and the marks, made on the newest board that was drawn. */
@@ -144,6 +146,7 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
       const next = await openProject(dir)
       if (open && open.id !== next.id) {
         // No start is taken for the old project from here on, and `stopAll` waits for one under way.
+        routing.drop(open.id)
         builds.close(open.id)
         open = undefined
         await sessions().stopAll()
@@ -187,7 +190,10 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
     },
     close: () =>
       inTurn(async () => {
-        if (open) builds.close(open.id)
+        if (open) {
+          routing.drop(open.id)
+          builds.close(open.id)
+        }
         open = undefined
         await sessions().stopAll()
         await changeConfig((config) => ({ recent: config.recent }))
@@ -330,6 +336,7 @@ void app.whenReady().then(async () => {
     state: (id) => builds.state(id),
     model: drawnModel,
     marks,
+    routing,
     buildResult: (project, hash) => resultOfBuild(project, hash, [builds.latest(project.id), builds.lastGood(project.id)]),
     diff: async (project, from, to) => (await kernel.get().request<{ changes: { circuit: string[]; layout: string[] } }>('diff', { project: project.dir, from, to })).changes,
     look: (_project, request) => {
@@ -352,7 +359,7 @@ void app.whenReady().then(async () => {
   if (isDebug) console.error(`[${APP.name}] listening at ${http.url('/')}`)
   // A folder of a project that pino may not write into is said in the window, once.
   onNotOwn((_dir, message) => broadcast('notice', { text: message }))
-  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks })
+  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing })
   // Every build that drew something has the marks found again on it.
   builds.onResult((projectId, result) => {
     const project = holder.open()

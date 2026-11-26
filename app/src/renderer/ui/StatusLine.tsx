@@ -1,9 +1,10 @@
-import { buildSeconds, netGauge, openNets } from '../../shared/checks'
+import { buildSeconds, clock, netGauge, openNets } from '../../shared/checks'
 import type { ProjectInfo } from '../../shared/project'
 import { actions, useStore } from '../state/store'
 import { useViewModel } from '../state/viewModel'
 import { numbered } from './numbered'
 import { sessionWord } from './sessionWords'
+import { useNow } from './useNow'
 
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
@@ -26,8 +27,11 @@ export function StatusLine({ project }: { project: ProjectInfo }) {
         ? `h${good.number} built in ${buildSeconds(good)} s`
         : 'No build yet'
 
+  const route = build?.route ?? null
+  const now = useNow(route !== null)
   let routed: string | null = null
-  if (model) {
+  if (route) routed = `routing ${route.of ? `${route.index}/${route.of}` : route.step}, ${clock(now - route.startedAt)}`
+  else if (model) {
     const routing = model.result.routing
     if (routing?.state === 'current' || routing?.state === 'stale') {
       const gauge = netGauge(model.circuit, model.open ? [...model.open] : openNets(model.result, model.placement, null), routing)

@@ -27,6 +27,8 @@ export interface PinoState {
   hotFinding: number | null
   /** The block pointed at in the route card, by its key: its frame lights on the sheet. */
   hotBlock: string | null
+  /** The build, by its hash, whose stale copper the person chose to keep without the band that says it is stale. */
+  keptStale: string | null
   /** The project's marks, as main holds them. */
   marks: Mark[]
   /** The marking tool in hand. */
@@ -43,10 +45,10 @@ export interface PinoState {
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
-const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
+const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
 
 export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
@@ -69,6 +71,10 @@ export const actions = {
   },
   showBuild(shown: number | null): void {
     store.setState({ shown, hotFinding: null })
+  },
+  /** The stale copper of this build stays on show without its band. */
+  keepStale(keptStale: string): void {
+    store.setState({ keptStale })
   },
   select(selection: Selection | null): void {
     // What is selected and a mark in hand are one hand: taking one puts the other down.

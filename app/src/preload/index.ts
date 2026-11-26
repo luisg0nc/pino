@@ -70,6 +70,10 @@ const bridge: PinoBridge = {
     onAsk: (cb) => subscribe('view:ask', cb),
     answer: (id, result) => ipcRenderer.send('view:answer', id, result)
   },
+  route: {
+    start: (projectId) => invoke('route:start', projectId),
+    cancel: (projectId) => invoke('route:cancel', projectId)
+  },
   marks: {
     list: (projectId) => invoke('marks:list', projectId),
     add: (projectId, mark) => invoke('marks:add', projectId, mark),

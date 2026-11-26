@@ -1,5 +1,5 @@
 import type { BuildState } from '../../../shared/build'
-import { netGauge, openNets } from '../../../shared/checks'
+import { cellsRouted, netGauge, openNets } from '../../../shared/checks'
 import type { ViewModel } from '../../state/viewModel'
 import { numbered } from '../numbered'
 import { Row, Section } from './Section'
@@ -14,25 +14,28 @@ export function RoutingBlock({ model, build }: { model: ViewModel; build: BuildS
   const gauge = netGauge(model.circuit, open, routing)
   const routed = routing?.state === 'current'
   const stale = routing?.state === 'stale'
-  const count = stale ? 'stale' : routed ? `${gauge.done} of ${gauge.total} nets` : `0 of ${gauge.total} nets`
+  const running = build.route
+  const through = running ? cellsRouted(running, gauge.total) : 0
+  const count = running ? (running.of ? `${running.index} of ${running.of} nets` : 'routing') : stale ? 'stale' : routed ? `${gauge.done} of ${gauge.total} nets` : `0 of ${gauge.total} nets`
   const madeOn = build.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number
   const copperFrom = routed ? `h${result.number}` : madeOn !== undefined ? `h${madeOn}` : routing?.number !== null && routing ? `r${routing.number}` : ''
   return (
-    <Section title="Routing" count={count} lit={routed}>
+    <Section title="Routing" count={count} lit={routed || running !== null}>
       <div className="route-gauge" role="img" aria-label={`${gauge.done} of ${gauge.total} nets routed`}>
         {Array.from({ length: gauge.total }, (_, i) => (
-          <i key={i} data-cell={gauge.state === 'stale' ? (i < gauge.done ? 'stale' : 'open') : i < gauge.done ? 'done' : 'open'} />
+          <i key={i} data-cell={running ? (i < through ? 'done' : 'open') : gauge.state === 'stale' ? (i < gauge.done ? 'stale' : 'open') : i < gauge.done ? 'done' : 'open'} />
         ))}
       </div>
-      {(routed || stale) && (
+      {!running && (routed || stale) && (
         <>
           <Row name="KiCadRoutingTools" value={routing!.router_seconds !== null ? numbered(`${routing!.router_seconds} s`) : ''} />
           <Row name={routed ? 'Copper is from this build' : 'Copper is from an older build'} value={<span className="num">{copperFrom}</span>} tone={stale ? 'warn' : undefined} />
           {stale && routing!.stale_because.length > 0 && <p className="route-note">{`Stale because ${routing!.stale_because.join(', ')}.`}</p>}
         </>
       )}
-      {!routed && !stale && <p className="route-note">{numbered(result.counts.unrouted ? `Not routed: ${result.counts.unrouted} connections to make.` : 'Not routed.')}</p>}
-      {open.length > 0 && (routed || stale) && (
+      {running && <p className="route-note">{numbered(running.net ? `In the background, at ${running.net}.` : `In the background: ${running.step}.`)}</p>}
+      {!routed && !stale && !running && <p className="route-note">{numbered(result.counts.unrouted ? `Not routed: ${result.counts.unrouted} connections to make.` : 'Not routed.')}</p>}
+      {!running && open.length > 0 && (routed || stale) && (
         <p className="route-line">
           Open: {open.slice(0, MOST_OPEN).join(' · ')}
           {open.length > MOST_OPEN && ` and ${open.length - MOST_OPEN} more`}

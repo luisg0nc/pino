@@ -33,7 +33,9 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
         ? (model?.circuit?.nets.find((n) => n.pins.some(([ref, pin]) => ref === target.ref && pin === target.number))?.name ?? null)
         : null
   // What the checks say is of the newest build, which a failed one is; the board in numbers is of the one drawn.
-  const result = useStore((s) => (s.shown === null ? (s.build?.latest ?? null) : null)) ?? model?.result ?? null
+  const latest = useStore((s) => (s.shown === null ? (s.build?.latest ?? null) : null))
+  // The drawn build holds the router's findings with its own: where it is the newest, it is the one read.
+  const result = latest && model?.result.number !== latest.number ? latest : (model?.result ?? latest)
   return (
     <div className="route-card">
       <Head project={project} build={build} />

@@ -21,6 +21,17 @@ const IGNORED_FOLDERS = new Set([APP.folder, '__pycache__', '.venv', 'node_modul
 /** The folders of .pino the engine writes: each must be the project's own before it is asked to build. */
 const ENGINE_FOLDERS = ['build', 'routes', 'trials', 'kicad']
 
+/**
+ * The engine writes under .pino: it is asked to only while those folders are the project's own. Whoever asks says why
+ * not; the window's one notice of the folder stays for what pino's main itself would write.
+ */
+export async function engineMayWrite(dir: string): Promise<void> {
+  for (const folder of ENGINE_FOLDERS) {
+    const why = await whyNotOwn(dir, folder)
+    if (why) throw new Error(why)
+  }
+}
+
 /** Told the files that changed in a burst, as absolute paths. */
 export type OnChange = (paths: string[]) => void
 
@@ -299,12 +310,7 @@ export class Builds {
   private async run(entry: Entry): Promise<void> {
     const open = () => this.entries.get(entry.project.id) === entry
     try {
-      // The engine writes under .pino: it is asked only when those folders are the project's own. The view says why
-      // not; the window's one notice of the folder stays for what pino's main itself would write.
-      for (const folder of ENGINE_FOLDERS) {
-        const why = await whyNotOwn(entry.project.dir, folder)
-        if (why) throw new Error(why)
-      }
+      await engineMayWrite(entry.project.dir)
       const client = await this.engine(entry)
       if (!open()) return
       entry.startedAt = this.now()

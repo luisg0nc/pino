@@ -1,5 +1,6 @@
 // Claude's `look`: main asks, the window draws the tab asked for from the build on show and answers with the picture.
 
+import { withRouteFindings } from '../shared/checks'
 import type { LookRequest, LookResult } from '../shared/view'
 import { boardLook } from './board/look'
 import { sheetLook } from './sheet/look'
@@ -21,7 +22,8 @@ async function shownModel(): Promise<ViewModel> {
     if (!hash) throw new Error(`h${shown} is no longer kept`)
     result = { ...(await window.pino.build.result(project.id, hash)), number: shown }
   }
-  return { ...(await loadViewModel(project.id, result)), result }
+  const model = await loadViewModel(project.id, result)
+  return { ...model, result: withRouteFindings(result, model.routeFindings) }
 }
 
 async function picture(request: LookRequest): Promise<LookResult> {

@@ -55,9 +55,21 @@ function rowOf(f: Finding): number {
 /** Whether the build left a check out: it failed, kicad-cli was missing or failed at its step, or nothing is routed. */
 function skipped(r: BuildResult, rule: RowRule): boolean {
   if (r.verdict === 'failed') return true
-  if (rule.label === 'Copper' || rule.label === 'Routing') return !r.routing || r.routing.state === 'none'
+  // The copper checks are of a route: they have run on this board only while its route is current.
+  if (rule.label === 'Copper' || rule.label === 'Routing') return r.routing?.state !== 'current'
   if (!rule.step) return false
   return r.findings.some((f) => f.source === 'kernel' && (f.code === 'kicad_cli_missing' || (f.code === 'kicad_cli_failed' && f.message.includes(`kicad-cli ${rule.step} failed`))))
+}
+
+/**
+ * A build with what the router and its checks said of its route, while that route is current: they are checks of this
+ * board too. The route card, the pins and Claude's `check` all read this one list.
+ */
+export function withRouteFindings(r: BuildResult, routeFindings: readonly Finding[] | null): BuildResult {
+  if (r.routing?.state !== 'current' || !routeFindings?.length) return r
+  const held = new Set(r.findings.map((f) => JSON.stringify(f)))
+  const added = routeFindings.filter((f) => !held.has(JSON.stringify(f)))
+  return added.length ? { ...r, findings: [...r.findings, ...added] } : r
 }
 
 export function checkRows(r: BuildResult): CheckRow[] {
@@ -100,6 +112,15 @@ export function netGauge(circuit: Circuit | null, open: readonly string[], routi
   if (routing?.state === 'stale') return { total, done: Math.max(0, total - (routing.unrouted ?? 0)), state: 'stale' }
   if (routing?.state !== 'current') return { total, done: 0, state: 'open' }
   return { total, done: Math.max(0, total - open.length), state: 'routed' }
+}
+
+/** The gauge's cells filled while a route runs: as far through them as the router is through the nets of its step. */
+export const cellsRouted = (route: { index: number; of: number }, total: number): number => (route.of > 0 ? Math.floor((total * route.index) / route.of) : 0)
+
+/** How long something has run, as `1:23`. */
+export function clock(ms: number): string {
+  const seconds = Math.max(0, Math.floor(ms / 1000))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 export interface BoardFacts {

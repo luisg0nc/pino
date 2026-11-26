@@ -1,10 +1,11 @@
 // The build on show, read and parsed once: the board (with a route's copper, fresh or stale), the circuit and the
 // placement. Every view draws from it, and keeps the last one while the next is being read.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { readBoard, type Board } from '../../shared/board/board'
 import { withStaleCopper } from '../../shared/board/stale'
 import type { BuildResult, Finding } from '../../shared/build'
+import { withRouteFindings } from '../../shared/checks'
 import { circuitOf, placementOf, type Circuit, type Placement } from '../../shared/circuit'
 import { useStore } from './store'
 
@@ -23,6 +24,8 @@ export interface ViewModel {
   open: Set<string> | null
   /** The build the route on the board was made of, by its hash. */
   routedBuild: string | null
+  /** What the router and its checks said of the route on the board; `result` holds them too while it is current. */
+  routeFindings: Finding[] | null
   circuit: Circuit | null
   placement: Placement | null
 }
@@ -51,6 +54,7 @@ async function read(projectId: string, result: BuildResult, key: string): Promis
   let open: Set<string> | null = null
   let route: string | null = null
   let routedBuild: string | null = null
+  let routeFindings: Finding[] | null = null
   if (routing?.route_key && (routing.state === 'current' || routing.state === 'stale' || routing.state === 'running')) {
     const routed = await window.pino.build.routeFile(projectId, routing.route_key, 'filled').then(readBoard, () => null)
     if (routed) {
@@ -60,13 +64,14 @@ async function read(projectId: string, result: BuildResult, key: string): Promis
         () => null
       )
       routedBuild = said?.build ?? null
+      routeFindings = said?.findings ?? null
       if (routing.state === 'current') {
         board = routed
         open = new Set((said?.findings ?? []).filter((f) => f.code === 'net_unrouted').flatMap((f) => f.nets ?? []))
       } else ({ board, stale } = withStaleCopper(built, routed))
     }
   }
-  return { key, projectId, result, hash, board, stale, route, open, routedBuild, circuit, placement }
+  return { key, projectId, result: withRouteFindings(result, routeFindings), hash, board, stale, route, open, routedBuild, routeFindings, circuit, placement }
 }
 
 export function loadViewModel(projectId: string, result: BuildResult): Promise<ViewModel> {
@@ -132,6 +137,6 @@ export function useViewModel(): Shown {
   // Of the project on show only: what was read for another is not this one's.
   const mine = state.model?.projectId === projectId ? state.model : null
   // The counts and findings are those of the result as it stands now (a cached build comes back with a new number).
-  const model = mine && target && mine.key === key ? { ...mine, result: target } : mine
+  const model = useMemo(() => (mine && target && mine.key === key ? { ...mine, result: withRouteFindings(target, mine.routeFindings) } : mine), [mine, target, key])
   return { model, problem: state.problem }
 }
