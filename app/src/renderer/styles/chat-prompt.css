@@ -158,3 +158,64 @@
 .chat-gone-body .chat-you .ref-chip {
   box-shadow: none;
 }
+
+/* ---- pino's marks in the chat: those that go with the next prompt, over the box; those a prompt went with, beside it;
+   those Claude has just pointed with, under its tool's card. ---- */
+
+.chat-goes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-goes-one {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.chat-goes-remove {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-inline);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.chat-goes-remove:hover {
+  background: var(--user-wash);
+  color: var(--ink);
+}
+
+.chat-mark {
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-mark:hover {
+  color: var(--user-mark);
+}
+
+.chat-tool-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 3px 0 2px;
+}
+
+.chat-added-line .mark-chip {
+  margin-right: 2px;
+}

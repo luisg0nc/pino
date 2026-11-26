@@ -1,6 +1,10 @@
 import { memo, useMemo, useState } from 'react'
 import { type ChatItem, type ChatWhere, shownPath, toolLabel } from '../../../shared/chat'
+import { toolName } from '../../../shared/app'
+import { useStore } from '../../state/store'
+import { MarkChip } from '../MarkChip'
 import { numbered } from '../numbered'
+import { chipsFor, pointedIds } from './markChips'
 import { Diff } from './Diff'
 import { editHunks, type Hunk, limitHunks } from './lineDiff'
 import { useChatPlace } from './place'
@@ -89,6 +93,8 @@ export function labelParts(name: string, label: string, own: boolean): [string, 
  */
 export const ToolCard = memo(function ToolCard({ item, beat }: { item: Tool; beat: boolean }) {
   const [open, setOpen] = useState(false)
+  const marks = useStore((s) => s.marks)
+  const pointed = item.name === toolName('point') && item.state === 'done' ? chipsFor(pointedIds(item.result), marks, false) : []
   const where = useChatPlace()
   const label = useMemo(() => toolLabel(item.name, item.input, where), [item.name, item.input, where])
   const full = useMemo(() => toolLabel(item.name, item.input), [item.name, item.input])
@@ -111,6 +117,14 @@ export const ToolCard = memo(function ToolCard({ item, beat }: { item: Tool; bea
           {STATE_WORD[item.state]}
         </span>
       </div>
+      {pointed.length > 0 && (
+        // What Claude has just pointed at, in its orange: a chip lights the mark in the view.
+        <div className="chat-tool-marks">
+          {pointed.map((chip) => (
+            <MarkChip key={chip.id} chip={chip} />
+          ))}
+        </div>
+      )}
       {open && (
         <div className="chat-tool-body">
           {hunks ? <Changes hunks={hunks} input={item.input} where={where} /> : <Lines label="Input" text={input} />}

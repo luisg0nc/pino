@@ -954,6 +954,8 @@ git commit -m "Pencil marks: point, arrow, stroke and region on the board, point
 
 ### Task 13: Chips in the composer and the chat
 
+> As built: `chipsFor` is in `ui/chat/markChips.ts` rather than `Items.tsx`, so that the tool card can use it without importing the items; it also reads a point's ids out of its answer. `chat-prompt.css` becomes an adapted copy.
+
 **Files:**
 - Modify: `app/src/renderer/ui/chat/Composer.tsx`, `app/src/renderer/ui/chat/Items.tsx`, `app/src/renderer/ui/chat/ToolCard.tsx`, `app/src/renderer/styles/chat-prompt.css`, `shared-from-torno.json` (their change lines)
 - Test: `app/src/renderer/ui/chat/chips.test.ts`
@@ -965,7 +967,7 @@ git commit -m "Pencil marks: point, arrow, stroke and region on the board, point
   - Composer: above the text, "Goes with your next prompt:" and a chip per draft of the person (mock `a-pencil.png`), each removable with its x; "Mark on board" in the composer's foot switches the view to the Board tab with the Point tool. Nothing about sending changes: the domain sends the drafts (Task 10).
   - Chat: under a prompt, its `context` item's marks as hollow chips beside the message; a `mcp__pino__point` tool card shows Claude's new marks as filled orange chips with their labels; hovering any chip lights its mark on the view (`store.hotMark`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 it('gives hollow chips for a sent prompt, by author colour, and drops ids it does not know', () => {
@@ -976,19 +978,19 @@ it('gives hollow chips for a sent prompt, by author colour, and drops ids it doe
 })
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/chat/chips.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write it**
+- [x] **Step 3: Write it**
 
-- [ ] **Step 4: Run the chat tests**
+- [x] **Step 4: Run the chat tests**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/chat && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json

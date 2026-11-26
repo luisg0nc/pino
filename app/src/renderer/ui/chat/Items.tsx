@@ -1,6 +1,9 @@
 import { memo, useMemo, useState, type ReactNode } from 'react'
 import type { ChatItem } from '../../../shared/chat'
 import { drawn } from '../../state/chat'
+import { useStore } from '../../state/store'
+import { MarkChip } from '../MarkChip'
+import { chipsFor } from './markChips'
 import { numbered } from '../numbered'
 import { AskCard } from './AskCard'
 import { type Entry, foldRuns } from './fold'
@@ -19,10 +22,15 @@ function Dot({ beat }: { beat: boolean }) {
 /** What pino added to a prompt, under it: the exact text the agent was given, to open out. */
 const Added = memo(function Added({ item }: { item: Of<'context'> }) {
   const [open, setOpen] = useState(false)
+  const marks = useStore((s) => s.marks)
+  const chips = chipsFor(item.marks, marks)
   return (
     <div className="chat-item chat-added" data-kind="context">
       <div className="chat-added-line">
         <span className="chat-added-label">with</span>
+        {chips.map((chip) => (
+          <MarkChip key={chip.id} chip={chip} />
+        ))}
         {item.instructions !== undefined && item.instructions > 0 && (
           <span className="chat-added-instructions" title="The instruction files Claude Code reads here, named in the text below">
             <span className="num">{item.instructions}</span> instruction {item.instructions === 1 ? 'file' : 'files'}
