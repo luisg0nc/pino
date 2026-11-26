@@ -160,6 +160,8 @@ git add -A && git commit -m "Scaffold pino: workspace, docs, guard hook, torno m
 
 ### Task 2: App prefix and the local HTTP server
 
+> **Note from the build:** The names test takes out only comments that open their own line (and JSX ones), so a `//` in an address or a `/*` in a glob is never read as a comment and cannot hide code.
+
 **Files:**
 - Create: `app/src/shared/app.ts`, `app/src/shared/app.test.ts`, `app/src/names.test.ts`
 - Copy adapted: `app/src/main/http.ts` (header from `APP.header`; comments say `/mcp/<project id>`), `app/src/main/http.test.ts` (object becomes project in words and fixtures)
@@ -175,7 +177,7 @@ git add -A && git commit -m "Scaffold pino: workspace, docs, guard hook, torno m
 
 `names.test.ts` reads `git ls-files --cached --others --exclude-standard` under `app/src`, `app/e2e`, `app/test` (not `app/test/fixtures/`), `scripts`, `.github`, `.claude/hooks`. It strips comments (`//` lines and `/* */` in ts/tsx/mjs/js/css, `#` lines in sh and yml) and checks the code that is left. Allowed to name torno: `scripts/torno-sync`, `app/src/tornoSync.test.ts`, `app/src/manifest.test.ts`, `app/src/names.test.ts`, `app/src/shared/app.ts`, `.claude/hooks/guard-bash.sh`, `.claude/hooks/guard-bash.test.sh`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // shared/app.test.ts
@@ -190,19 +192,19 @@ it('says project, never object, in identifiers', () => { expect(offenders(/\b(ob
 it('reads the token from X-Pino-Session', () => { expect(SESSION_HEADER).toBe('X-Pino-Session') })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/app.test.ts src/names.test.ts src/main/http.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Write `shared/app.ts` and `names.test.ts`; copy `http.ts` and `http.test.ts` and make the named adaptation; add both to the manifest as adapted**
+- [x] **Step 3: Write `shared/app.ts` and `names.test.ts`; copy `http.ts` and `http.test.ts` and make the named adaptation; add both to the manifest as adapted**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the app prefix and torno's local HTTP server with per-session tokens"
