@@ -270,6 +270,8 @@ git add -A && git commit -m "Mount pino's MCP server per project with one tool, 
 
 ### Task 4: The `.pino/` write guard
 
+> **Note from the build:** `atomic.test.ts`, `own.order.test.ts` and `rules.test.ts` are adapted, not as-is: the first two name torno's folder (the second cannot pass against `.pino`), and the third wants more than 40 rules.
+
 **Files:**
 - Copy adapted: `app/src/main/own.ts` (`FOLDER = APP.folder`; `ownTorno` renamed `ownFolder`; messages name `APP.name`), `app/src/main/ignored.ts` (names), `app/src/main/own.test.ts` (keep the generic cases; drop views, exports and scans), `app/src/main/ignored.test.ts` (names)
 - Copy as-is: `app/src/main/atomic.ts`, `app/src/main/atomic.test.ts`, `app/src/main/own.order.test.ts`, `app/src/rules.test.ts`
@@ -280,7 +282,7 @@ git add -A && git commit -m "Mount pino's MCP server per project with one tool, 
 - Consumes: `APP` (Task 2).
 - Produces: `FOLDER`, `ownFolder(dir: string, ...inside: string[]): Promise<string>`, `writeOwn(dir: string, name: string, data: string | Uint8Array): Promise<void>`, `onNotOwn(cb: NotOwnListener | null): void`, `writeFileAtomic(path, data): Promise<void>`, `ensureIgnored(dir: string, lines: readonly string[]): Promise<void>`.
 
-- [ ] **Step 1: Copy the tests and adapt them as named**
+- [x] **Step 1: Copy the tests and adapt them as named**
 
 Kept from torno's `own.test.ts`, in pino's words: "answers with the folder when there is none yet, and when it is a real folder", "refuses a link in its place, and a file, with a plain reason", "tells of a folder once, whoever was refused there and however often", "is the one rule: a linked .pino is refused in the same words, and the window is told". Add:
 
@@ -292,19 +294,19 @@ it('writes nothing where a linked .pino leads, and the project keeps no new file
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/own.test.ts src/main/own.order.test.ts src/main/atomic.test.ts src/main/ignored.test.ts src/rules.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy the modules and the rule, make the named adaptations, list them in the manifest**
+- [x] **Step 3: Copy the modules and the rule, make the named adaptations, list them in the manifest**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test`
 Expected: PASS (rules.test finds `workspace-writes.md` and every glob in it matches a tracked file).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's write guard as the .pino folder guard"

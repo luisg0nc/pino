@@ -9,6 +9,15 @@
     { "pino": "app/src/main/http.ts", "torno": "app/src/main/http.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the header from APP.header; comments say project" },
     { "pino": "app/src/main/http.test.ts", "torno": "app/src/main/http.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's header and variable names; project in words; a case for the header name" },
     { "pino": "app/src/main/mcp/server.ts", "torno": "app/src/main/mcp/server.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "server name from APP, version from package.json, pino's tools and instructions, no prompts" },
-    { "pino": "app/src/main/turncost.test.ts", "torno": "app/src/main/turncost.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the tool list and the prompt ceiling only, for pino's one tool" }
+    { "pino": "app/src/main/turncost.test.ts", "torno": "app/src/main/turncost.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the tool list and the prompt ceiling only, for pino's one tool" },
+    { "pino": "app/src/main/atomic.ts", "torno": "app/src/main/atomic.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/main/atomic.test.ts", "torno": "app/src/main/atomic.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the temp folder's name" },
+    { "pino": "app/src/main/own.order.test.ts", "torno": "app/src/main/own.order.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's folder name" },
+    { "pino": "app/src/rules.test.ts", "torno": "app/src/rules.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "any number of rules, not more than 40" },
+    { "pino": "app/src/main/own.ts", "torno": "app/src/main/own.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "FOLDER from APP, ownTorno renamed ownFolder, messages and comments say pino" },
+    { "pino": "app/src/main/own.test.ts", "torno": "app/src/main/own.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the generic cases only, in pino's words, and two for writes through a link" },
+    { "pino": "app/src/main/ignored.ts", "torno": "app/src/main/ignored.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "names" },
+    { "pino": "app/src/main/ignored.test.ts", "torno": "app/src/main/ignored.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "names" },
+    { "pino": ".claude/rules/workspace-writes.md", "torno": ".claude/rules/workspace-writes.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino writes only under .pino, with no exception yet" }
   ]
 }

@@ -82,3 +82,5 @@ Plain messages that describe the change. No Co-Authored-By trailer and no "Gener
 The detail is in `.claude/rules/*.md`. Claude Code loads a rule when a file its `paths:` names is read or edited;
 read one by hand before work its globs miss. Paths in a rule are written from `app/` (`src/main/...`), or short under
 `app/src/` (`main/`, `shared/`) and under `app/src/renderer/` (`ui/`, `state/`, `styles/`).
+
+- Files: `workspace-writes` (what pino writes in a project).
