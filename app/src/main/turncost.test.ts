@@ -54,6 +54,10 @@ describe('what a turn costs', () => {
     expect(prompt).toContain(`Use JLC parts by LCSC number: basic first; an extended part needs why= in board.py. Check stock with ${toolName('parts')}.`)
   })
 
+  it('the prompt says labels are placed by pino and how board.py sets one', () => {
+    expect(systemPrompt(toolName)).toContain('b.label(part, side="left")')
+  })
+
   it("a prompt's context, a verdict and a tool's text are capped", () => {
     expect([CONTEXT_LIMIT, VERDICT_LIMIT, TOOL_TEXT_LIMIT, MOST_LINES]).toEqual([6000, 1200, 8000, 40])
   })

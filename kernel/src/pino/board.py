@@ -21,7 +21,7 @@ from pathlib import Path
 from pino_kernel import fab as fab_profiles
 from pino_kernel import outline as outlines
 from pino_kernel.circuit import (
-    SCHEMA, BlockSpec, Circuit, Expect, FixedVia, GroupSpec, Intent, Keepout, KeptRoute, NetClassSpec,
+    SCHEMA, BlockSpec, Circuit, Expect, FixedVia, GroupSpec, Intent, Keepout, KeptRoute, LabelSpec, NetClassSpec,
     NetSpec, OutlineSpec, PairSpec, PartSpec, PinInfo, PinRef, RouteHint, RouteStep, ZoneSpec, pair_base,
 )
 from pino_kernel.parts.model import normalize_lcsc
@@ -293,6 +293,7 @@ class Board:
         self._kept: list[KeptRoute] = []
         self._fixed_vias: list[FixedVia] = []
         self._hints: list[RouteHint] = []
+        self._labels: dict[str, LabelSpec] = {}
         _BOARDS.append(self)
 
     @property
@@ -455,6 +456,52 @@ class Board:
             name, edge, 0.0 if center else (None if along is None else float(along)),
             None if near is None else self._anchor(near, where), side, at,
             None if rot is None else float(rot), bool(back), where[1])
+
+    def label(self, part, *, side=None, at=None, rot=None, hide=False) -> None:
+        """Where one part's reference label goes, by hand.
+
+        pino places every label itself after placement: beside the part (top, bottom, left, right, then turned 90
+        degrees), clear of pads, courtyards, other labels and the board edge; smaller when nothing fits, never below
+        the fab's minimum text; hidden, with an info finding, when still nothing fits. This call wins over that:
+
+            b.label(r1, side="left")           # centred on that side of the part
+            b.label(u1, at=(0, -4.5), rot=90)  # its centre 4.5 mm below the part's origin, reading upward
+            b.label(c3, rot=90)                # the automatic search, turned 90 degrees only
+            b.label(r9, hide=True)             # left off the silkscreen
+
+        side= is top, bottom, left or right as seen from above; at=(dx, dy) is mm from the part's origin in the
+        board frame (y up); rot= is degrees counter-clockwise (0 reads left to right). A hand label is not checked:
+        DRC reports one that lands on a pad or another label."""
+        where = _caller()
+        if not isinstance(part, Part):
+            raise _fail(f"label() takes a part, not {part!r}", where)
+        name = part.ref
+        if name in self._labels:
+            raise _fail(f"{name}: its label is set twice (lines {self._labels[name].line} and {where[1]})", where)
+        if side is not None and side not in SIDES:
+            raise _fail(f"{name}: side={side!r}: use one of {', '.join(SIDES)}", where)
+        if side is not None and at is not None:
+            raise _fail(f"{name}: side= and at= cannot go together; pick one", where)
+        if hide and (side is not None or at is not None or rot is not None):
+            raise _fail(f"{name}: hide=True leaves the label off; it takes no side=, at= or rot=", where)
+        if at is not None:
+            try:
+                at = (float(at[0]), float(at[1]))
+                if not all(math.isfinite(v) for v in at):
+                    raise ValueError
+            except (TypeError, ValueError, IndexError):
+                raise _fail(f"{name}: at= takes (dx, dy) in mm from the part's origin", where) from None
+        if rot is not None:
+            try:
+                rot = float(rot)
+            except (TypeError, ValueError):
+                rot = math.nan
+            if not math.isfinite(rot):
+                raise _fail(f"{name}: rot= takes degrees, counter-clockwise", where)
+            rot %= 360
+        if side is None and at is None and rot is None and not hide:
+            raise _fail(f"{name}: label() needs side=, at=, rot= or hide=True", where)
+        self._labels[name] = LabelSpec(name, side, at, rot, bool(hide), where[1])
 
     # -- rules ----------------------------------------------------------------
 
@@ -796,7 +843,8 @@ class Board:
         return {"intents": list(self._intents.values()), "groups": list(self._groups.values()),
                 "keepouts": keepouts, "zones": list(self._zones), "net_classes": list(self._net_classes),
                 "expects": list(self._expects), "pairs": list(self._pairs), "kept_routes": list(self._kept),
-                "fixed_vias": list(self._fixed_vias), "route_hints": list(self._hints)}
+                "fixed_vias": list(self._fixed_vias), "route_hints": list(self._hints),
+                "labels": list(self._labels.values())}
 
     def to_circuit(self) -> Circuit:
         self.validate()

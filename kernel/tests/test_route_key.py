@@ -34,6 +34,20 @@ def test_key_ignores_uuids_silk_and_formatting():
     assert route_key(flat, PRO_2L, DRU_2L, PLAN).key == a
 
 
+def test_a_moved_or_hidden_label_changes_the_key():
+    # the routed board is the build's board with the copper on it, so a label moved by board.py needs a new one
+    a = route_key(board_text(), PRO_2L, DRU_2L, PLAN)
+    text = board_text()
+    assert text.count("(at 0 -1.5 0)") == 2
+    moved = text.replace("(at 0 -1.5 0)", "(at 0 1.6 90)", 1)
+    assert stale_reasons(a, route_key(moved, PRO_2L, DRU_2L, PLAN)) == ["labels moved"]
+    hidden = text.replace('(layer "F.SilkS")', '(layer "F.SilkS") (hide yes)', 1)
+    assert stale_reasons(a, route_key(hidden, PRO_2L, DRU_2L, PLAN)) == ["labels moved"]
+    # with a part moved too, the move is the reason
+    both = board_text(r1_at=(3, 0)).replace("(at 0 -1.5 0)", "(at 0 1.6 90)", 1)
+    assert stale_reasons(a, route_key(both, PRO_2L, DRU_2L, PLAN)) == ["parts moved"]
+
+
 def test_kept_copper_changes_the_key():
     a = route_key(board_text(), PRO_2L, DRU_2L, PLAN)
     b = route_key(board_text(tracks=[track("A", (-4.2, 0), (4.2, 0), locked=True)]), PRO_2L, DRU_2L, PLAN)

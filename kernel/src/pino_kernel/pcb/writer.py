@@ -6,15 +6,17 @@ board drawings by layer, start, end, UUID), so a KiCad refill-and-save only adds
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .. import ids
 from ..circuit import Circuit, Keepout, PinRef, Placement
 from ..coords import ORIGIN, to_kicad
 from ..fab import PROFILES, FabProfile, for_layers
+from ..findings import Finding
 from ..outline import polygon as outline_polygon
 from ..sexpr import Sym, dump, find, num, parse
 from .footprint import FootprintLibrary, Placed, pad_world, place
+from .labels import place_labels
 from .rules import kicad_dru, kicad_pro, net_rules
 from .stackup import stackup
 
@@ -54,6 +56,7 @@ class BoardFiles:
     kicad_pro: str
     kicad_dru: str
     placed: list[Placed]
+    findings: list[Finding] = field(default_factory=list)  # the label step's
 
 
 def copper_layers(n: int) -> list[tuple[int, str]]:
@@ -320,6 +323,9 @@ def write_board(circuit: Circuit, placement: Placement, footprints: FootprintLib
     cu = copper_layers(circuit.layers)
     cu_names = [name for _, name in cu]
     placed = placed_parts(circuit, placement, footprints)
+    labels, label_findings = place_labels(circuit, placed, fab)
+    for p in placed:
+        p.label = labels.get(p.ref)
 
     fps = [(p.back, ids.footprint_uuid(p.key), place(p, copper_layers=cu_names)) for p in placed]
     fps += [(False, ids.uid(f"hole:{h.name}"), _hole(h)) for h in circuit.outline.holes]
@@ -344,4 +350,4 @@ def write_board(circuit: Circuit, placement: Placement, footprints: FootprintLib
     for k, ko in enumerate(circuit.keepouts):
         root.append(_keepout_zone(k, ko, cu_names))
     root.append([S("embedded_fonts"), S("no")])
-    return BoardFiles(dump(root) + "\n", kicad_pro(circuit, fab), kicad_dru(fab), placed)
+    return BoardFiles(dump(root) + "\n", kicad_pro(circuit, fab), kicad_dru(fab), placed, label_findings)

@@ -20,6 +20,7 @@ from pino_kernel.routing import job
 from pino_kernel.routing.history import RouteHistory
 from pino_kernel.routing.job import RouteOptions, latest_build, route_project
 from pino_kernel.routing.result import RouteResult, route_headline
+from pino_kernel.sexpr import dump, find_all, parse
 
 KERNEL = Path(__file__).resolve().parents[1]
 ROUTE_SCHEMA = json.loads((KERNEL / "schema" / "route-result-1.schema.json").read_text())
@@ -278,3 +279,21 @@ def test_an_engine_fault_is_a_failed_route(routed_project, monkeypatch):
     assert r.state == "failed" and r.findings[0].code == "internal_error" and "kaboom" in r.findings[0].message
     assert all(e["state"] != "running" for e in RouteHistory(routed_project).entries())
     assert not list((routed_project / ".pino/routes").glob("*.tmp-*"))
+
+
+def test_the_routed_board_keeps_the_labels(built_project):
+    project = built_project(SMALL_BOARD_PY.replace("b.nc_rest(u2)\n", 'b.nc_rest(u2)\nb.label(r1, side="left")\n'))
+    r = route_project(project)
+    assert r.state == "done"
+
+    def references(path):
+        out = {}
+        for fp in find_all(parse(path.read_text()), "footprint"):
+            for p in find_all(fp, "property"):
+                if p[1] == "Reference":
+                    out[str(p[2])] = dump(p)
+        return out
+
+    built = references(project / ".pino/build" / latest_build(project) / "board.kicad_pcb")
+    routed = references(project / ".pino/routes" / r.key / "board.kicad_pcb")
+    assert routed == built and "R1" in routed
