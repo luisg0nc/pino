@@ -316,6 +316,12 @@ git add -A && git commit -m "Copy torno's write guard as the .pino folder guard"
 
 ### Task 5: Claude Code launch, stream and the stand-in agent
 
+> **Note from the build:** `stream.test.ts`, `inside.test.ts` and `trust.test.ts` are adapted, not as-is: their temp folder names torno, which the names test refuses.
+>
+> **Note from the build:** `agentEnv.test.ts` builds the sibling variable name from `SIBLING_PREFIXES`, so the names allowlist stays as Task 2 lists it.
+>
+> **Note from the build:** `reach.ts` also resolves a relative path against the project folder: as copied, a relative write was read as one under `.pino/` and refused.
+
 **Files:**
 - Copy as-is: `app/src/main/sessions/transport.ts`, `stream.ts`, `stream.test.ts`, `signals.ts`, `permissions.ts`, `permissions.test.ts`, `inside.ts`, `inside.test.ts`, `app/src/main/trust.ts`, `app/src/main/trust.test.ts`, `app/test/fixtures/claude-stream.jsonl`, `claude-stream-asks.jsonl`, `RECORDING.md`
 - Copy adapted:
@@ -351,7 +357,7 @@ git add -A && git commit -m "Copy torno's write guard as the .pino folder guard"
 
 `adapter.ts` imports `Effort` from `shared/chat.ts`, so this task copies `shared/chat.ts` with the adaptation Task 6 describes (it is types and pure rules, with no dependency on the transport). Task 6 owns its tests.
 
-- [ ] **Step 1: Copy the tests (as-is and adapted), and add**
+- [x] **Step 1: Copy the tests (as-is and adapted), and add**
 
 ```ts
 // agentEnv.test.ts
@@ -371,19 +377,19 @@ it('names pino\'s server and tools, and keeps the token out of every argument an
 it('the stand-in agent names the app as shared/app.ts does', () => { expect(readFileSync(fake, 'utf8')).toMatch(/^const APP = 'pino'$/m) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/sessions src/main/trust.test.ts src/shared/app.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy the files and make the named adaptations, list them in the manifest**
+- [x] **Step 3: Copy the files and make the named adaptations, list them in the manifest**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS. The as-is tests pass unchanged. If one fails only for a missing pino module, that test file becomes adapted, with the reason in `change`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's Claude Code launch, stream, trust and the stand-in agent"
