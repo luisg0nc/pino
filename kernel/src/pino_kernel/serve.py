@@ -1,15 +1,16 @@
 """pino-kernel serve: JSON-line requests on stdin, one JSON object per line on stdout.
 
 Ordered ops are answered in request order by one worker: ping, build, route_status, keep, nudge without
-routing, unknown ops and bad lines, shutdown. Job ops (route, route_net, nudge with route) start a child
+routing, unknown ops and bad lines, shutdown. Job ops (route, route_net, nudge with route, parts, release) start a child
 `pino-kernel <op> ... --events` from that worker and stream: each progress event comes back as
-{"id", "event": {...}}, and the end as {"id", "ok": true, "result": {...}}. route_cancel is answered at once, out
-of order. shutdown and the end of input cancel running jobs, wait up to 10 s for them, and stop.
+{"id", "event": {...}}, and the end as {"id", "ok": true, "result": {...}}. cancel (or its older name route_cancel)
+is answered at once, out of order. fab_profiles lists the fab's limits. shutdown and the end of input cancel running jobs, wait up to 10 s for them, and stop.
 Every line is written whole, under one lock, and flushed.
 """
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import queue
@@ -23,10 +24,15 @@ from typing import Callable
 
 from . import __version__
 from .build import BuildOptions, build
+from .fab import PROFILES
+from .ops import extra_op
 from .result import SCHEMA
 
-SERVE_VERSION = 2
+SERVE_VERSION = 3
 ROUTE_SCHEMA = "pino.route/1"
+PARTS_SCHEMA = "pino.parts/1"
+RELEASE_SCHEMA = "pino.release/1"
+CANCEL_OPS = ("route_cancel", "cancel")
 STOP_WAIT = 10.0
 KILL_AFTER = 5.0
 MAX_ERROR = 300
@@ -36,12 +42,13 @@ def _options(raw) -> BuildOptions:
     raw = raw or {}
     if not isinstance(raw, dict):
         raise ValueError("options must be an object")
-    known = {"timeout", "render", "kicad", "cache"}
+    known = {"timeout", "render", "kicad", "cache", "parts_network"}
     extra = sorted(set(raw) - known)
     if extra:
         raise ValueError(f"unknown option {extra[0]!r}")
     return BuildOptions(timeout=float(raw.get("timeout", 30.0)), render=bool(raw.get("render", False)),
-                        kicad=bool(raw.get("kicad", True)), cache=bool(raw.get("cache", True)))
+                        kicad=bool(raw.get("kicad", True)), cache=bool(raw.get("cache", True)),
+                        parts_network=bool(raw.get("parts_network", True)))
 
 
 class Output:
@@ -97,7 +104,8 @@ class JobRunner:
         proc.wait()
         if not done:
             last = err[-1] if err else f"exit code {proc.returncode}"
-            self.out.write({"id": id, "ok": False, "error": f"route job stopped: {last}"[:MAX_ERROR]})
+            op = proc.args[3] if len(proc.args) > 3 else "pino"
+            self.out.write({"id": id, "ok": False, "error": f"{op} job stopped: {last}"[:MAX_ERROR]})
         with self.lock:
             self.jobs.pop(id, None)
 
@@ -191,20 +199,26 @@ class Server:
         self.jobs = JobRunner(out)
         # op -> handler(req) returning a reply dict, or None when a job was started
         self.ordered: dict[str, Callable[[dict], dict | None]] = {
-            "ping": self.ping, "build": self.build, "route_status": self.route_status, "route": self.route}
+            "ping": self.ping, "build": self.build, "route_status": self.route_status, "route": self.route,
+            "fab_profiles": self.fab_profiles, "diff": extra_op}
         self.extend()
 
     def extend(self) -> None:
-        """Hook for more ops (the finishing tools)."""
-        try:
-            from .routing.trials import serve_ops
-        except ImportError:
-            return
-        self.ordered.update(serve_ops(self))
+        """Hook for more ops: the finishing tools, parts and release."""
+        for module in ("routing.trials", "parts.ops", "release.ops"):
+            try:
+                serve_ops = importlib.import_module(f"{__package__}.{module}").serve_ops
+            except ImportError:
+                continue
+            self.ordered.update(serve_ops(self))
+
+    def fab_profiles(self, req: dict) -> dict:
+        return {"id": req.get("id"), "ok": True, "profiles": [p.to_json() for p in PROFILES.values()]}
 
     def ping(self, req: dict) -> dict:
         return {"id": req.get("id"), "ok": True,
-                "pong": {"kernel": __version__, "schema": SCHEMA, "serve": SERVE_VERSION, "route_schema": ROUTE_SCHEMA}}
+                "pong": {"kernel": __version__, "schema": SCHEMA, "serve": SERVE_VERSION, "route_schema": ROUTE_SCHEMA,
+                         "parts_schema": PARTS_SCHEMA, "release_schema": RELEASE_SCHEMA}}
 
     def build(self, req: dict) -> dict:
         rid = req.get("id")
@@ -280,7 +294,7 @@ def main(stdin=None, stdout=None) -> int:
                 req = json.loads(line)
             except json.JSONDecodeError:
                 req = None
-            if isinstance(req, dict) and req.get("op") == "route_cancel":
+            if isinstance(req, dict) and req.get("op") in CANCEL_OPS:
                 out.write({"id": req.get("id"), "ok": True, "cancelled": server.jobs.cancel(req.get("job"))})
                 continue
             work.put(line)

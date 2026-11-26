@@ -1,0 +1,9 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=IC&limit=8",
+ "status": 400,
+ "body": {
+  "error": "Invalid search",
+  "error_code": "invalid_search",
+  "message": "Add another search term, such as \"dc connector\", \"IC amplifier\", or \"8MHz crystal\", or use an exact LCSC part number."
+ }
+}

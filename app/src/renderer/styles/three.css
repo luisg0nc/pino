@@ -1,0 +1,60 @@
+/* The 3D tab (`three/ThreeView.tsx`): the board on the plate, its switches at the top left under the tabs, the compass
+   at the top right (compass.css). */
+
+.three-view {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.three-view canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.three-view canvas:active {
+  cursor: grabbing;
+}
+
+.three-options {
+  position: absolute;
+  z-index: 5;
+  top: 56px;
+  left: 14px;
+  display: flex;
+  gap: 4px;
+}
+
+.three-option {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.three-option:hover {
+  color: var(--ink);
+}
+
+.three-option[aria-pressed='true'] {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.three-note {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  max-width: 60ch;
+  color: var(--muted);
+  transform: translateX(-50%);
+}

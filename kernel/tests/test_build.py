@@ -52,8 +52,8 @@ def test_build_folder_and_artifacts(make_project, fixture_libs):
             "sym-lib-table", "fp-lib-table", "result.json"} <= {f.name for f in d.iterdir()}
     assert all((p / a).is_file() for a in r.artifacts.values() if isinstance(a, str))
     assert r.artifacts["board"] == f".pino/build/{r.hash}/board.kicad_pcb"
-    assert [t.step for t in r.timings] == ["libraries", "run board.py", "hash", "place", "write schematic", "write board",
-                                           "checks", "diff", "routing"]
+    assert [t.step for t in r.timings] == ["libraries", "fetch parts", "run board.py", "hash", "place", "write schematic",
+                                           "write board", "checks", "parts", "diff", "routing"]
     assert r.waiting == ["routing: not started"] and r.counts["parts"] == 8 and r.placement["length_mm"] > 0
 
 
@@ -88,7 +88,8 @@ def test_changes_versus_previous_build(make_project, fixture_libs):
 
 def test_findings_are_capped_and_sorted(make_project, fixture_libs):
     r = build(make_project(board_with_missing_models(250)), NO_KICAD)
-    assert len(r.findings) == 200 and r.truncated == 50 and len(r.to_json()) < 100_000
+    found = r.counts["errors"] + r.counts["warnings"] + r.counts["infos"]
+    assert len(r.findings) == 200 and r.truncated == found - 200 >= 50 and len(r.to_json()) < 100_000
     assert [f.severity for f in r.findings] == sorted((f.severity for f in r.findings), key=SEVERITIES.index)
 
 
@@ -149,7 +150,7 @@ def test_kicad_build_of_the_small_board(make_project, fixture_libs):
     r = build(make_project(SMALL_BOARD_PY + 'b.zone("GND", layer="B.Cu")\n'))
     errors = [f.to_json() for f in r.findings if f.severity == "error"]
     assert r.verdict == "ok", errors
-    assert [t.step for t in r.timings][6:12] == ["erc", "netlist", "schematic svg", "drc", "svg", "glb"]
+    assert [t.step for t in r.timings][7:13] == ["erc", "netlist", "schematic svg", "drc", "svg", "glb"]
     assert r.counts["unrouted"] > 0 and set(r.artifacts["svg"]) >= {"F.Cu", "B.Cu", "Edge.Cuts", "F.SilkS"}
 
 

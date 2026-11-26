@@ -1,0 +1,2034 @@
+{
+ "blocks": [
+  {
+   "key": "usb",
+   "parts": [
+    "J1",
+    "F1",
+    "R9",
+    "C1",
+    "R1",
+    "R2",
+    "R3",
+    "C2"
+   ],
+   "title": "USB power in"
+  },
+  {
+   "key": "reg",
+   "parts": [
+    "C3",
+    "U2",
+    "C4"
+   ],
+   "title": "3V3 regulator"
+  },
+  {
+   "key": "mcu",
+   "parts": [
+    "U1",
+    "C5",
+    "C6",
+    "R4",
+    "C7",
+    "R5",
+    "SW1",
+    "R6",
+    "D1",
+    "R7",
+    "D2"
+   ],
+   "title": "MCU"
+  }
+ ],
+ "expects": [
+  {
+   "a": [
+    [
+     "J1",
+     "A4"
+    ],
+    [
+     "J1",
+     "A9"
+    ],
+    [
+     "J1",
+     "B4"
+    ],
+    [
+     "J1",
+     "B9"
+    ]
+   ],
+   "b": [
+    [
+     "U2",
+     "1"
+    ]
+   ],
+   "kind": "path",
+   "line": 81,
+   "through": [
+    "F1"
+   ]
+  },
+  {
+   "a": [
+    [
+     "J1",
+     "A6"
+    ],
+    [
+     "J1",
+     "B6"
+    ]
+   ],
+   "b": [
+    [
+     "U1",
+     "18"
+    ]
+   ],
+   "kind": "path",
+   "line": 82,
+   "through": []
+  },
+  {
+   "a": [
+    [
+     "J1",
+     "A7"
+    ],
+    [
+     "J1",
+     "B7"
+    ]
+   ],
+   "b": [
+    [
+     "U1",
+     "17"
+    ]
+   ],
+   "kind": "path",
+   "line": 83,
+   "through": []
+  },
+  {
+   "a": [
+    [
+     "U2",
+     "5"
+    ]
+   ],
+   "b": [
+    [
+     "U1",
+     "3"
+    ]
+   ],
+   "kind": "path",
+   "line": 84,
+   "through": []
+  },
+  {
+   "a": [
+    [
+     "J1",
+     "A6"
+    ],
+    [
+     "J1",
+     "B6"
+    ]
+   ],
+   "b": [
+    [
+     "J1",
+     "A7"
+    ],
+    [
+     "J1",
+     "B7"
+    ]
+   ],
+   "kind": "apart",
+   "line": 85,
+   "through": []
+  }
+ ],
+ "fab": "jlc-standard-2layer",
+ "fixed_vias": [],
+ "groups": [
+  {
+   "line": 76,
+   "name": "leds",
+   "refs": [
+    "D1",
+    "R6",
+    "D2",
+    "R7"
+   ]
+  }
+ ],
+ "intents": [
+  {
+   "along": 0.0,
+   "at": null,
+   "back": false,
+   "edge": "top",
+   "line": 72,
+   "near": null,
+   "rot": null,
+   "side": null,
+   "target": "U1"
+  },
+  {
+   "along": 0.0,
+   "at": null,
+   "back": false,
+   "edge": "bottom",
+   "line": 73,
+   "near": null,
+   "rot": null,
+   "side": null,
+   "target": "J1"
+  },
+  {
+   "along": null,
+   "at": null,
+   "back": false,
+   "edge": null,
+   "line": 74,
+   "near": "J1",
+   "rot": null,
+   "side": "top",
+   "target": "U2"
+  },
+  {
+   "along": null,
+   "at": null,
+   "back": false,
+   "edge": "left",
+   "line": 75,
+   "near": null,
+   "rot": null,
+   "side": null,
+   "target": "SW1"
+  },
+  {
+   "along": null,
+   "at": null,
+   "back": false,
+   "edge": null,
+   "line": 77,
+   "near": "U1",
+   "rot": null,
+   "side": "right",
+   "target": "group:leds"
+  }
+ ],
+ "keepouts": [],
+ "kept_routes": [],
+ "layers": 2,
+ "name": "pino-reference",
+ "nc_rest": {
+  "U1": [
+   "4",
+   "5",
+   "6",
+   "7",
+   "9",
+   "10",
+   "12",
+   "13",
+   "15",
+   "16",
+   "19",
+   "20",
+   "21",
+   "24",
+   "25",
+   "26",
+   "27",
+   "28",
+   "29",
+   "30",
+   "31",
+   "32",
+   "33",
+   "34",
+   "35"
+  ],
+  "U2": [
+   "4"
+  ]
+ },
+ "net_classes": [
+  {
+   "clearance": 0.15,
+   "line": 80,
+   "name": "power",
+   "nets": [
+    "VBUS",
+    "+3V3"
+   ],
+   "via_diameter": 0.6,
+   "via_drill": 0.3,
+   "width": 0.5
+  }
+ ],
+ "nets": [
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 52,
+   "name": "VBUS_IN",
+   "pins": [
+    [
+     "J1",
+     "A4"
+    ],
+    [
+     "J1",
+     "A9"
+    ],
+    [
+     "J1",
+     "B4"
+    ],
+    [
+     "J1",
+     "B9"
+    ],
+    [
+     "F1",
+     "1"
+    ],
+    [
+     "R9",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": true,
+   "kind": "supply",
+   "line": 53,
+   "name": "VBUS",
+   "pins": [
+    [
+     "F1",
+     "2"
+    ],
+    [
+     "R9",
+     "2"
+    ],
+    [
+     "C1",
+     "1"
+    ],
+    [
+     "C3",
+     "1"
+    ],
+    [
+     "U2",
+     "1"
+    ],
+    [
+     "U2",
+     "3"
+    ]
+   ],
+   "symbol": "power:VBUS"
+  },
+  {
+   "external": false,
+   "kind": "supply",
+   "line": 54,
+   "name": "+3V3",
+   "pins": [
+    [
+     "U2",
+     "5"
+    ],
+    [
+     "C4",
+     "1"
+    ],
+    [
+     "U1",
+     "3"
+    ],
+    [
+     "C5",
+     "1"
+    ],
+    [
+     "C6",
+     "1"
+    ],
+    [
+     "R4",
+     "1"
+    ],
+    [
+     "R5",
+     "1"
+    ],
+    [
+     "R7",
+     "1"
+    ]
+   ],
+   "symbol": "power:+3V3"
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 55,
+   "name": "CC1",
+   "pins": [
+    [
+     "J1",
+     "A5"
+    ],
+    [
+     "R1",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 56,
+   "name": "CC2",
+   "pins": [
+    [
+     "J1",
+     "B5"
+    ],
+    [
+     "R2",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 57,
+   "name": "SHIELD",
+   "pins": [
+    [
+     "J1",
+     "SH"
+    ],
+    [
+     "R3",
+     "1"
+    ],
+    [
+     "C2",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 58,
+   "name": "USB_D-",
+   "pins": [
+    [
+     "J1",
+     "A7"
+    ],
+    [
+     "J1",
+     "B7"
+    ],
+    [
+     "U1",
+     "17"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 59,
+   "name": "USB_D+",
+   "pins": [
+    [
+     "J1",
+     "A6"
+    ],
+    [
+     "J1",
+     "B6"
+    ],
+    [
+     "U1",
+     "18"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 61,
+   "name": "EN",
+   "pins": [
+    [
+     "U1",
+     "8"
+    ],
+    [
+     "R4",
+     "2"
+    ],
+    [
+     "C7",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 62,
+   "name": "BOOT",
+   "pins": [
+    [
+     "U1",
+     "23"
+    ],
+    [
+     "R5",
+     "2"
+    ],
+    [
+     "SW1",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 63,
+   "name": "LED",
+   "pins": [
+    [
+     "U1",
+     "22"
+    ],
+    [
+     "R6",
+     "1"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 64,
+   "name": "LED_A",
+   "pins": [
+    [
+     "R6",
+     "2"
+    ],
+    [
+     "D1",
+     "2"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": false,
+   "kind": "signal",
+   "line": 65,
+   "name": "PWR_LED",
+   "pins": [
+    [
+     "R7",
+     "2"
+    ],
+    [
+     "D2",
+     "2"
+    ]
+   ],
+   "symbol": ""
+  },
+  {
+   "external": true,
+   "kind": "gnd",
+   "line": 66,
+   "name": "GND",
+   "pins": [
+    [
+     "J1",
+     "A1"
+    ],
+    [
+     "J1",
+     "A12"
+    ],
+    [
+     "J1",
+     "B1"
+    ],
+    [
+     "J1",
+     "B12"
+    ],
+    [
+     "C1",
+     "2"
+    ],
+    [
+     "R1",
+     "2"
+    ],
+    [
+     "R2",
+     "2"
+    ],
+    [
+     "R3",
+     "2"
+    ],
+    [
+     "C2",
+     "2"
+    ],
+    [
+     "C3",
+     "2"
+    ],
+    [
+     "U2",
+     "2"
+    ],
+    [
+     "C4",
+     "2"
+    ],
+    [
+     "U1",
+     "1"
+    ],
+    [
+     "U1",
+     "2"
+    ],
+    [
+     "U1",
+     "11"
+    ],
+    [
+     "U1",
+     "14"
+    ],
+    [
+     "U1",
+     "36"
+    ],
+    [
+     "U1",
+     "37"
+    ],
+    [
+     "U1",
+     "38"
+    ],
+    [
+     "U1",
+     "39"
+    ],
+    [
+     "U1",
+     "40"
+    ],
+    [
+     "U1",
+     "41"
+    ],
+    [
+     "U1",
+     "42"
+    ],
+    [
+     "U1",
+     "43"
+    ],
+    [
+     "U1",
+     "44"
+    ],
+    [
+     "U1",
+     "45"
+    ],
+    [
+     "U1",
+     "46"
+    ],
+    [
+     "U1",
+     "47"
+    ],
+    [
+     "U1",
+     "48"
+    ],
+    [
+     "U1",
+     "49"
+    ],
+    [
+     "U1",
+     "50"
+    ],
+    [
+     "U1",
+     "51"
+    ],
+    [
+     "U1",
+     "52"
+    ],
+    [
+     "U1",
+     "53"
+    ],
+    [
+     "C5",
+     "2"
+    ],
+    [
+     "C6",
+     "2"
+    ],
+    [
+     "C7",
+     "2"
+    ],
+    [
+     "SW1",
+     "2"
+    ],
+    [
+     "D1",
+     "1"
+    ],
+    [
+     "D2",
+     "1"
+    ]
+   ],
+   "symbol": "power:GND"
+  }
+ ],
+ "no_connects": [
+  [
+   "J1",
+   "A8"
+  ],
+  [
+   "J1",
+   "B8"
+  ],
+  [
+   "U2",
+   "4"
+  ],
+  [
+   "U1",
+   "4"
+  ],
+  [
+   "U1",
+   "5"
+  ],
+  [
+   "U1",
+   "6"
+  ],
+  [
+   "U1",
+   "7"
+  ],
+  [
+   "U1",
+   "9"
+  ],
+  [
+   "U1",
+   "10"
+  ],
+  [
+   "U1",
+   "12"
+  ],
+  [
+   "U1",
+   "13"
+  ],
+  [
+   "U1",
+   "15"
+  ],
+  [
+   "U1",
+   "16"
+  ],
+  [
+   "U1",
+   "19"
+  ],
+  [
+   "U1",
+   "20"
+  ],
+  [
+   "U1",
+   "21"
+  ],
+  [
+   "U1",
+   "24"
+  ],
+  [
+   "U1",
+   "25"
+  ],
+  [
+   "U1",
+   "26"
+  ],
+  [
+   "U1",
+   "27"
+  ],
+  [
+   "U1",
+   "28"
+  ],
+  [
+   "U1",
+   "29"
+  ],
+  [
+   "U1",
+   "30"
+  ],
+  [
+   "U1",
+   "31"
+  ],
+  [
+   "U1",
+   "32"
+  ],
+  [
+   "U1",
+   "33"
+  ],
+  [
+   "U1",
+   "34"
+  ],
+  [
+   "U1",
+   "35"
+  ]
+ ],
+ "outline": {
+  "height": 44,
+  "height_limit": null,
+  "holes": [
+   {
+    "courtyard": 5.0,
+    "drill": 3.2,
+    "name": "H1",
+    "x": -24.5,
+    "y": 18.5
+   },
+   {
+    "courtyard": 5.0,
+    "drill": 3.2,
+    "name": "H2",
+    "x": 24.5,
+    "y": 18.5
+   },
+   {
+    "courtyard": 5.0,
+    "drill": 3.2,
+    "name": "H3",
+    "x": -24.5,
+    "y": -18.5
+   },
+   {
+    "courtyard": 5.0,
+    "drill": 3.2,
+    "name": "H4",
+    "x": 24.5,
+    "y": -18.5
+   }
+  ],
+  "segments": [
+   [
+    "arc",
+    [
+     28.0,
+     20.0
+    ],
+    [
+     27.414214,
+     21.414214
+    ],
+    [
+     26.0,
+     22.0
+    ]
+   ],
+   [
+    "line",
+    [
+     26.0,
+     22.0
+    ],
+    [
+     -26.0,
+     22.0
+    ]
+   ],
+   [
+    "arc",
+    [
+     -26.0,
+     22.0
+    ],
+    [
+     -27.414214,
+     21.414214
+    ],
+    [
+     -28.0,
+     20.0
+    ]
+   ],
+   [
+    "line",
+    [
+     -28.0,
+     20.0
+    ],
+    [
+     -28.0,
+     -20.0
+    ]
+   ],
+   [
+    "arc",
+    [
+     -28.0,
+     -20.0
+    ],
+    [
+     -27.414214,
+     -21.414214
+    ],
+    [
+     -26.0,
+     -22.0
+    ]
+   ],
+   [
+    "line",
+    [
+     -26.0,
+     -22.0
+    ],
+    [
+     26.0,
+     -22.0
+    ]
+   ],
+   [
+    "arc",
+    [
+     26.0,
+     -22.0
+    ],
+    [
+     27.414214,
+     -21.414214
+    ],
+    [
+     28.0,
+     -20.0
+    ]
+   ],
+   [
+    "line",
+    [
+     28.0,
+     -20.0
+    ],
+    [
+     28.0,
+     20.0
+    ]
+   ]
+  ],
+  "source": "outline.json",
+  "width": 56
+ },
+ "pairs": [
+  {
+   "gap": null,
+   "line": 60,
+   "name": "USB_D",
+   "negative": "USB_D-",
+   "positive": "USB_D+",
+   "width": null
+  }
+ ],
+ "parts": [
+  {
+   "block": "usb",
+   "datasheet": "https://www.usb.org/sites/default/files/documents/usb_type-c.zip",
+   "description": "USB 2.0-only 16P Type-C Receptacle connector",
+   "dnp": false,
+   "footprint": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+   "hand_fit": false,
+   "key": "J1",
+   "lcsc": "C165948",
+   "line": 18,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "A1"
+    },
+    {
+     "etype": "passive",
+     "name": "VBUS",
+     "number": "A4"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "CC1",
+     "number": "A5"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "D+",
+     "number": "A6"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "D-",
+     "number": "A7"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "SBU1",
+     "number": "A8"
+    },
+    {
+     "etype": "passive",
+     "name": "VBUS",
+     "number": "A9"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "A12"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "B1"
+    },
+    {
+     "etype": "passive",
+     "name": "VBUS",
+     "number": "B4"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "CC2",
+     "number": "B5"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "D+",
+     "number": "B6"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "D-",
+     "number": "B7"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "SBU2",
+     "number": "B8"
+    },
+    {
+     "etype": "passive",
+     "name": "VBUS",
+     "number": "B9"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "B12"
+    },
+    {
+     "etype": "passive",
+     "name": "SHIELD",
+     "number": "SH"
+    }
+   ],
+   "ref": "J1",
+   "role": "path",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Connector:USB_C_Receptacle_USB2.0_16P",
+   "value": "USB-C",
+   "why": "the USB-C receptacle this footprint is drawn for, the HRO TYPE-C-31-M-12"
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resettable fuse, polymeric positive temperature coefficient, small symbol",
+   "dnp": false,
+   "footprint": "Fuse:Fuse_0805_2012Metric",
+   "hand_fit": false,
+   "key": "F1",
+   "lcsc": "C910822",
+   "line": 21,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "F1",
+   "role": "path",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:Polyfuse_Small",
+   "value": "500mA",
+   "why": "an 0805 resettable fuse holding 500 mA at 24 V; jlcsearch listed no basic one"
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": true,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R9",
+   "lcsc": "",
+   "line": 23,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R9",
+   "role": "across",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "0R DNP",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "hand_fit": false,
+   "key": "C1",
+   "lcsc": "C15850",
+   "line": 24,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C1",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "10uF",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R1",
+   "lcsc": "C25905",
+   "line": 25,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R1",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "5.1k",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R2",
+   "lcsc": "C25905",
+   "line": 26,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R2",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "5.1k",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R3",
+   "lcsc": "C26083",
+   "line": 27,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R3",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "1M",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
+   "key": "C2",
+   "lcsc": "C1538",
+   "line": 28,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C2",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "4.7nF",
+   "why": ""
+  },
+  {
+   "block": "reg",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
+   "key": "C3",
+   "lcsc": "C52923",
+   "line": 31,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C3",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "1uF",
+   "why": ""
+  },
+  {
+   "block": "reg",
+   "datasheet": "https://www.diodes.com/assets/Datasheets/AP2112.pdf",
+   "description": "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5",
+   "dnp": false,
+   "footprint": "Package_TO_SOT_SMD:SOT-23-5",
+   "hand_fit": false,
+   "key": "U2",
+   "lcsc": "C51118",
+   "line": 32,
+   "pins": [
+    {
+     "etype": "power_in",
+     "name": "VIN",
+     "number": "1"
+    },
+    {
+     "etype": "power_in",
+     "name": "GND",
+     "number": "2"
+    },
+    {
+     "etype": "input",
+     "name": "EN",
+     "number": "3"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "4"
+    },
+    {
+     "etype": "power_out",
+     "name": "VOUT",
+     "number": "5"
+    }
+   ],
+   "ref": "U2",
+   "role": "path",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Regulator_Linear:AP2112K-3.3",
+   "value": "AP2112K-3.3",
+   "why": "the AP2112K-3.3 the design uses: 600 mA from a SOT-23-5"
+  },
+  {
+   "block": "reg",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
+   "key": "C4",
+   "lcsc": "C52923",
+   "line": 34,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C4",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "1uF",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "https://www.espressif.com/sites/default/files/documentation/esp32-c6-mini-1_mini-1u_datasheet_en.pdf",
+   "description": "RF Module, ESP32-C6 SoC, Wi-Fi 802.11b/g/n/ax, Bluetooth, BLE, Zigbee, Thread, 32-bit, 3.3V, SMD, onboard antenna",
+   "dnp": false,
+   "footprint": "RF_Module:ESP32-C6-MINI-1",
+   "hand_fit": false,
+   "key": "U1",
+   "lcsc": "C5736265",
+   "line": 37,
+   "pins": [
+    {
+     "etype": "power_in",
+     "name": "GND",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "2"
+    },
+    {
+     "etype": "power_in",
+     "name": "3V3",
+     "number": "3"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "4"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO2",
+     "number": "5"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO3",
+     "number": "6"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "7"
+    },
+    {
+     "etype": "input",
+     "name": "EN",
+     "number": "8"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO4",
+     "number": "9"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO5",
+     "number": "10"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "11"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO0",
+     "number": "12"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO1",
+     "number": "13"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "14"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO6",
+     "number": "15"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO7",
+     "number": "16"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO12",
+     "number": "17"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO13",
+     "number": "18"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO14",
+     "number": "19"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO15",
+     "number": "20"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "21"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO8",
+     "number": "22"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO9",
+     "number": "23"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO18",
+     "number": "24"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO19",
+     "number": "25"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO20",
+     "number": "26"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO21",
+     "number": "27"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO22",
+     "number": "28"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "IO23",
+     "number": "29"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "RXD0",
+     "number": "30"
+    },
+    {
+     "etype": "bidirectional",
+     "name": "TXD0",
+     "number": "31"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "32"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "33"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "34"
+    },
+    {
+     "etype": "no_connect",
+     "name": "NC",
+     "number": "35"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "36"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "37"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "38"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "39"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "40"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "41"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "42"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "43"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "44"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "45"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "46"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "47"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "48"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "49"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "50"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "51"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "52"
+    },
+    {
+     "etype": "passive",
+     "name": "GND",
+     "number": "53"
+    }
+   ],
+   "ref": "U1",
+   "role": "path",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "RF_Module:ESP32-C6-MINI-1",
+   "value": "ESP32-C6-MINI-1",
+   "why": "the ESP32-C6 module itself, with 4 MB of flash"
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
+   "key": "C5",
+   "lcsc": "C1525",
+   "line": 39,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C5",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "100nF",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "hand_fit": false,
+   "key": "C6",
+   "lcsc": "C15850",
+   "line": 40,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C6",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "10uF",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R4",
+   "lcsc": "C25744",
+   "line": 41,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R4",
+   "role": "tap",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "10k",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
+   "key": "C7",
+   "lcsc": "C52923",
+   "line": 42,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C7",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "1uF",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R5",
+   "lcsc": "C25744",
+   "line": 43,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R5",
+   "role": "tap",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "10k",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Push button switch, generic, two pins",
+   "dnp": false,
+   "footprint": "Button_Switch_SMD:SW_SPST_TL3342",
+   "hand_fit": false,
+   "key": "SW1",
+   "lcsc": "C2886894",
+   "line": 44,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "1",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "2",
+     "number": "2"
+    }
+   ],
+   "ref": "SW1",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Switch:SW_Push",
+   "value": "BOOT",
+   "why": "the TL3342 button this footprint is drawn for"
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R6",
+   "lcsc": "C11702",
+   "line": 46,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R6",
+   "role": "path",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "1k",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Light emitting diode",
+   "dnp": false,
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "hand_fit": false,
+   "key": "D1",
+   "lcsc": "C72043",
+   "line": 47,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "K",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "A",
+     "number": "2"
+    }
+   ],
+   "ref": "D1",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:LED",
+   "value": "green",
+   "why": "a green 0603 LED; jlcsearch listed no basic one"
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R7",
+   "lcsc": "C11702",
+   "line": 49,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R7",
+   "role": "tap",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "1k",
+   "why": ""
+  },
+  {
+   "block": "mcu",
+   "datasheet": "",
+   "description": "Light emitting diode",
+   "dnp": false,
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "hand_fit": false,
+   "key": "power-led",
+   "lcsc": "C2286",
+   "line": 50,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "K",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "A",
+     "number": "2"
+    }
+   ],
+   "ref": "D2",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:LED",
+   "value": "red",
+   "why": ""
+  }
+ ],
+ "route_hints": [],
+ "schema": "pino.circuit/1",
+ "source_file": "board.py",
+ "zones": [
+  {
+   "layer": "B.Cu",
+   "line": 79,
+   "net": "GND",
+   "polygon": null
+  }
+ ]
+}

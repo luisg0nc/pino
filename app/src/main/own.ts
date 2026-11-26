@@ -44,6 +44,30 @@ function refused(dir: string, path: string, inside: string | null, message: stri
   return new Error(message)
 }
 
+/** What stands at `<dir>/.pino` and the names under it: the folder pino may write into, or why it may not. */
+async function look(dir: string, inside: string[]): Promise<{ folder: string } | { path: string; name: string | null; message: string }> {
+  let path = join(dir, FOLDER)
+  for (let depth = 0; ; depth++) {
+    const what = await lstat(path).catch((e: NodeJS.ErrnoException) => {
+      if (e.code === 'ENOENT') return null
+      throw e
+    })
+    // Not there: nothing under it is either, and whoever writes makes real folders.
+    if (what === null) return { folder: join(dir, FOLDER, ...inside) }
+    const name = depth === 0 ? null : inside.slice(0, depth).join('/')
+    if (what.isSymbolicLink()) {
+      const message =
+        name === null
+          ? `${path} is a link, not a folder of ${APP.name}'s own inside the project: ${APP.name} writes nothing there. Put a real folder in its place.`
+          : `${path} is a link, not a folder of ${APP.name}'s own inside the project: ${APP.name} writes nothing there and deletes nothing through it. Take the link away.`
+      return { path, name, message }
+    }
+    if (!what.isDirectory()) return { path, name, message: `${path} is a file, not a folder: ${APP.name} writes nothing there. Remove it.` }
+    if (depth === inside.length) return { folder: path }
+    path = join(path, inside[depth])
+  }
+}
+
 /**
  * `<dir>/.pino`, when pino may write there: it is a real folder, or not there yet (whoever writes makes it).
  * Rejects, with a plain reason, when a link or a file is in its place. Asked before every write under it.
@@ -52,29 +76,18 @@ function refused(dir: string, path: string, inside: string | null, message: stri
  * same at every step down: asked before every write into it and before every delete in it.
  */
 export async function ownFolder(dir: string, ...inside: string[]): Promise<string> {
-  let path = join(dir, FOLDER)
-  for (let depth = 0; ; depth++) {
-    const what = await lstat(path).catch((e: NodeJS.ErrnoException) => {
-      if (e.code === 'ENOENT') return null
-      throw e
-    })
-    // Not there: nothing under it is either, and whoever writes makes real folders.
-    if (what === null) return join(dir, FOLDER, ...inside)
-    const name = depth === 0 ? null : inside.slice(0, depth).join('/')
-    if (what.isSymbolicLink()) {
-      throw refused(
-        dir,
-        path,
-        name,
-        name === null
-          ? `${path} is a link, not a folder of ${APP.name}'s own inside the project: ${APP.name} writes nothing there. Put a real folder in its place.`
-          : `${path} is a link, not a folder of ${APP.name}'s own inside the project: ${APP.name} writes nothing there and deletes nothing through it. Take the link away.`
-      )
-    }
-    if (!what.isDirectory()) throw refused(dir, path, name, `${path} is a file, not a folder: ${APP.name} writes nothing there. Remove it.`)
-    if (depth === inside.length) return path
-    path = join(path, inside[depth])
-  }
+  const found = await look(dir, inside)
+  if ('folder' in found) return found.folder
+  throw refused(dir, found.path, found.name, found.message)
+}
+
+/**
+ * Why pino may not use `<dir>/.pino/...`, or null when it may, said to the caller alone: the window is not told, so
+ * that what is only read, or shown elsewhere, does not use up the one time it is told of a folder.
+ */
+export async function whyNotOwn(dir: string, ...inside: string[]): Promise<string | null> {
+  const found = await look(dir, inside)
+  return 'folder' in found ? null : found.message
 }
 
 /** The last `writeOwn` of each file: the folder check is awaited before `writeFileAtomic` has the path, so the line is kept here, taken before any await. */

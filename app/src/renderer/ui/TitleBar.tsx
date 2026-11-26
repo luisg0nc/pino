@@ -11,7 +11,7 @@ export function TitleBar({ project, disabled, onChoose }: { project: ProjectInfo
   return (
     <header className="title-row" data-region="title">
       <span className="title-vise" aria-hidden="true">
-        <Logo />
+        <Logo size={20} />
       </span>
       <FolderMenu open={project} disabled={disabled} onChoose={onChoose} />
       <span className="title-grow" />

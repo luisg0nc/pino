@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from .. import ids
 from ..circuit import Circuit, Keepout, PinRef, Placement
-from ..coords import to_kicad
+from ..coords import ORIGIN, to_kicad
 from ..fab import PROFILES, FabProfile, for_layers
 from ..outline import polygon as outline_polygon
 from ..sexpr import Sym, dump, find, num, parse
@@ -86,7 +86,7 @@ def placed_parts(circuit: Circuit, placement: Placement, footprints: FootprintLi
                 nets[pin.number] = unconnected_net(part.ref, pin.name, pin.number)
         out.append(Placed(part.ref, part.key, footprints.load(part.footprint), float(pose.x), float(pose.y),
                           float(pose.rot), bool(pose.back), part.value, nets, part.dnp, part.lcsc,
-                          part.datasheet, part.description))
+                          part.datasheet, part.description, part.hand_fit))
     return out
 
 
@@ -202,7 +202,9 @@ def _setup(circuit: Circuit, fab: FabProfile) -> list:
             [S("tenting"), [S("front"), y], [S("back"), y]],
             [S("covering"), [S("front"), n], [S("back"), n]],
             [S("plugging"), [S("front"), n], [S("back"), n]],
-            [S("capping"), n], [S("filling"), n], _PLOT]
+            [S("capping"), n], [S("filling"), n],
+            # the drill and place origin: the outline centre, so Gerbers, drill files and the CPL share pino's frame
+            [S("aux_axis_origin"), *[num(v) for v in ORIGIN]], _PLOT]
 
 
 @dataclass(frozen=True)

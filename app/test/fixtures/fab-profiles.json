@@ -1,0 +1,123 @@
+[
+ {
+  "name": "jlc-standard-2layer",
+  "title": "JLC standard 2-layer",
+  "layers": 2,
+  "min_track": 0.1,
+  "min_clearance": 0.1,
+  "min_via_drill": 0.2,
+  "min_via_diameter": 0.45,
+  "min_annular": 0.125,
+  "min_pth_annular": 0.18,
+  "min_hole": 0.2,
+  "min_npth": 0.5,
+  "hole_to_hole": 0.2,
+  "pad_hole_to_hole": 0.45,
+  "via_hole_to_track": 0.2,
+  "pth_to_track": 0.28,
+  "pad_to_pad": 0.15,
+  "copper_to_edge": 0.2,
+  "silk_min_width": 0.15,
+  "silk_min_text_height": 1.0,
+  "silk_to_pad": 0.15,
+  "board_thickness": 1.6,
+  "thicknesses": [
+   0.4,
+   0.6,
+   0.8,
+   1.0,
+   1.2,
+   1.6,
+   2.0
+  ],
+  "copper_oz": 1.0,
+  "copper_options": [
+   1.0,
+   2.0,
+   2.5,
+   3.5,
+   4.5
+  ],
+  "inner_copper_oz": null,
+  "heavy_track": 0.16,
+  "assembly": {
+   "kind": "economic",
+   "sides": 1,
+   "min_board": [
+    10.0,
+    10.0
+   ],
+   "max_board": [
+    470.0,
+    500.0
+   ],
+   "thickness": [
+    0.8,
+    1.6
+   ],
+   "smallest": "0402",
+   "min_pitch": 0.4
+  },
+  "source": "https://jlcpcb.com/capabilities/pcb-capabilities",
+  "read_on": "2026-11-26"
+ },
+ {
+  "name": "jlc-standard-4layer",
+  "title": "JLC standard 4-layer",
+  "layers": 4,
+  "min_track": 0.09,
+  "min_clearance": 0.09,
+  "min_via_drill": 0.2,
+  "min_via_diameter": 0.45,
+  "min_annular": 0.125,
+  "min_pth_annular": 0.15,
+  "min_hole": 0.2,
+  "min_npth": 0.5,
+  "hole_to_hole": 0.2,
+  "pad_hole_to_hole": 0.45,
+  "via_hole_to_track": 0.2,
+  "pth_to_track": 0.28,
+  "pad_to_pad": 0.15,
+  "copper_to_edge": 0.2,
+  "silk_min_width": 0.15,
+  "silk_min_text_height": 1.0,
+  "silk_to_pad": 0.15,
+  "board_thickness": 1.6,
+  "thicknesses": [
+   0.4,
+   0.6,
+   0.8,
+   1.0,
+   1.2,
+   1.6,
+   2.0
+  ],
+  "copper_oz": 1.0,
+  "copper_options": [
+   1.0,
+   2.0
+  ],
+  "inner_copper_oz": 0.5,
+  "heavy_track": 0.15,
+  "assembly": {
+   "kind": "economic",
+   "sides": 1,
+   "min_board": [
+    10.0,
+    10.0
+   ],
+   "max_board": [
+    470.0,
+    500.0
+   ],
+   "thickness": [
+    0.8,
+    1.6
+   ],
+   "smallest": "0402",
+   "min_pitch": 0.4
+  },
+  "source": "https://jlcpcb.com/capabilities/pcb-capabilities",
+  "read_on": "2026-11-26"
+ }
+]

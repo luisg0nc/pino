@@ -150,6 +150,8 @@ class RoutePlan:
 # --- rules ---------------------------------------------------------------------------------------------------
 
 _DRU_RULE = re.compile(r'\(rule\s+"pino: ([a-z_]+)"\s*\(constraint\s+([a-z_]+)\s+\(min\s+([0-9.]+)mm\)\)\s*\)')
+# The router has one hole-to-hole distance, so it keeps the widest the fab asks of vias or pads.
+_DRU_HOLE_TO_HOLE = re.compile(r'\(rule\s+"pino: (?:via|pad) hole_to_hole"\s*\(constraint\s+hole_to_hole\s+\(min\s+([0-9.]+)mm\)\)')
 _DRU_FIELDS = {"track_width": "min_track", "clearance": "min_clearance", "hole_clearance": "hole_clearance",
                "hole_to_hole": "hole_to_hole", "edge_clearance": "edge_clearance"}
 
@@ -177,6 +179,8 @@ def _raw_rules(pro_text: str, dru_text: str | None) -> dict:
         key = _DRU_FIELDS.get(constraint)
         if key and name == constraint:
             out[key] = max(out[key], float(value))
+    for value in _DRU_HOLE_TO_HOLE.findall(dru_text or ""):
+        out["hole_to_hole"] = max(out["hole_to_hole"], float(value))
     return out
 
 

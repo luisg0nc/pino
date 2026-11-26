@@ -1,6 +1,8 @@
 """A stand-in for kicad-cli in tests: prints what it was called with and never writes a file, except that
 `pcb drc` copies the JSON file named by $FAKE_KICAD_DRC to its -o path when that is set (with --save-board the
-board is left as it is). FAKE_KICAD_DRC=auto writes a report whose unconnected items come from the board's copper
+board is left as it is), and `pcb export gerbers` and `pcb export drill` write one small dated file per layer and two
+drill files, each carrying a digest of the board (FAKE_KICAD_EXPORT_FAIL=<message> fails them, and
+FAKE_KICAD_EXPORT_SKIP=<layer> leaves one file out). FAKE_KICAD_DRC=auto writes a report whose unconnected items come from the board's copper
 (pads of a net that pino's contact rule does not join), with no violations."""
 
 import json
@@ -60,6 +62,35 @@ def auto_report(board_path):
             "source": "board.kicad_pcb", "violations": [], "unconnected_items": unconnected, "schematic_parity": []}
 
 
+def export(kind):
+    """Files named as kicad-cli names them, dated, each holding a digest of the board they came from."""
+    import hashlib
+    from pathlib import Path
+
+    if os.environ.get("FAKE_KICAD_EXPORT_FAIL"):
+        print(os.environ["FAKE_KICAD_EXPORT_FAIL"], file=sys.stderr)
+        sys.exit(1)
+    out, board = Path(args[args.index("-o") + 1]), Path(args[-1])
+    out.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256(board.read_bytes()).hexdigest()
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    if kind == "gerbers":
+        ext = {"F.Cu": "gtl", "B.Cu": "gbl", "F.Paste": "gtp", "B.Paste": "gbp", "F.Silkscreen": "gto",
+               "B.Silkscreen": "gbo", "F.Mask": "gts", "B.Mask": "gbs", "Edge.Cuts": "gm1"}
+        for layer in args[args.index("--layers") + 1].split(","):
+            name = f"{board.stem}-{layer.replace('.', '_')}.{ext.get(layer) or 'g' + layer[2:-3]}"
+            skip = os.environ.get("FAKE_KICAD_EXPORT_SKIP")
+            if not skip or skip not in name:
+                (out / name).write_text(f"%TF.CreationDate,{stamp}*%\nG04 {layer} of {digest}*\nM02*\n")
+        (out / f"{board.stem}-job.gbrjob").write_text('{"Header": {"CreationDate": "' + stamp + '"}}\n')
+    else:
+        for part in ("PTH", "NPTH"):
+            (out / f"{board.stem}-{part}.drl").write_text(
+                f"M48\n; DRILL file KiCad 10.0.6 date {stamp}\n; #@! TF.CreationDate,{stamp}\n; {digest}\nM30\n")
+
+
+if args[:3] in (["pcb", "export", "gerbers"], ["pcb", "export", "drill"]):
+    export(args[2])
 if args[:2] == ["pcb", "drc"] and os.environ.get("FAKE_KICAD_SLOW"):
     if os.environ.get("FAKE_KICAD_PIDFILE"):
         with open(os.environ["FAKE_KICAD_PIDFILE"], "w") as f:

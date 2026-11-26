@@ -31,6 +31,35 @@
   --user-mark: #6440C4;    /* marks made by the person: the violet of the design mocks */
   --agent-mark: #C0502B;   /* marks made by Claude: Claude Code's orange, darkened to read on the panel and under --on-mark */
   --on-mark: #FFFFFF;      /* text on a mark's chip */
+  --user-wash: #ECE6F8;    /* the ground of a row or a field that is the person's mark */
+  --agent-wash: #F7E7E0;   /* and of one that is Claude's */
+
+  /* The board, drawn as a technical drawing (`renderer/board/`): graphite copper on the layer looked at, a pencil tone
+     on the others, pours as section hatching. A second palette, apart from the accent. */
+  --board-paper: #FCFBF8;
+  --cu: #2A2F37;
+  --cu-far: #CBC6BC;
+  --hatch: rgb(42 47 55 / .22);
+  --hatch-far: rgb(42 47 55 / .09);
+  --silk: #A29D93;
+  --rat: #6E6A62;          /* the ratsnest, and ground when nets are coloured */
+
+  /* The schematic: KiCad's sheet in the board's ink, on one paper (`renderer/sheet/ink.ts`). */
+  --sch-paper: #FCFBF8;
+  --sch-ink: #2A2F37;
+  --sch-fill: #F5F3EE;
+  --sch-wire: #2A2F37;
+  --sch-net: #4A4F57;
+  --sch-pin: #7A7F86;
+  --sch-block: #8A857B;
+  --sch-dnp: #B4AFA5;
+
+  /* The 3D view's solder-mask material, the same in both themes: a made board does not change with the room. */
+  --mask: #1E5B3B;
+  --mask-cu: #3F8C5F;
+  --tin: #DCDFD8;
+  --silk-3d: #F2F0E8;
+  --fr4: #C2BB9C;
   /* Verdicts are read as text, and are no mark's colour to the eye: --ok 1.5:1 at least from Claude's orange, --fail
      60 degrees of hue at least from the person's violet; 4.5:1 on both grounds and on the wash (shared/contrast.test.ts). */
   --ok: #1B5B3C;
@@ -71,8 +100,8 @@
   --ease: cubic-bezier(.2, .8, .2, 1);
 
   /* Layout */
-  /* The window's sizes. The shell is one grid of them (`styles/layout.css`). A window narrower than 1360px takes the
-     narrow defaults at the end of this block. */
+  /* The window's sizes. The shell is one grid of them (`styles/layout.css`). A window of 1500px or less takes the
+     narrow defaults at the end of this block, as the design mocks do: the board needs the room. */
   --title-h: 40px;
   --card-w: 296px;         /* the route card's default */
   --panel-w: var(--card-w); /* what the card was called: the panel docked at the left */
@@ -86,8 +115,8 @@
   --space-6: 32px;
 }
 
-/* Narrow defaults of the card and the dock: a window under 1360px. */
-@media (max-width: 1359px) {
+/* Narrow defaults of the card and the dock: a window of 1500px or less. */
+@media (max-width: 1500px) {
   :root {
     --card-w: 264px;
     --dock-w: 384px;
@@ -117,6 +146,23 @@
     --user-mark: #A88BFA;
     --agent-mark: #D97757;
     --on-mark: #1A1C1F;
+    --user-wash: #2D2840;
+    --agent-wash: #3A2A24;
+    --board-paper: #202327;
+    --cu: #E6E3DC;
+    --cu-far: #464B52;
+    --hatch: rgb(230 227 220 / .2);
+    --hatch-far: rgb(230 227 220 / .07);
+    --silk: #6F747B;
+    --rat: #A7A39A;
+    --sch-paper: #202327;
+    --sch-ink: #E6E3DC;
+    --sch-fill: #272A2F;
+    --sch-wire: #E6E3DC;
+    --sch-net: #C9C6BF;
+    --sch-pin: #9EA3AA;
+    --sch-block: #747A82;
+    --sch-dnp: #5A5F66;
     --ok: #A9E6C8;
     --warn: #CBAA6A;
     --fail: #F9B2A7;

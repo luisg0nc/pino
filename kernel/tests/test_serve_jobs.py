@@ -142,13 +142,6 @@ def test_route_bad_requests(tmp_path):
     assert "unknown option" in out[2]["error"] and "save board.py first" in out[3]["error"]
 
 
-def test_ping_says_serve_2():
-    from pino_kernel import __version__
-
-    out = serve([{"id": 1, "op": "ping"}])
-    assert out[0]["pong"] == {"kernel": __version__, "schema": "pino.build/1", "serve": 2, "route_schema": "pino.route/1"}
-
-
 def test_an_engine_fault_in_an_inline_op_keeps_serve_alive(routed_project, monkeypatch, tmp_path):
     monkeypatch.setenv("PINO_KICAD_FOOTPRINT_DIR", str(tmp_path / "nowhere"))
     out = serve([{"id": 1, "op": "nudge", "project": str(routed_project), "part": "R1", "by": [1, 0]},

@@ -16,8 +16,13 @@ import traceback
 from pathlib import Path
 
 
-def _problem(message: str, file: str | None, line: int | None) -> dict:
-    return {"message": message, "file": file, "line": line}
+def _problem(message: str, file: str | None, line: int | None, code: str = "board_py",
+             data: dict | None = None) -> dict:
+    return {"message": message, "file": file, "line": line, "code": code, "data": data}
+
+
+def _problems(problems) -> dict:
+    return {"ok": False, "problems": [_problem(p.message, p.file, p.line, p.code, p.data) for p in problems]}
 
 
 def _inside(path: str | None, folder: Path) -> bool:
@@ -52,7 +57,7 @@ def run(board_path: str) -> dict:
     except SyntaxError as e:
         return {"ok": False, "problems": [_problem(f"SyntaxError: {e.msg}", e.filename or str(board), e.lineno)]}
     except CircuitError as e:
-        return {"ok": False, "problems": [_problem(p.message, p.file, p.line) for p in e.problems]}
+        return _problems(e.problems)
     except SystemExit as e:
         if e.code not in (None, 0):
             return {"ok": False, "problems": [_problem(f"board.py called sys.exit({e.code!r})", str(board), None)]}
@@ -67,7 +72,7 @@ def run(board_path: str) -> dict:
     try:
         circuit = _BOARDS[0].to_circuit()
     except CircuitError as e:
-        return {"ok": False, "problems": [_problem(p.message, p.file, p.line) for p in e.problems]}
+        return _problems(e.problems)
     except BaseException as e:  # noqa: BLE001
         return {"ok": False, "problems": [_exception_problem(e, folder, board)]}
     return {"ok": True, "circuit": json.loads(circuit.to_json())}

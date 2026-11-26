@@ -35,7 +35,8 @@ paths:
   session starts.
 - `Items.tsx` draws the person's words, the agent's markdown, thoughts, tool chips (a run of them folded once its turn
   is over), asks, notes, the task list, what pino added to a prompt ("Show text"), and one line at the end of a turn
-  (done, stopped, or failed with why). A ref (`U1`, `M4`) is plain text until there are marks.
+  (done, stopped, or failed with why). A ref (`U1`, `M4`) in text is set in the number face. Marks are chips: those a
+  prompt went with under it, and Claude's on the card of its `point` (`markChips.ts`).
 - A tool of pino's own is marked `data-own` (`chat.css`). A result is text; an edit is a `Diff`.
 - `Composer.tsx`: Enter sends, Shift+Enter breaks the line, Escape stops a turn at work (else it gives the keys back);
   every key comes from `shared/keys.ts`. A prompt sent while Claude works is queued. With a permission or a plan

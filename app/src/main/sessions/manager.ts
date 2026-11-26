@@ -644,14 +644,17 @@ export class Sessions {
 
     const prompt = typeof fields.prompt === 'string' ? fields.prompt : undefined
     // The prompt goes ahead without it rather than wait for the hook to time out.
-    const text = await this.deps.domain.promptContext(session.project, prompt ?? '').catch((e: unknown) => {
+    const context = await this.deps.domain.promptContext(session.project, prompt ?? '').catch((e: unknown) => {
       console.error(`no context for the prompt in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`)
-      return ''
+      return { text: '', sentMarkIds: [], delivered: undefined }
     })
+    const { text, sentMarkIds } = context
     // Said even when nothing is added: it is how the transcript knows the CLI took the prompt up.
-    session.chat.transcript.context({ text, sentMarkIds: [], ...(prompt !== undefined ? { prompt } : {}) })
+    session.chat.transcript.context({ text, sentMarkIds, ...(prompt !== undefined ? { prompt } : {}) })
     this.debug(`session ${session.id} hook ${event}${text ? `, answered with: ${text}` : ''}`)
     sendJson(res, 200, text ? { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } } : {})
+    // The agent has the context now.
+    await context.delivered?.().catch((e: unknown) => console.error(`after the prompt in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`))
   }
 }
 

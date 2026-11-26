@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C5736265&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 5736265,
+    "mfr": "ESP32-C6-MINI-1-N4",
+    "package": "SMD-53P",
+    "description": "-106dBm -40℃~+85℃ 2.4GHz 21dBm 354mA 3V~3.6V 71mA ESP32-C6FH4 Integrated Bluetooth function、Integrated Zigbee function On-board PCB Antenna UART、SPI、I2C、GPIO、I2S SMD-53P WiFi Modules ROHS",
+    "is_basic": false,
+    "is_preferred": false,
+    "stock": null,
+    "price": 4.0906,
+    "stock_checked_at": "2026-11-10T12:36:57.000Z"
+   }
+  ]
+ }
+}

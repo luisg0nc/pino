@@ -36,6 +36,31 @@ describe('the specs', () => {
     expect(src).toContain("PINO_AGENT_CMD: opts.agent ? `node ${FAKE_AGENT}` : NO_AGENT")
   })
 
+  it('keeps the real engine off the network: parts are offline in every run', () => {
+    // The real engine looks parts up at jlcsearch while it builds the reference board: no spec may.
+    expect(read('e2e/launch.ts')).toContain("PINO_PARTS_OFFLINE: '1'")
+  })
+
+  it("runs the engine's stand-in everywhere but in the one spec of the real engine", () => {
+    expect(read('e2e/launch.ts')).toContain('PINO_KERNEL_CMD: `node ${FAKE_KERNEL}`')
+    expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts')).toEqual(['e2e/real-kernel.spec.ts'])
+  })
+
+  it('takes its pictures only where a run names a folder outside the repository, and never resizes the window first', () => {
+    const shots = read('e2e/shots.spec.ts')
+    expect(shots).toContain('test.skip(folder === null || inRepo')
+    // A hidden window resized with a board drawn gives no picture: it is made at its size (PINO_TEST_SIZE).
+    expect(specsNaming(/setContentSize|setBounds|setSize\(/)).toEqual([])
+  })
+
+  // A CI runner has no GPU, and Chromium draws WebGL in software only when asked, which it calls unsafe for pages
+  // from elsewhere: the tests ask, on CI, and pino never does.
+  it('asks for software WebGL on CI alone, in the launcher and nowhere in the app', () => {
+    expect(read('e2e/launch.ts')).toContain("process.env.CI ? ['--enable-unsafe-swiftshader'] : []")
+    const main = readdirSync(join(app, 'src', 'main'), { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.ts'))
+    expect(main.filter((f) => /swiftshader/i.test(read(`src/main/${f}`)))).toEqual([])
+  })
+
   it('no spec takes a screenshot or touches the clipboard', () => {
     expect(specsNaming(/\.screenshot\(|clipboard/)).toEqual([])
   })

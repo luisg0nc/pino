@@ -1,0 +1,20 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C900005&limit=1",
+ "synthetic": true,
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 900005,
+    "mfr": "SYN-RN",
+    "package": "0603x4",
+    "description": "10kΩ Resistor Networks, Arrays 0603x4 ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": 100000,
+    "price": 0.001,
+    "stock_checked_at": "2026-11-26T05:00:00.000Z"
+   }
+  ]
+ }
+}

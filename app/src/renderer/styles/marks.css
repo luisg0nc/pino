@@ -1,0 +1,233 @@
+/* ---- Marks' chips: torno's, in pino's two colours. The person's are violet, Claude's its orange; one that has gone
+   with a prompt stands hollow beside it. (ui/MarkChip.tsx) ---- */
+
+.mark-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 17px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--radius-inline);
+  background: var(--user-mark);
+  color: var(--on-mark);
+  font: 500 10.5px / 1 var(--font-mono);
+  letter-spacing: -0.02em;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+button.mark-chip {
+  cursor: pointer;
+}
+
+.mark-chip[data-author='agent'] {
+  background: var(--agent-mark);
+}
+
+.mark-chip[data-hollow] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.3px var(--user-mark);
+  color: var(--user-mark);
+}
+
+.mark-chip[data-author='agent'][data-hollow] {
+  box-shadow: inset 0 0 0 1.3px var(--agent-mark);
+  color: var(--agent-mark);
+}
+
+/* A mark whose target is gone: dashed round. */
+.mark-chip[data-stale] {
+  outline: 1px dashed var(--field-edge);
+  outline-offset: 1px;
+}
+
+/* The chips on a view: each on its mark's point, with no leader. */
+.mark-chips {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mark-chips .mark-chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  animation: chip-pop 0.2s var(--ease) both;
+}
+
+.mark-chips .mark-chip[data-lit] {
+  outline: 2px solid var(--raise);
+  outline-offset: 0;
+}
+
+@keyframes chip-pop {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark-chips .mark-chip {
+    animation: none;
+  }
+}
+
+/* ---- The route card's Marks: two lines a mark, with exactly what Claude gets ---- */
+
+.mark-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mark-row {
+  display: grid;
+  grid-template-columns: minmax(30px, auto) minmax(0, 1fr);
+  gap: 4px var(--space-2);
+  width: calc(100% + 24px);
+  margin: 0 -8px 0 -16px;
+  padding: 6px 8px 6px 16px;
+  border: 0;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  background: transparent;
+  font-size: var(--text-row);
+  text-align: left;
+  align-items: start;
+}
+
+.mark-row:hover,
+.mark-row[data-lit] {
+  background: var(--user-wash);
+}
+
+.mark-row[data-held] {
+  background: var(--user-wash);
+  box-shadow: inset 2px 0 0 var(--user-mark);
+}
+
+.mark-row[data-author='agent']:hover,
+.mark-row[data-author='agent'][data-lit] {
+  background: var(--agent-wash);
+}
+
+.mark-row[data-author='agent'][data-held] {
+  background: var(--agent-wash);
+  box-shadow: inset 2px 0 0 var(--agent-mark);
+}
+
+.mark-row .mark-chip {
+  justify-self: start;
+  margin-top: 1px;
+}
+
+.mark-words {
+  min-width: 0;
+}
+
+.mark-note {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.mark-payload {
+  display: block;
+  color: var(--muted);
+  font: 400 10.5px / 1.45 var(--font-mono);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.mark-state {
+  color: var(--warn);
+}
+
+.mark-resolved {
+  padding-top: 4px;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* ---- The mark in hand: its words and what can be done with it ---- */
+
+.mark-hand {
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--user-wash);
+}
+
+.mark-hand[data-author='agent'] {
+  background: var(--agent-wash);
+}
+
+.mark-hand .mark-payload {
+  color: var(--ink);
+}
+
+.mark-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.mark-act {
+  height: 24px;
+  padding: 0 9px;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+  font-size: var(--text-small);
+}
+
+.mark-act[aria-pressed='true'] {
+  border-color: var(--user-mark);
+  color: var(--user-mark);
+}
+
+.mark-field {
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: 5px 8px;
+  border: var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-row);
+}
+
+/* What the pen says while it draws. */
+.pen {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  padding: 5px 10px;
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  font-size: var(--text-small);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pen-more {
+  display: block;
+  color: var(--muted);
+  font: 400 10.5px / 1.5 var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* In the list a mark's line is held to three lines: a stroke's path would fill the card. In hand it is whole. */
+.mark-rows .mark-payload {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}

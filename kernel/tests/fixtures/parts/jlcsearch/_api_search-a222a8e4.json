@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C2886894&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 2886894,
+    "mfr": "TL3342F260QG",
+    "package": "SMD-4P,5.2x5.2mm",
+    "description": "-20℃~+70℃ 1.54mm 100,000 cycles 12V 2.6N 5.2mm 5.2mm 50mA Gull Wing Round Button SPST Surface Mount,Vertical Without Bracket Yellow SMD-4P,5.2x5.2mm Tactile Switches ROHS",
+    "is_basic": false,
+    "is_preferred": false,
+    "stock": null,
+    "price": 1.0158,
+    "stock_checked_at": "2026-11-12T11:31:49.000Z"
+   }
+  ]
+ }
+}

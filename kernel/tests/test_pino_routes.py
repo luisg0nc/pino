@@ -45,8 +45,8 @@ def test_keep_route_needs_one_pin(fixture_libs):
 
 def test_keep_route_width_below_the_fab(fixture_libs):
     b = small_board()
-    b.keep_route("VBUS", frm=b.part("J1")[1], to=b.part("U1")["VIN"], layer="F.Cu", width=0.1)
-    with pytest.raises(CircuitError, match="below the fab's 0.15 mm"):
+    b.keep_route("VBUS", frm=b.part("J1")[1], to=b.part("U1")["VIN"], layer="F.Cu", width=0.09)
+    with pytest.raises(CircuitError, match="below the fab's 0.1 mm"):
         b.validate()
 
 

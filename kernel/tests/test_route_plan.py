@@ -23,7 +23,7 @@ def test_rules_from_pro_and_dru():
 
 
 def test_dru_raises_the_minimums():
-    dru = DRU_2L.replace('(constraint clearance (min 0.15mm))', '(constraint clearance (min 0.18mm))')
+    dru = DRU_2L + '(rule "pino: clearance"\n\t(constraint clearance (min 0.18mm)))\n'
     assert router_rules(PRO_2L, dru).min_clearance == 0.18
 
 
@@ -151,3 +151,11 @@ def test_no_net_footprint_copper_gets_router_keepouts():
     zones = {str(find(z, "name")[1]): z for z in find_all(parse(text), "zone")}
     assert find(find(zones["pino-router:graphic:AE1#1"], "keepout"), "tracks")[1] == "allowed"
     assert find(find(zones["pino-router:graphic:AE1#1"], "keepout"), "vias")[1] == "not_allowed"
+
+
+def test_router_keeps_the_pad_hole_spacing_of_the_fab_rules():
+    from pino_kernel import fab
+    from pino_kernel.pcb.rules import kicad_dru
+
+    # the fab's rules split hole to hole into vias (0.2) and pads (0.45): the router keeps the wider one
+    assert router_rules(pro(hole_to_hole=0.2), kicad_dru(fab.jlc_standard_2layer)).hole_to_hole == 0.45

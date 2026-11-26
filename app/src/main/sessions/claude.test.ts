@@ -20,7 +20,8 @@ const ctx = {
 const hookOf = (url: string) => ({
   type: 'http',
   url,
-  timeout: 5,
+  // The Stop hook waits for a build that is nearly done (torno's value).
+  timeout: url.endsWith('/Stop') ? 25 : 5,
   headers: { 'X-Pino-Session': '$PINO_SESSION' },
   allowedEnvVars: ['PINO_SESSION']
 })

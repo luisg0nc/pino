@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C25744&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 25744,
+    "mfr": "0402WGF1002TCE",
+    "package": "0402",
+    "description": "-55℃~+155℃ 10kΩ 50V 62.5mW Thick Film Resistor ±1% ±100ppm/℃ 0402 Chip Resistor - Surface Mount ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.0028,
+    "stock_checked_at": "2026-11-03T21:33:50.000Z"
+   }
+  ]
+ }
+}

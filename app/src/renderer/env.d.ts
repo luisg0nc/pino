@@ -1,3 +1,4 @@
+import type { Target } from '../shared/board/refs'
 import type { PinoBridge } from '../shared/bridge'
 import type { PinoState } from './state/store'
 
@@ -8,6 +9,10 @@ declare global {
     /** Only when main runs with PINO_TEST=1: what the e2e specs read. */
     __pinoTest?: {
       state(): PinoState
+      /** Client pixels of a thing's centre in the chosen view (`state/testHooks.ts`). */
+      screenOf(target: Target): { x: number; y: number } | null
+      /** What each mounted view drew, under `board`, `sheet` and `three`. */
+      drawn(): Record<string, any>
     }
   }
 }

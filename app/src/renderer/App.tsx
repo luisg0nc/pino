@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { ProjectInfo } from '../shared/project'
+import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
 import { actions, store, useStore } from './state/store'
 import type { FolderChoice } from './ui/FolderMenu'
 import { nameOf, openProblem } from './ui/openFolder'
 import { RouteCard } from './ui/RouteCard'
+import { LeaderLayer } from './ui/LeaderLayer'
 import { SessionDock } from './ui/SessionDock'
 import { StatusLine } from './ui/StatusLine'
 import { BareControls, TitleBar } from './ui/TitleBar'
@@ -37,6 +39,37 @@ export function App() {
       offNotices()
     }
   }, [])
+
+  // Claude's pictures are drawn here, when main asks.
+  useEffect(() => answerLooks(), [])
+
+  // The marks of the project on show: as they stand, and every change main says.
+  useEffect(() => window.pino.marks.onChange((m) => actions.setMarks(m.projectId, m.marks)), [])
+
+  // The build loop of the project on show: what main tells from now on, and how it stands already.
+  useEffect(() => window.pino.build.onState(actions.setBuild), [])
+  useEffect(() => window.pino.fab.onState(actions.setFab), [])
+  const projectId = project?.id
+  // The fab's limits, once an engine with fab files is there: they are in the Brief from the first build.
+  const makesFab = useStore((s) => s.build?.engine.state === 'ready' && s.build.engine.serve >= 3)
+  useEffect(() => {
+    if (!projectId || !makesFab) return
+    void window.pino.fab.profiles().then(actions.setFabProfiles, () => {})
+    void window.pino.fab.state(projectId).then((s) => s && actions.setFab(s), () => {})
+  }, [projectId, makesFab])
+  useEffect(() => {
+    if (!projectId) return
+    void window.pino.build.state(projectId).then((s) => s && actions.setBuild(s), () => {})
+    void window.pino.marks.list(projectId).then((list) => actions.setMarks(projectId, list), () => {})
+  }, [projectId])
+
+  // What the person sees is told to main, which tells Claude with the next prompt.
+  const tab = useStore((s) => s.tab)
+  const look = useStore((s) => s.look)
+  const selection = useStore((s) => s.selection)
+  useEffect(() => {
+    if (projectId) void window.pino.view.tell(projectId, { tab, look, selection }).catch(() => {})
+  }, [projectId, tab, look, selection])
 
   // The project main holds open: the one remembered or named at start, and the same one after the window is reloaded.
   useEffect(() => {
@@ -100,6 +133,7 @@ export function App() {
         <SessionDock key={project.id} project={project} />
       </aside>
       <StatusLine project={project} />
+      <LeaderLayer />
     </div>
   )
 }

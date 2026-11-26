@@ -1,7 +1,12 @@
 // Everything the renderer may ask of main, and the types both sides share for it.
 
+import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
+import type { FabProfile, FabState, Readiness } from './fab'
+import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
+import type { EngineInfo } from './ready'
+import type { BoardLook, LookRequest, LookResult, Selection, ViewTab } from './view'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
 export type AgentView = 'chat' | 'terminal'
@@ -63,6 +68,55 @@ export interface PinoBridge {
     onItem(cb: (m: { sessionId: string; item: ChatItem; seq: number }) => void): () => void
     onMeta(cb: (m: { sessionId: string; meta: ChatMeta; seq: number }) => void): () => void
     onCapabilities(cb: (m: { sessionId: string; commands: ChatCommand[]; models: ChatModel[]; seq: number }) => void): () => void
+  }
+  build: {
+    /** The build loop of the open project as it stands; null for a project that is not open. */
+    state(projectId: string): Promise<BuildState | null>
+    rebuild(projectId: string): Promise<void>
+    /** The result of the build with this hash, which an older build's folder still holds. */
+    result(projectId: string, hash: string): Promise<BuildResult>
+    /** A file of the build with this hash: text, or the 3D model's bytes. Only what that build's result lists. */
+    file(projectId: string, hash: string, name: ArtifactName): Promise<string | Uint8Array>
+    /** A file of the route with this key, as text. */
+    routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>
+    onState(cb: (s: BuildState) => void): () => void
+    /** Whether Claude Code, KiCad and the engine are here; asked once a run. */
+    engineInfo(): Promise<EngineInfo>
+  }
+  view: {
+    /** What the window shows, so that Claude can be told what the person sees. */
+    tell(projectId: string, view: { tab: ViewTab; look: BoardLook; selection: Selection | null }): Promise<void>
+    /** Main asks for something only the window can make: a picture for Claude's `look`. Answered once, by id. */
+    onAsk(cb: (m: { id: number; kind: 'look'; req: LookRequest }) => void): () => void
+    answer(id: number, result: LookResult | { error: string }): void
+  }
+  route: {
+    /** The band's "Route again": routes the newest build in the background. */
+    start(projectId: string): Promise<void>
+    cancel(projectId: string): Promise<void>
+  }
+  fab: {
+    /** The release of the open project as main holds it; null for a project that is not open. */
+    state(projectId: string): Promise<FabState | null>
+    /** Whether a release would go through, and what it would be called. */
+    readiness(projectId: string): Promise<Readiness>
+    /** The status line's "Make fab files": its steps and its end come through onState. */
+    release(projectId: string): Promise<void>
+    cancel(projectId: string): Promise<void>
+    /** The fab's limits for every profile the engine builds; none from an engine without fab files. */
+    profiles(): Promise<FabProfile[]>
+    /** Shows the newest release's folder in the file manager. */
+    showFolder(projectId: string): Promise<void>
+    onState(cb: (s: FabState) => void): () => void
+  }
+  marks: {
+    list(projectId: string): Promise<Mark[]>
+    /** A mark of the person's, a draft until it goes with a prompt. Main works out its id, label and exact line. */
+    add(projectId: string, mark: NewMark): Promise<Mark>
+    update(projectId: string, id: string, patch: MarkPatch): Promise<Mark>
+    remove(projectId: string, id: string): Promise<void>
+    resolve(projectId: string, id: string, note: string): Promise<Mark>
+    onChange(cb: (m: { projectId: string; marks: Mark[] }) => void): () => void
   }
   notices: {
     /** Something main has to say that no call asked for: a folder it may not write into. */

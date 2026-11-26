@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ensureIgnored } from './ignored'
-import { FOLDER, onNotOwn, ownFolder, writeOwn } from './own'
+import { FOLDER, onNotOwn, ownFolder, whyNotOwn, writeOwn } from './own'
 
 let root: string
 let project: string
@@ -74,5 +74,23 @@ describe('ownFolder', () => {
     expect(readFileSync(join(project, FOLDER, 'session.json'), 'utf8')).toBe('{}')
     expect(readdirSync(outside)).toEqual([])
     expect(told).toEqual(['chat'])
+  })
+})
+
+describe("asking quietly whether a folder is pino's own", () => {
+  it('says why not, and uses up nothing the window is to be told', async () => {
+    const heard: string[] = []
+    onNotOwn((_dir, message) => heard.push(message))
+    symlinkSync(outside, join(project, FOLDER))
+    expect(await whyNotOwn(project, 'build')).toContain('.pino is a link')
+    expect(heard).toEqual([])
+    await expect(ownFolder(project)).rejects.toThrow('is a link')
+    expect(heard).toHaveLength(1)
+  })
+
+  it('says nothing of a folder that is, or is not there yet', async () => {
+    expect(await whyNotOwn(project, 'build')).toBeNull()
+    mkdirSync(join(project, FOLDER, 'build'), { recursive: true })
+    expect(await whyNotOwn(project, 'build')).toBeNull()
   })
 })

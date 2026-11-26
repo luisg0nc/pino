@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C910822&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 910822,
+    "mfr": "BSMD0805-050-24V",
+    "package": "0805",
+    "description": "-40℃~+85℃ 1.1mm 1.5mm 100ms 100mΩ 1A 2.2mm 24V 40A 500mA 600mW 850mΩ 0805 Resettable Fuses ROHS",
+    "is_basic": false,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.0516,
+    "stock_checked_at": "2026-11-15T07:27:48.000Z"
+   }
+  ]
+ }
+}

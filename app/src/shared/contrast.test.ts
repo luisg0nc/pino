@@ -139,6 +139,33 @@ describe.each([['light', tokens(css.slice(0, dark))], ['dark', { ...tokens(css.s
   })
 })
 
+describe.each([['light', tokens(css.slice(0, dark))], ['dark', { ...tokens(css.slice(0, dark)), ...tokens(css.slice(dark)) }]])('the board and the sheet, %s', (_theme, t) => {
+  const holds = (fg: string, bg: string, least: number) => expect([fg, bg, +contrast(t[fg], t[bg]).toFixed(2) >= least]).toEqual([fg, bg, true])
+
+  it('reads the copper as a drawing: graphite on the active layer, a pencil tone on the others', () => {
+    holds('--cu', '--board-paper', 7)
+    holds('--cu-far', '--board-paper', 1.5)
+    holds('--rat', '--board-paper', 3)
+    holds('--silk', '--board-paper', 2)
+  })
+
+  it('shows both marks on the paper and over copper', () => {
+    for (const mark of ['--user-mark', '--agent-mark']) holds(mark, '--board-paper', 4.5)
+    holds('--user-mark', '--cu-far', 3)
+    // Claude's orange is just under 3:1 on far copper. Every mark is therefore drawn cased in the paper, which it
+    // stands 4.5:1 from (drawMarks.ts); this holds the pair from drifting further.
+    holds('--agent-mark', '--cu-far', 2.75)
+  })
+
+  it('reads the sheet in its ink', () => {
+    holds('--sch-ink', '--sch-paper', 7)
+    holds('--sch-wire', '--sch-paper', 7)
+    holds('--sch-net', '--sch-paper', 4.5)
+    holds('--sch-pin', '--sch-paper', 3)
+    holds('--sch-ink', '--sch-fill', 7)
+  })
+})
+
 it('has the light tokens written out where no stylesheet is read, as the stylesheet has them', () => {
   // The window's ground in main.
   const light = tokens(css.slice(0, dark))

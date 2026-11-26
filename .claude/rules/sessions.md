@@ -19,7 +19,7 @@ paths:
 
 - The manager is plumbing. What the app's domain adds is behind `SessionDomain` (`domain.ts`): `promptContext` (added
   to a prompt through its `UserPromptSubmit` hook) and `stopAnswer` (the `Stop` hook's answer: a block, or null). The
-  engine stage implements it; nothing about boards goes into the manager. A domain that throws is logged, and the
+  board's side of it is `PinoDomain` (`main/domain.ts`); nothing about boards goes into the manager. A domain that throws is logged, and the
   prompt and the turn go on.
 - One session per project. A second `start` while one runs or starts is answered with the first, and `stopAll` waits
   for one that is being started. Closing or replacing the open project goes through `stopAll`, never through

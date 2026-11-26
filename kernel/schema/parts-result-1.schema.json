@@ -1,0 +1,259 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://pino.invalid/schema/parts-result-1.schema.json",
+ "title": "pino parts result",
+ "description": "What `pino-kernel parts` answers (pino_kernel.parts.ops.PartsResult).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "kind",
+  "query",
+  "parts",
+  "resolved",
+  "findings",
+  "source",
+  "headline"
+ ],
+ "properties": {
+  "schema": {
+   "const": "pino.parts/1"
+  },
+  "kind": {
+   "enum": [
+    "search",
+    "get",
+    "fetch",
+    "refresh"
+   ]
+  },
+  "query": {
+   "type": "object"
+  },
+  "parts": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/part"
+   }
+  },
+  "resolved": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/resolved"
+   }
+  },
+  "findings": {
+   "type": "array",
+   "maxItems": 200,
+   "items": {
+    "$ref": "#/$defs/finding"
+   }
+  },
+  "source": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "url",
+    "fresh",
+    "fetched_at"
+   ],
+   "properties": {
+    "url": {
+     "type": "string"
+    },
+    "fresh": {
+     "type": "boolean"
+    },
+    "fetched_at": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   }
+  },
+  "headline": {
+   "type": "string",
+   "maxLength": 160
+  }
+ },
+ "$defs": {
+  "part": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "lcsc",
+    "mfr",
+    "package",
+    "description",
+    "stock",
+    "price",
+    "class",
+    "checked_at",
+    "fetched_at"
+   ],
+   "properties": {
+    "lcsc": {
+     "type": "string",
+     "pattern": "^C[0-9]+$"
+    },
+    "mfr": {
+     "type": "string"
+    },
+    "package": {
+     "type": "string"
+    },
+    "description": {
+     "type": "string"
+    },
+    "stock": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "price": {
+     "type": [
+      "number",
+      "null"
+     ]
+    },
+    "class": {
+     "enum": [
+      "basic",
+      "preferred",
+      "extended"
+     ]
+    },
+    "checked_at": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "fetched_at": {
+     "type": "string"
+    }
+   }
+  },
+  "resolved": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "lcsc",
+    "how",
+    "symbol",
+    "footprint",
+    "notes"
+   ],
+   "properties": {
+    "lcsc": {
+     "type": "string"
+    },
+    "how": {
+     "enum": [
+      "kicad-map",
+      "kicad-rule",
+      null
+     ]
+    },
+    "symbol": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "footprint": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "notes": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "finding": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "source",
+    "code",
+    "severity",
+    "message"
+   ],
+   "properties": {
+    "source": {
+     "type": "string"
+    },
+    "code": {
+     "type": "string"
+    },
+    "severity": {
+     "enum": [
+      "error",
+      "warning",
+      "info"
+     ]
+    },
+    "message": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "at": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "space"
+     ],
+     "properties": {
+      "space": {
+       "enum": [
+        "board",
+        "sheet",
+        "source"
+       ]
+      },
+      "x": {
+       "type": "number"
+      },
+      "y": {
+       "type": "number"
+      },
+      "layer": {
+       "type": "string"
+      },
+      "file": {
+       "type": "string"
+      },
+      "line": {
+       "type": "integer"
+      }
+     }
+    },
+    "refs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "pins": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "nets": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,12 @@
+match,symbol,footprint,checked
+prefix=R;package=^0402$,Device:R,Resistor_SMD:R_0402_1005Metric,2026-11-26
+prefix=R;package=^0603$,Device:R,Resistor_SMD:R_0603_1608Metric,2026-11-26
+prefix=R;package=^0805$,Device:R,Resistor_SMD:R_0805_2012Metric,2026-11-26
+prefix=R;package=^1206$,Device:R,Resistor_SMD:R_1206_3216Metric,2026-11-26
+prefix=C;package=^0402$,Device:C,Capacitor_SMD:C_0402_1005Metric,2026-11-26
+prefix=C;package=^0603$,Device:C,Capacitor_SMD:C_0603_1608Metric,2026-11-26
+prefix=C;package=^0805$,Device:C,Capacitor_SMD:C_0805_2012Metric,2026-11-26
+prefix=C;package=^1206$,Device:C,Capacitor_SMD:C_1206_3216Metric,2026-11-26
+prefix=LED;package=^0402$,Device:LED,LED_SMD:LED_0402_1005Metric,2026-11-26
+prefix=LED;package=^0603$,Device:LED,LED_SMD:LED_0603_1608Metric,2026-11-26
+prefix=LED;package=^0805$,Device:LED,LED_SMD:LED_0805_2012Metric,2026-11-26

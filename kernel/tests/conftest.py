@@ -1,5 +1,6 @@
 import os
 import shutil
+import socket
 from pathlib import Path
 
 import pytest
@@ -65,11 +66,52 @@ def _isolated_router_cache(request, monkeypatch, tmp_path):
     """Every test gets its own pino cache, so no test reads or writes the user's. A `krt` test gets the router
     installed on this machine, read only."""
     monkeypatch.setenv("PINO_CACHE_DIR", str(tmp_path / "pino-cache"))
-    for k in ("PINO_KRT_DIR", "PINO_KRT_PYTHON", "PINO_KRT_REPO"):
+    for k in ("PINO_KRT_DIR", "PINO_KRT_PYTHON", "PINO_KRT_REPO", "PINO_PARTS_RECORDED", "PINO_JLCSEARCH_URL"):
         monkeypatch.delenv(k, raising=False)
     if request.node.get_closest_marker("krt") and _real_krt() is not None:
         monkeypatch.setenv("PINO_KRT_DIR", str(_real_krt().root))
         monkeypatch.setenv("PINO_KRT_PYTHON", str(_real_krt().python))
+
+
+@pytest.fixture(autouse=True)
+def _no_network(request, monkeypatch):
+    """No test asks jlcsearch anything or opens an internet socket (network-marked tests excepted)."""
+    monkeypatch.setenv("PINO_PARTS_OFFLINE", "1")
+    if request.node.get_closest_marker("network"):
+        return
+    connect = socket.socket.connect
+
+    def guard(sock, address):
+        if sock.family in (socket.AF_INET, socket.AF_INET6):
+            raise RuntimeError("network in a test")
+        return connect(sock, address)
+
+    monkeypatch.setattr(socket.socket, "connect", guard)
+
+
+RECORDED = FIXTURES / "parts" / "jlcsearch"
+
+
+@pytest.fixture
+def recorded():
+    """The folder of recorded and hand-made jlcsearch answers."""
+    return RECORDED
+
+
+@pytest.fixture
+def recorded_env(monkeypatch):
+    """Parts lookups (here and in child processes) read the recorded answers."""
+    monkeypatch.setenv("PINO_PARTS_RECORDED", str(RECORDED))
+    monkeypatch.delenv("PINO_PARTS_OFFLINE", raising=False)
+    return RECORDED
+
+
+@pytest.fixture
+def parts_cache(tmp_path):
+    """A PartsCache in tmp_path; set .now to move its clock."""
+    from pino_kernel.parts.cache import PartsCache
+
+    return PartsCache(tmp_path / "parts-cache")
 
 
 @pytest.fixture

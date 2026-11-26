@@ -57,6 +57,41 @@ const bridge: PinoBridge = {
     onMeta: (cb) => subscribe('chat:meta', cb),
     onCapabilities: (cb) => subscribe('chat:capabilities', cb)
   },
+  build: {
+    state: (projectId) => invoke('build:state', projectId),
+    rebuild: (projectId) => invoke('build:rebuild', projectId),
+    result: (projectId, hash) => invoke('build:result', projectId, hash),
+    file: (projectId, hash, name) => invoke('build:file', projectId, hash, name),
+    routeFile: (projectId, key, name) => invoke('build:routeFile', projectId, key, name),
+    onState: (cb) => subscribe('build:state', cb),
+    engineInfo: () => invoke('build:engineInfo')
+  },
+  view: {
+    tell: (projectId, view) => invoke('view:tell', projectId, view),
+    onAsk: (cb) => subscribe('view:ask', cb),
+    answer: (id, result) => ipcRenderer.send('view:answer', id, result)
+  },
+  route: {
+    start: (projectId) => invoke('route:start', projectId),
+    cancel: (projectId) => invoke('route:cancel', projectId)
+  },
+  fab: {
+    state: (projectId) => invoke('fab:state', projectId),
+    readiness: (projectId) => invoke('fab:readiness', projectId),
+    release: (projectId) => invoke('fab:release', projectId),
+    cancel: (projectId) => invoke('fab:cancel', projectId),
+    profiles: () => invoke('fab:profiles'),
+    showFolder: (projectId) => invoke('fab:showFolder', projectId),
+    onState: (cb) => subscribe('fab:state', cb)
+  },
+  marks: {
+    list: (projectId) => invoke('marks:list', projectId),
+    add: (projectId, mark) => invoke('marks:add', projectId, mark),
+    update: (projectId, id, patch) => invoke('marks:update', projectId, id, patch),
+    remove: (projectId, id) => invoke('marks:remove', projectId, id),
+    resolve: (projectId, id, note) => invoke('marks:resolve', projectId, id, note),
+    onChange: (cb) => subscribe('marks:changed', cb)
+  },
   notices: {
     onNotice: (cb) => subscribe('notice', cb)
   }

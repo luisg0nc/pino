@@ -35,8 +35,8 @@ something changed. A sheet copied from torno keeps its rules; pino's own areas h
 - An edit drawn as a diff has its own two washes (`--diff-removed-wash`, a grey between the panel and the hairline;
   `--diff-added-wash`, the value of `--accent-wash`): `--ink` 7:1 and `--muted` 4.5:1 on both. The added wash is 60
   degrees of hue at least from both marks and from `--fail`, but not from `--ok`: pino's accent is green.
-- Copper, mask, silk and per-net colours of a board are a second palette, separate from the accent. It comes with the
-  views.
+- Copper, mask, silk and per-net colours of a board are a second palette, separate from the accent: the drawing's
+  tokens in `tokens.css`, the net colours in `shared/board/palette.ts` (see `views`).
 
 ## Faces and shape
 
@@ -50,5 +50,5 @@ something changed. A sheet copied from torno keeps its rules; pino's own areas h
   of its own (set from the window).
 - No text is dimmed by `opacity`, nothing animates without end, and a sheet that moves something says what it does for
   a person who asked for less motion (`styles/styles.test.ts`).
-- The window's sizes are tokens (`--title-h`, `--card-w`, `--dock-w`, `--status-h`); under 1360px the card and the
-  dock take their narrow widths.
+- The window's sizes are tokens (`--title-h`, `--card-w`, `--dock-w`, `--status-h`); at 1500px and under the card and
+  the dock take their narrow widths, as the design mocks do.

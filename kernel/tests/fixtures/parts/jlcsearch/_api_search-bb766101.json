@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C1538&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 1538,
+    "mfr": "0402B472K500NT",
+    "package": "0402",
+    "description": "4.7nF 50V X7R ±10% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.0038,
+    "stock_checked_at": "2026-11-10T12:35:09.000Z"
+   }
+  ]
+ }
+}

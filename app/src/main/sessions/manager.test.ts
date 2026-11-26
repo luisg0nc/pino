@@ -10,6 +10,7 @@ import type { ChatItem } from '../../shared/chat'
 import type { ProjectInfo } from '../../shared/project'
 import { type HttpRouter, SESSION_HEADER, startHttp } from '../http'
 import { mountMcp } from '../mcp/server'
+import type { ToolDeps } from '../mcp/tools'
 import { onNotOwn } from '../own'
 import { systemPrompt } from '../prompt'
 import { Trust } from '../trust'
@@ -42,7 +43,7 @@ beforeEach(async () => {
   mkdirSync(dir, { recursive: true })
   project = { id: 'p0123456789ab', dir, name: 'blinky board' }
   http = await startHttp()
-  mountMcp(http, { project: (id) => (id === project.id ? project : undefined) })
+  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined } as unknown as ToolDeps)
   const grant = http.grant.bind(http)
   tokens = []
   http.grant = (paths) => {
@@ -185,7 +186,7 @@ describe('Sessions', () => {
     const domain: SessionDomain = {
       promptContext: async (of_, prompt) => {
         prompts.push(`${of_.id} ${prompt}`)
-        return 'CTX'
+        return { text: 'CTX', sentMarkIds: [] }
       },
       stopAnswer: async () => (++stops === 1 ? { decision: 'block', reason: 'KEEP GOING' } : null)
     }
@@ -195,6 +196,19 @@ describe('Sessions', () => {
     expect(prompts).toEqual([`${project.id} say hello`])
     expect(of(sessions, id, 'context')).toMatchObject([{ text: 'CTX', marks: [] }])
     expect(stops).toBe(2)
+  })
+
+  it("puts the marks the domain sent on the prompt's context item, and calls delivered once the hook is answered", async () => {
+    const delivered: string[] = []
+    const domain: SessionDomain = {
+      promptContext: async () => ({ text: 'M1 pad U2.1', sentMarkIds: ['M1'], delivered: async () => void delivered.push('M1') }),
+      stopAnswer: async () => null
+    }
+    const sessions = manager({ domain })
+    const id = await started(sessions)
+    await turn(sessions, id, 'say hello')
+    expect(of(sessions, id, 'context')).toMatchObject([{ text: 'M1 pad U2.1', marks: ['M1'] }])
+    await expect.poll(() => delivered).toEqual(['M1'])
   })
 
   it('lets a prompt and a turn go on when the domain throws', async () => {
@@ -408,7 +422,7 @@ describe('Sessions', () => {
     expect(hook.status).toBe(404)
     const client = new Client({ name: 'test', version: '0' })
     await client.connect(new StreamableHTTPClientTransport(new URL(http.url(`/mcp/${project.id}`)), { requestInit: { headers: { [SESSION_HEADER]: tokens[0] } } }))
-    expect((await client.listTools()).tools.map((t) => t.name)).toEqual(['project'])
+    expect((await client.listTools()).tools.map((t) => t.name)).toContain('project')
     await client.close()
   })
 

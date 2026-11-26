@@ -41,8 +41,8 @@ paths:
   list of strings (never a line for a shell), variables to add to the environment, and files to write
   (`AgentLaunch.files`). Everything the agent is given of pino is on its command line, in its environment, or in a
   config file of pino's that holds no secret (`<userData>/agent/<session id>.mcp.json`, written before the agent
-  starts and removed when it has gone). pino passes no skills yet (`skills: false`, no `--plugin-dir`) and every hook
-  has a 5 s timeout. The session's token (`LaunchContext.token`) is in its environment alone, as `PINO_SESSION`.
+  starts and removed when it has gone). pino passes no skills yet (`skills: false`, no `--plugin-dir`). Every hook
+  has a 5 s timeout but `Stop`, which has 25 s: it may wait for a build that is nearly done (`main/domain.ts`). The session's token (`LaunchContext.token`) is in its environment alone, as `PINO_SESSION`.
 - A `PINO_SESSION`, `PINO_PROJECT_ID` or `PINO_SESSION_ID` pino itself was started with (from inside a session of
   another pino), and the same variables of a sibling app (`SIBLING_PREFIXES` in `shared/app.ts`), reach no process it
   starts: `withoutSession` of `sessions/agentEnv.ts` takes them out, and `agentEnv` also drops pino's own switches and

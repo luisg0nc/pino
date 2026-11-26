@@ -1,26 +1,39 @@
 import { existsSync, rmSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme, shell } from 'electron'
 import { APP, envName, toolName } from '../shared/app'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
-import { frameOptions, MIN_WINDOW, SURFACE } from './frame'
+import { Builds } from './builds'
+import { PinoDomain } from './domain'
+import { frameOptions, MIN_WINDOW, SURFACE, windowSize } from './frame'
 import { startHttp } from './http'
 import { broadcast, type Projects, registerIpc } from './ipc'
+import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
 import { applyLoginPath } from './loginPath'
+import { MarkStore } from './marks/store'
 import { mountMcp } from './mcp/server'
+import { type BuildModel, Models } from './model'
 import { onNotOwn } from './own'
+import { resultOfBuild } from './artifacts'
+import type { LookResult } from '../shared/view'
 import { openProject } from './project'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
+import { readEngine, versionCommand } from './engineInfo'
+import type { EngineInfo } from '../shared/ready'
+import { agentEnv } from './sessions/agentEnv'
+import { findCommand } from './sessions/choice'
+import { Routing } from './routing'
+import { Fab } from './fab'
 import { type Config, configOf, listed, recentWith } from './recent'
 import { claudeAdapter } from './sessions/claude'
-import { NO_DOMAIN } from './sessions/domain'
 import { Sessions } from './sessions/manager'
 import { KnownModels } from './sessions/models'
 import { makeTestProfile, removeTestProfileAfterExit } from './testProfile'
 import { Trust } from './trust'
+import { askWindow, NoAnswer, ViewHolder } from './view'
 
 // Environment switches:
 //   PINO_TEST=1            the window is created hidden and never shown, the profile is a temporary folder, any number
@@ -29,6 +42,8 @@ import { Trust } from './trust'
 //   PINO_CONFIG=<path>     config file to use instead of ~/.config/pino/config.json (under test there is none unless
 //                          one is named)
 //   PINO_AGENT_CMD=<cmd>   command to run for a session instead of `claude`, split on spaces
+//   PINO_KERNEL_CMD=<cmd>  command to run as the engine's serve mode instead of `uv run ... pino-kernel serve`
+//   PINO_KERNEL_DIR=<dir>  the engine's folder, instead of `kernel` beside the app
 //   PINO_DEBUG=1           print where the MCP server is, and the command line and the hooks of every session
 // Whose window this is, said outright: the desktop finds pino's entry and icon by it (the Wayland app id, the
 // X11 class).
@@ -102,6 +117,34 @@ function changeConfig(change: (config: Config) => Config): Promise<void> {
   return done
 }
 
+/** The one engine of this run, and the build loop over it. Neither starts anything until a project has a board. */
+const kernel = kernelHolder(() =>
+  startKernel(kernelCommand(process.env, app.getAppPath()), { env: process.env, cwd: app.getPath('userData') })
+)
+const builds = new Builds({ kernel: () => kernel.get() })
+const routing = new Routing({ kernel: () => kernel.get(), builds })
+/** The project on show, once there is a holder of it: the fab's engine state is that project's build loop's. */
+let openProjectId: () => string | undefined = () => undefined
+const fab = new Fab({
+  kernel: () => kernel.get(),
+  builds,
+  engine: () => {
+    const id = openProjectId()
+    return (id ? builds.state(id)?.engine : undefined) ?? { state: 'starting' }
+  },
+  onState: (state) => broadcast('fab:state', state)
+})
+/** What the person has on screen, for what Claude is told of it. */
+const views = new ViewHolder()
+/** Each build as main reads it, and the marks, made on the newest board that was drawn. */
+const buildModels = new Models()
+/** The newest build that drew something, read. */
+async function drawnModel(project: ProjectInfo): Promise<BuildModel | null> {
+  const drawn = builds.lastGood(project.id)
+  return drawn ? buildModels.get(project, drawn) : null
+}
+const marks = new MarkStore({ model: drawnModel })
+
 /** The one project open, and the rules of opening and closing it. */
 function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: string, said: boolean): Promise<void> } {
   let open: ProjectInfo | undefined
@@ -119,10 +162,14 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
       const next = await openProject(dir)
       if (open && open.id !== next.id) {
         // No start is taken for the old project from here on, and `stopAll` waits for one under way.
+        routing.drop(open.id)
+        fab.drop(open.id)
+        builds.close(open.id)
         open = undefined
         await sessions().stopAll()
       }
       open = next
+      builds.open(next)
       await changeConfig((config) => ({ project: next.dir, recent: recentWith(config.recent, next.dir) }))
       return next
     })
@@ -160,6 +207,11 @@ function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: stri
     },
     close: () =>
       inTurn(async () => {
+        if (open) {
+          routing.drop(open.id)
+          fab.drop(open.id)
+          builds.close(open.id)
+        }
         open = undefined
         await sessions().stopAll()
         await changeConfig((config) => ({ recent: config.recent }))
@@ -179,6 +231,8 @@ const testHooks = {
   pickFolder: null as string | null,
   picks: 0,
   mcpFor: (_projectId: string): { url: string; token: string } => ({ url: '', token: '' }),
+  /** The engine's process id, when one runs: a spec checks that it does not outlive pino. */
+  kernelPid: (): number | null => kernel.current()?.pid ?? null,
   configPath: (): string | null => configPath
 }
 
@@ -197,8 +251,9 @@ function windowIcon(): NativeImage | undefined {
 function createWindow(): BrowserWindow {
   const icon = windowIcon()
   const win = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    ...windowSize(isTest, env('TEST_SIZE')),
+    // The size is the page's, as there is no native frame.
+    useContentSize: true,
     show: false,
     title: APP.name,
     ...(icon ? { icon } : {}),
@@ -279,7 +334,7 @@ void app.whenReady().then(async () => {
   // What the agent's CLI talks to: its hooks, and the MCP server through which it asks pino.
   const http = await startHttp()
   const holder = (projects = projectHolder(() => sessions!))
-  mountMcp(http, { project: (id) => (holder.open()?.id === id ? holder.open() : undefined) })
+  openProjectId = () => holder.open()?.id
   // The files an agent is given by path (its MCP server's, which holds no secret): what a pino that crashed left is of no use.
   const configDir = join(app.getPath('userData'), 'agent')
   rmSync(configDir, { recursive: true, force: true })
@@ -287,12 +342,41 @@ void app.whenReady().then(async () => {
   const dataDir = app.getPath('userData')
   const trust = new Trust(join(dataDir, 'trusted.json'))
   const models = new KnownModels(join(dataDir, 'models.json'))
+  const domain = new PinoDomain({
+    builds,
+    marks,
+    view: () => {
+      const open = holder.open()
+      return open ? views.of(open.id) : null
+    },
+    toolName
+  })
+  mountMcp(http, {
+    project: (id) => (holder.open()?.id === id ? holder.open() : undefined),
+    state: (id) => builds.state(id),
+    model: drawnModel,
+    marks,
+    routing,
+    buildResult: (project, hash) => resultOfBuild(project, hash, [builds.latest(project.id), builds.lastGood(project.id)]),
+    diff: async (project, from, to) => (await kernel.get().request<{ changes: { circuit: string[]; layout: string[] } }>('diff', { project: project.dir, from, to })).changes,
+    look: (_project, request) => {
+      const win = BrowserWindow.getAllWindows()[0]
+      return win ? askWindow<LookResult>(win, 'look', request) : Promise.reject(new NoAnswer('there is no window'))
+    },
+    looked: (id) => domain.looked(id),
+    fab,
+    fabProfile: async (project) => {
+      const model = await drawnModel(project)
+      await fab.profiles()
+      return fab.profileOf(model?.circuit?.fab)
+    }
+  })
   sessions = new Sessions({
     http,
     adapter: claudeAdapter(env('AGENT_CMD')),
     configDir,
     env: process.env,
-    domain: NO_DOMAIN,
+    domain,
     trust,
     models,
     systemPrompt: systemPrompt(toolName),
@@ -301,7 +385,24 @@ void app.whenReady().then(async () => {
   if (isDebug) console.error(`[${APP.name}] listening at ${http.url('/')}`)
   // A folder of a project that pino may not write into is said in the window, once.
   onNotOwn((_dir, message) => broadcast('notice', { text: message }))
-  registerIpc({ projects: holder, sessions, trust, models })
+  const adapter = claudeAdapter(env('AGENT_CMD'))
+  let engineSaid: Promise<EngineInfo> | undefined
+  const engineInfo = () =>
+    (engineSaid ??= readEngine(versionCommand(kernelCommand(process.env, app.getAppPath())), { env: process.env, cwd: app.getPath('userData') }).then((said) => ({
+      ...said,
+      claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
+    })))
+  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path) })
+  // Every build that drew something has the marks found again on it.
+  builds.onResult((projectId, result) => {
+    fab.buildLanded(projectId)
+    const project = holder.open()
+    if (!project || project.id !== projectId || !result.hash) return
+    void buildModels
+      .get(project, result)
+      .then((model) => model && marks.reanchor(project, model))
+      .catch((e: Error) => console.error(`cannot find the marks again on h${result.number}: ${e.message}`))
+  })
 
   testHooks.mcpFor = (projectId) => ({ url: http.url(`/mcp/${projectId}`), token: http.grant([`/mcp/${projectId}`]) })
   if (isTest) Object.assign(globalThis, { [APP.mainHook]: testHooks })
@@ -316,12 +417,16 @@ void app.whenReady().then(async () => {
 const quitWaits = quitGate(3000)
 
 app.on('before-quit', (event) => {
-  const wait = quitWaits([sessions?.busy ? sessions.stopAll() : null, configWriting > 0 ? configWritten : null])
+  // The engine is asked to shut down; it has the same three seconds, and its whole group is killed with pino.
+  const wait = quitWaits([sessions?.busy ? sessions.stopAll() : null, configWriting > 0 ? configWritten : null, kernel.current() ? kernel.dispose() : null])
   if (!wait) return
   event.preventDefault()
   void wait.then(() => app.quit())
 })
-app.on('will-quit', () => sessions?.killAll())
+app.on('will-quit', () => {
+  sessions?.killAll()
+  kernel.kill()
+})
 
 // Closing the window ends the app: sessions do not outlive it.
 app.on('window-all-closed', () => app.quit())

@@ -1,0 +1,92 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://pino.invalid/schema/sheet-1.schema.json",
+ "title": "pino schematic sheet",
+ "description": "Where every symbol, pin, power symbol, wire, label and block frame is on the sheet (pino_kernel.schematic.writer.sheet_json). Sheet millimetres, origin top left, y down: the units of the schematic SVG.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "paper", "symbols", "power", "wires", "labels", "frames"],
+ "properties": {
+  "schema": {"const": "pino.sheet/1"},
+  "paper": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["name", "width", "height"],
+   "properties": {"name": {"type": "string"}, "width": {"type": "number"}, "height": {"type": "number"}}
+  },
+  "symbols": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["ref", "x0", "y0", "x1", "y1", "pins"],
+    "properties": {
+     "ref": {"type": "string"},
+     "x0": {"type": "number"},
+     "y0": {"type": "number"},
+     "x1": {"type": "number"},
+     "y1": {"type": "number"},
+     "pins": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": ["number", "name", "net", "x", "y"],
+       "properties": {
+        "number": {"type": "string"},
+        "name": {"type": "string"},
+        "net": {"type": ["string", "null"], "description": "null for a pin left open"},
+        "x": {"type": "number"},
+        "y": {"type": "number"}
+       }
+      }
+     }
+    }
+   }
+  },
+  "power": {"type": "array", "items": {"$ref": "#/$defs/spot"}},
+  "wires": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["net", "a", "b"],
+    "properties": {"net": {"type": "string"}, "a": {"$ref": "#/$defs/point"}, "b": {"$ref": "#/$defs/point"}}
+   }
+  },
+  "labels": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["net", "x", "y", "global"],
+    "properties": {"net": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"}, "global": {"type": "boolean"}}
+   }
+  },
+  "frames": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["key", "title", "x0", "y0", "x1", "y1"],
+    "properties": {
+     "key": {"type": "string"},
+     "title": {"type": "string"},
+     "x0": {"type": "number"},
+     "y0": {"type": "number"},
+     "x1": {"type": "number"},
+     "y1": {"type": "number"}
+    }
+   }
+  }
+ },
+ "$defs": {
+  "point": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}], "minItems": 2, "maxItems": 2},
+  "spot": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["net", "x", "y"],
+   "properties": {"net": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"}}
+  }
+ }
+}

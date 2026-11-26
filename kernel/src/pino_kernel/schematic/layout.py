@@ -31,6 +31,7 @@ class MPart:
     footprint: str
     lcsc: str
     dnp: bool
+    hand_fit: bool = False
 
 
 @dataclass(eq=False)
@@ -64,7 +65,7 @@ class Model:
         self.parts: dict[str, MPart] = {}
         for p in circuit.parts:
             self.parts[p.ref] = MPart(p.ref, p.key, symbols.load(p.symbol), p.value, p.role, by_key[p.block],
-                                      p.footprint, p.lcsc, p.dnp)
+                                      p.footprint, p.lcsc, p.dnp, p.hand_fit)
         for b in circuit.blocks:
             by_key[b.key].parts = [self.parts[r] for r in b.parts]
         self.nets: dict[str, MNet] = {n.name: MNet(n.name, n.kind, list(n.pins), n.external, n.symbol)

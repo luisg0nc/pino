@@ -44,7 +44,7 @@ it('names a key press as the table does', () => {
 it('has Left and Right for a focused view tab, in a scope of its own', () => {
   expect(pressed({ key: 'ArrowLeft' }, 'view.prev')).toBe(true)
   expect(pressed({ key: 'ArrowRight' }, 'view.next')).toBe(true)
-  expect(KEYS.filter((r) => r.id.startsWith('view.')).map((r) => r.scope)).toEqual(['tabs', 'tabs'])
+  expect(KEYS.filter((r) => r.id === 'view.prev' || r.id === 'view.next').map((r) => r.scope)).toEqual(['tabs', 'tabs'])
 })
 
 it("has the chat's keys where the chat listens: the box, a card that asks, a field and a popover", () => {
@@ -74,4 +74,11 @@ it('says which key of a row was pressed', () => {
 it('knows what typing would take', () => {
   for (const key of ['V', '?', 'Esc', 'Enter', 'Shift+Enter', 'Left', 'Ctrl+C', 'Ctrl+R']) expect([key, typed(key)]).toEqual([key, true])
   for (const key of ['Ctrl+Shift+E', 'F6', 'Ctrl+`', 'F12']) expect([key, typed(key)]).toEqual([key, false])
+})
+
+it('has the keys of the views in a scope of their own, with no clash', () => {
+  expect(keyClashes(KEYS)).toEqual([])
+  expect(KEYS.filter((r) => r.scope === 'view').map((r) => r.id)).toEqual(['board.layer', 'board.fit', 'board.nets', 'view.drop', 'mark.select', 'mark.point', 'mark.arrow', 'mark.stroke', 'mark.region'])
+  expect(which({ key: '2' }, 'board.layer')).toBe(1)
+  expect([pressed({ key: 'f' }, 'board.fit'), pressed({ key: 'n' }, 'board.nets'), pressed({ key: 'Escape' }, 'view.drop')]).toEqual([true, true, true])
 })

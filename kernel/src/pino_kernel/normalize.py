@@ -2,8 +2,8 @@
 
 A build folder must be a pure function of its inputs (two copies of a project give the same
 bytes), and must not carry absolute paths. kicad-cli stamps the time into SVG titles, report
-JSON, the netlist and the GLB, and the input's full path into the netlist; its threaded DRC lists
-unconnected pads in no fixed order.
+JSON, the netlist, the GLB, Gerbers and drill files, and the input's full path into the netlist; its threaded DRC
+lists unconnected pads in no fixed order.
 """
 
 from __future__ import annotations
@@ -16,6 +16,15 @@ _SVG_TITLE = re.compile(r"<title>SVG Image created as (\S+) date [^<]*</title>")
 _SOURCE = re.compile(r"<source>[^<]*?([^/<]+)</source>")
 _DATE = re.compile(r"<date>[^<]*</date>")
 _GLB_TIME = re.compile(rb'"generated_at"\s*:\s*"([^"]*)"')
+# Gerber and drill files: X2's creation date, and the date in KiCad's comments
+_GERBER_SUFFIX = re.compile(r"^\.(gbr|gtl|gbl|gto|gbo|gts|gbs|gtp|gbp|gm\d+|g\d+|drl)$")
+_FIXED_DATE = "2000-01-01T00:00:00+00:00"
+_GERBER_DATES = (
+    (re.compile(r"%TF\.CreationDate,[^*]*\*%"), f"%TF.CreationDate,{_FIXED_DATE}*%"),
+    (re.compile(r"(G04 Created by KiCad \([^)]*\)) date [^*]*\*"), r"\1*"),
+    (re.compile(r"(?m)^(; DRILL file .*?) date \S+"), r"\1"),
+    (re.compile(r"(?m)^(; #@! TF\.CreationDate,)\S+"), rf"\g<1>{_FIXED_DATE}"),
+)
 
 
 def _unconnected(entries: list) -> list:
@@ -52,6 +61,13 @@ def normalize(path: Path) -> None:
             changed = True
         if changed:
             path.write_text(json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    elif _GERBER_SUFFIX.match(path.suffix):
+        data = path.read_bytes().decode("utf-8", "surrogateescape")
+        new = data
+        for pattern, replacement in _GERBER_DATES:
+            new = pattern.sub(replacement, new)
+        if new != data:
+            path.write_bytes(new.encode("utf-8", "surrogateescape"))
     elif path.suffix == ".xml":
         text = path.read_text(encoding="utf-8")
         new = _DATE.sub("<date></date>", _SOURCE.sub(r"<source>\1</source>", text))

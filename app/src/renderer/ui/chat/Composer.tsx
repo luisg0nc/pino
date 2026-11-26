@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { hint, pressed, which } from '../../../shared/keys'
 import { useChat } from '../../state/chat'
+import { actions, store, useStore } from '../../state/store'
+import { chipOf, MarkChip } from '../MarkChip'
 import { giveKeysBack } from '../typing'
 import { TasksBar } from './Tasks'
 
@@ -19,6 +21,9 @@ export function Composer({ sessionId, live, working, onSent }: { sessionId: stri
   const [text, setText] = useState(() => drafts.get(sessionId) ?? '')
   const [problem, setProblem] = useState<string | null>(null)
   const chat = useChat(sessionId)
+  const marks = useStore((s) => s.marks)
+  // The person's marks not yet sent: the next prompt takes them with it.
+  const drafted = marks.filter((m) => m.status === 'draft' && m.author === 'user')
   const waiting = chat?.items.findLast((i) => i.kind === 'ask' && i.state === 'open' && i.toolName !== 'AskUserQuestion')
   const openAsk = waiting?.kind === 'ask' ? waiting : undefined
   const field = useRef<HTMLTextAreaElement>(null)
@@ -65,6 +70,25 @@ export function Composer({ sessionId, live, working, onSent }: { sessionId: stri
       {/* Above the box, while Claude works: how far its list is, and what it does now. */}
       <TasksBar items={chat?.items ?? []} working={working} />
       <div className="chat-composer chat-box">
+        {drafted.length > 0 && (
+          <div className="chat-goes" role="group" aria-label="Marks that go with your next prompt">
+            <span>Goes with your next prompt:</span>
+            {drafted.map((mark) => (
+              <span key={mark.id} className="chat-goes-one">
+                <MarkChip chip={chipOf(mark)} />
+                <button
+                  type="button"
+                  className="chat-goes-remove"
+                  aria-label={`Remove ${mark.id}`}
+                  title={`Remove ${mark.id}`}
+                  onClick={() => void window.pino.marks.remove(store.getState().project!.id, mark.id).catch((e: Error) => actions.notice(e.message))}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <textarea
           ref={field}
           className="chat-input"
@@ -95,6 +119,17 @@ export function Composer({ sessionId, live, working, onSent }: { sessionId: stri
           }}
         />
         <div className="chat-actions">
+          <button
+            type="button"
+            className="chat-mark"
+            title="Point at the board: the mark goes with your next prompt"
+            onClick={() => {
+              actions.setTab('board')
+              actions.setTool('point')
+            }}
+          >
+            Mark on board
+          </button>
           <span className="spacer" />
           {live && (
             <kbd className="chat-hint num" aria-hidden="true">

@@ -1,12 +1,16 @@
-/* The route card at the left of an open project (`ui/RouteCard.tsx`). */
+/* The route card at the left of an open project (`ui/RouteCard.tsx`): torno's card, with a route down its blocks. */
 
 /* In the left column of the grid (`layout.css`): the card is the column. */
 .left .route-card {
+  flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
 
 .route-head {
-  padding: var(--space-4) var(--space-4) var(--space-3);
+  padding: 14px var(--space-4) var(--space-3);
   border-bottom: var(--divider);
 }
 
@@ -18,13 +22,241 @@
   white-space: nowrap;
 }
 
+.route-verdict {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.route-verdict .route-build {
+  font-size: 15px;
+}
+
+.route-rest {
+  margin-left: 4px;
+  font: 500 11px / 1.5 var(--font-mono);
+  letter-spacing: -0.02em;
+  color: var(--ok);
+}
+
+.route-rest[data-tone='warn'] {
+  color: var(--warn);
+}
+
+.route-rest[data-tone='fail'] {
+  color: var(--fail);
+}
+
+.route-sub {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--text-row);
+}
+
+.route-sub .num {
+  color: var(--ink);
+}
+
+.route-head[data-engine='failed'] .route-sub {
+  overflow-wrap: anywhere;
+}
+
+/* ---- the blocks, strung on the route ---- */
+
 .route-section {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: 2px;
+  padding: 14px var(--space-4) 10px var(--space-6);
+  border-bottom: var(--divider);
+}
+
+.route-section::before {
+  content: '';
+  position: absolute;
+  top: 19px;
+  left: 15px;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--route);
+  border-radius: 50%;
+  background: var(--panel);
+}
+
+.route-section[data-lit]::before {
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .route-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.route-title .route-net {
+  font-size: 13px;
+}
+
+.route-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.route-count .num {
+  margin-inline: 0;
+}
+
+.route-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 3px 0;
+  font-size: var(--text-row);
+}
+
+.route-grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-value {
+  flex: none;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.route-value .num {
+  color: var(--ink);
+}
+
+.route-value[data-tone='warn'],
+.route-value[data-tone='warn'] .num {
+  color: var(--warn);
+}
+
+.route-value[data-tone='fail'] {
+  color: var(--fail);
+}
+
+.route-value[data-tone='ok'] {
+  color: var(--ok);
+}
+
+.route-line {
+  display: block;
+  color: var(--muted);
+  font: 400 10.5px / 1.5 var(--font-mono);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.route-reference {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-control);
+  background: var(--accent-wash);
+  font: 400 10.5px / 1.55 var(--font-mono);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.route-note {
+  padding: 2px 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* The gauge: a cell for each net, hollow while open, hatched when its copper is stale. */
+.route-gauge {
+  display: flex;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.route-gauge i {
+  flex: 1;
+  height: 8px;
+  border-radius: 0;
+}
+
+.route-gauge i[data-cell='done'] {
+  background: var(--accent);
+}
+
+.route-gauge i[data-cell='open'] {
+  box-shadow: inset 0 0 0 1px var(--field-edge);
+}
+
+.route-gauge i[data-cell='stale'] {
+  background: repeating-linear-gradient(135deg, var(--field-edge) 0 1.5px, transparent 1.5px 4px);
+}
+
+/* The rows of checks and of blocks: each a button; the one in hand has the wash and a rule at its left. */
+.route-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-check {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: calc(100% + 24px);
+  margin: 0 -8px 0 -16px;
+  padding: 4px 8px 4px 16px;
+  border: 0;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  background: transparent;
+  font-size: var(--text-row);
+  text-align: left;
+}
+
+.route-check:hover,
+.route-check[data-hot] {
+  background: var(--accent-wash);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.route-times {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.route-word {
+  flex: none;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.route-check[data-word='pass'] .route-word {
+  color: var(--ok);
+}
+
+.route-check[data-word='warn'] .route-word {
+  color: var(--warn);
+}
+
+.route-check[data-word='fail'] .route-word {
+  color: var(--fail);
+}
+
+.route-failure {
+  padding: 3px 0;
+  color: var(--fail);
+  font-size: var(--text-row);
+  overflow-wrap: anywhere;
 }

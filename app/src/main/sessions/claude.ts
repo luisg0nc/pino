@@ -8,6 +8,8 @@ import { HOOK_EVENTS } from './status'
 export { HOOK_EVENTS }
 
 const HOOK_TIMEOUT_S = 5
+/** The Stop hook may wait for a build that is nearly done before it answers (`main/domain.ts`, STOP_WAIT_MS). */
+const STOP_HOOK_TIMEOUT_S = 25
 /**
  * The variable of the agent's environment that holds the session's token. Claude Code reads names that look like a
  * credential (`*_API_KEY`, `NPM_TOKEN`, ...) as empty toward a remote server: this one does not look like one.
@@ -58,7 +60,7 @@ export function claudeAdapter(agentCmd?: string): AgentAdapter {
             {
               type: 'http',
               url: ctx.hookUrl(event),
-              timeout: HOOK_TIMEOUT_S,
+              timeout: event === 'Stop' ? STOP_HOOK_TIMEOUT_S : HOOK_TIMEOUT_S,
               headers: { [SESSION_HEADER]: `$${TOKEN_VARIABLE}` },
               allowedEnvVars: [TOKEN_VARIABLE]
             }

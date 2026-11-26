@@ -1,0 +1,137 @@
+/* The builds strip at the top of the dock (`ui/strip/BuildsStrip.tsx`): the project's builds, each a small picture of
+   its board, hung on a line. */
+
+.strip {
+  flex: none;
+  padding: 8px 0 8px;
+  border-bottom: var(--divider);
+}
+
+.strip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 14px 6px;
+  color: var(--muted);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+.strip-head b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.strip-track {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  padding: 0 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.strip-node {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  width: 62px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.strip-pic {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+}
+
+.strip-pic img {
+  display: block;
+  width: 60px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.strip-pic-word {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.strip-node:not(:disabled):hover .strip-pic {
+  border-color: var(--field-edge);
+}
+
+.strip-node[data-on-show] .strip-pic {
+  border: 1.5px solid var(--accent);
+}
+
+.strip-node[data-kind='failed'] .strip-pic {
+  border-color: var(--fail);
+  background: var(--fail-wash);
+}
+
+.strip-node[data-kind='failed'] .strip-pic-word {
+  color: var(--fail);
+}
+
+/* A build the engine no longer keeps. */
+.strip-node[data-kind='gone'] .strip-pic {
+  border-style: dashed;
+  background: var(--surface);
+}
+
+.strip-id {
+  color: var(--ink);
+  font: 500 11px / 1.6 var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.strip-node[data-on-show] .strip-id {
+  color: var(--accent);
+}
+
+.strip-node:disabled .strip-id {
+  color: var(--muted);
+}
+
+.strip-by {
+  max-width: 62px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-by .num {
+  margin-inline: 0;
+}
+
+.strip-node[data-landing] {
+  animation: strip-land 0.7s var(--ease) both;
+}
+
+@keyframes strip-land {
+  from {
+    opacity: 0;
+    transform: translateX(34px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip-node[data-landing] {
+    animation: none;
+  }
+}

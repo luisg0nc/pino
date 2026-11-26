@@ -97,6 +97,8 @@ Copied from torno at `TORNO_COMMIT` (copy, then adapt only as named; list each i
 
 ### Task 1: The engine writes `sheet.json` and answers `diff`
 
+> As built: no version bump (director's call). The schematic SVG is exported with `--exclude-drawing-sheet`, so the Schematic tab shows blocks on one paper without KiCad's title block. `sheet.json` gives the paper's nominal size; KiCad's SVG is a few microns off it.
+
 **Files:**
 - Modify: `kernel/src/pino_kernel/schematic/writer.py`, `kernel/src/pino_kernel/build.py`, `kernel/src/pino_kernel/cli.py`, `kernel/src/pino_kernel/__init__.py`, `kernel/schema/build-result-1.schema.json`, `kernel/README.md`
 - Create: `kernel/src/pino_kernel/ops.py`, `kernel/schema/sheet-1.schema.json`
@@ -110,7 +112,7 @@ Copied from torno at `TORNO_COMMIT` (copy, then adapt only as named; list each i
   - `ops.extra_op(req: dict) -> dict | None`: answers `{"id", "op": "diff", "project", "from": "<hash>", "to": "<hash>"}` with `{"id", "ok": true, "changes": {"circuit": [...], "layout": [...]}}` from the two folders' `board.kicad_pcb` through `cap_changes(changes(a, b))`; a folder that is gone gives `{"ok": false, "error": "build <hash> is no longer kept"}`; a hash that is not 12 hex gives `"not a build hash"`. `None` for any other op. `cli._answer` calls it before its "unknown op" line, nothing else changes there (the routing branch moves the loop to `serve.py`: the merge keeps this one call).
   - `__version__ = "0.1.1"` (old caches stop matching, so every build has `sheet.json`). If `routing` merged first with `0.2.0`, use `0.2.1`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_sheet_json_has_every_pin_once(reference_circuit, real_symbols):
@@ -161,21 +163,21 @@ def test_other_ops_are_not_extra():
 def test_serve_answers_diff(two_builds): ...   # through cli.serve with io.StringIO, in order with a ping
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_sheet_json.py tests/test_ops.py -v`
 Expected: FAIL with `AttributeError: 'SchematicFiles' object has no attribute 'sheet'` and `ModuleNotFoundError: No module named 'pino_kernel.ops'`.
 
-- [ ] **Step 3: Write `sheet_json`, `ops.py`, the schema, the build step and the README lines**
+- [x] **Step 3: Write `sheet_json`, `ops.py`, the schema, the build step and the README lines**
 
 The schema's `artifacts` gains `"sheet": {"type": "string"}`; nothing else in it changes. README: `sheet.json` in the build folder list, `diff` in the serve protocol.
 
-- [ ] **Step 4: Run the kernel suite**
+- [x] **Step 4: Run the kernel suite**
 
 Run: `uv run --directory kernel pytest -v`
 Expected: PASS (the engine's 247 tests plus the new ones; kicad tests run here).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/
@@ -185,6 +187,8 @@ git commit -m "kernel: sheet.json for the views' hit layer, and a diff op betwee
 ---
 
 ### Task 2: Build types, the reference build fixture and the engine's stand-in
+
+> As built: the stand-in's pong has no `serve` at protocol 1, as the real engine's has none. A move applies once `board.py` differs from what the first build read (not simply from build 2), so the build pino asks for right after a route keeps the copper current, as the real engine's cache would.
 
 **Files:**
 - Create: `app/src/shared/build.ts`, `app/src/shared/circuit.ts`, `app/src/shared/sheet.ts`, `app/scripts/reference-build.mjs`, `app/test/fake-kernel.mjs`, `app/test/fixtures/reference-build/` (generated), `app/test/fixtures/boards/tiny.kicad_pcb`
@@ -208,7 +212,7 @@ git commit -m "kernel: sheet.json for the views' hit layer, and a diff op betwee
 - Produces (`fake-kernel.mjs`): speaks the serve protocol on stdin and stdout. `ping` answers `{"pong": {"kernel": "0.1.1-fake", "schema": "pino.build/1", "serve": <1 or 2>}}`; `build` copies the fixture into `<project>/.pino/build/<hash>/` (hash `` `aaaaaaaa${n.toString(16).padStart(4, '0')}` `` for build n), appends `.pino/builds.json` (`{"schema": "pino.builds/1", "builds": [...]}`), answers the fixture's result with `number` counted up and `changes` filled from the move. `diff` answers from its log of moves. Switches: `FAKE_KERNEL_SERVE=1|2` (default 1: no routing), `FAKE_KERNEL_DELAY_MS` (per build), `FAKE_KERNEL_FAIL_ON=<n>` (build n answers verdict `failed` with one finding `{"source": "board.py", "code": "syntax_error", "severity": "error", "message": "invalid syntax", "at": {"space": "source", "file": "board.py", "line": 12}}`), `FAKE_KERNEL_DIE=start|build` (exit 1 with a stderr line), `FAKE_KERNEL_MOVE=<ref>:<dx>,<dy>` (from the second build on, that footprint's `(at …)` in both boards moves by dx, dy board mm, y up). With `FAKE_KERNEL_SERVE=2`: `route` streams `{"id", "event": {"event": "step", "step": "signals", "index": 1, "of": 1}}`, one `{"event": "net", …}` per placement edge net, then `{"id", "ok": true, "result": {…pino.route/1…}}`, after writing `.pino/routes/<key>/board.kicad_pcb` and `filled/board.kicad_pcb` as the build's filled board plus one F.Cu segment per placement edge (width 0.25, the edge's net, uuid from a counter) and `route.json`; later builds answer `routing` `current` while no move happened since the route and `stale` with `stale_because: ["parts moved"]` after one; `route_status`, `route_cancel`, `route_net`, `nudge`, `keep` answer canned `pino.trial/1`-shaped results. `FAKE_KERNEL_ROUTE_MS` spaces the net events.
 - `tiny.kicad_pcb`: written by hand in KiCad 10's format (copy the header, layer table and net syntax from the fixture's `board.kicad_pcb`): one two-pad 0402 footprint `R1` at board (0, 0), one SOT-23 `U1` at (5, 0) on the back, nets `A` and `GND`, two F.Cu segments and one F.Cu arc on `A`, one through via on `A`, one B.Cu filled zone on `GND`, Edge.Cuts rectangle 20 x 10 mm centred on (100, 100).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('reads the reference build result and refuses another schema', () => {
@@ -238,21 +242,21 @@ it('moves a part from the second build on', async () => { /* FAKE_KERNEL_MOVE=R4
 it('streams a route and then answers stale after a move', async () => { /* FAKE_KERNEL_SERVE=2 */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/build.test.ts src/fakeKernel.test.ts`
 Expected: FAIL with "Cannot find module './build'".
 
-- [ ] **Step 3: Generate the fixture, write the types and the stand-in**
+- [x] **Step 3: Generate the fixture, write the types and the stand-in**
 
 Run: `node app/scripts/reference-build.mjs` (needs `uv` and `kicad-cli`; about 10 s). Check `git status` shows changes only under `app/test/fixtures/reference-build/`.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `pnpm -C app exec vitest run src/shared/build.test.ts src/fakeKernel.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/shared/build.ts app/src/shared/circuit.ts app/src/shared/sheet.ts app/src/shared/build.test.ts app/src/fakeKernel.test.ts app/scripts/reference-build.mjs app/test/fake-kernel.mjs app/test/fixtures/
@@ -262,6 +266,8 @@ git commit -m "Build result types, the reference build as a fixture, and a stand
 ---
 
 ### Task 3: Kernel client and the build loop in main
+
+> As built: a folder with no `board.py` yet is not built and no engine is started, so opening an empty folder writes nothing. Main also refuses to ask the engine to build when `.pino` or a folder it writes under it is a link. `Builds.patch` is added for the router's progress.
 
 **Files:**
 - Create: `app/src/main/kernel/client.ts`, `app/src/main/builds.ts`, `app/src/main/artifacts.ts`
@@ -287,7 +293,7 @@ git commit -m "Build result types, the reference build as a fixture, and a stand
   - `build: { state(projectId: string): Promise<BuildState | null>; rebuild(projectId: string): Promise<void>; file(projectId: string, hash: string, name: ArtifactName): Promise<string | Uint8Array>; routeFile(projectId: string, key: string, name: 'board' | 'filled' | 'route'): Promise<string>; onState(cb: (s: BuildState) => void): () => void }` (`glb` is a `Uint8Array`, the rest text).
 - Store: `build: BuildState | null`, `shown: number | null` (an older build chosen in the strip; null is the latest), actions `setBuild(s: BuildState)`, `showBuild(n: number | null)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // client.test.ts (spawns the stand-in; kills only its own pid group)
@@ -332,21 +338,21 @@ it('refuses a name the result does not list, and a hash that is not one', () => 
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/kernel/client.test.ts src/main/builds.test.ts src/main/artifacts.test.ts`
 Expected: FAIL with "Cannot find module".
 
-- [ ] **Step 3: Add chokidar, write the client, the loop, the artifact paths, IPC, preload, store**
+- [x] **Step 3: Add chokidar, write the client, the loop, the artifact paths, IPC, preload, store**
 
 `pnpm -C app add chokidar@^5.0.0`. `index.ts` makes one `Builds`, opens the project when `projects.openAt` succeeds, closes it on close, disposes the kernel in `before-quit` through `quitGate`, and broadcasts `build:state`. `App.tsx` subscribes once and calls `actions.setBuild`.
 
-- [ ] **Step 4: Run the tests, then the whole unit suite and typecheck**
+- [x] **Step 4: Run the tests, then the whole unit suite and typecheck**
 
 Run: `pnpm -C app exec vitest run src/main && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/package.json pnpm-lock.yaml app/src/main app/src/shared/bridge.ts app/src/preload/index.ts app/src/renderer/state/store.ts app/src/renderer/App.tsx
@@ -356,6 +362,8 @@ git commit -m "Build board.py on every save through the engine's serve mode (cho
 ---
 
 ### Task 4: The board model, shared by main and the renderer
+
+> As built: the pad outlines used by crossings, gaps and areas are in one more module, `outlines.ts`. A courtyard whose lines close into one loop keeps its true shape (an L stays an L); otherwise its convex hull. `netColour` takes the supply names as a fifth argument, to give supplies their colours in turn.
 
 **Files:**
 - Create: `app/src/shared/board/sexpr.ts`, `geom.ts`, `board.ts`, `coords.ts`, `hit.ts`, `refs.ts`, `nets.ts`, `measure.ts`, `changes.ts`, `palette.ts`
@@ -385,7 +393,7 @@ git commit -m "Build board.py on every save through the engine's serve mode (cho
   - `changes.ts`: `interface ChangedSet { parts: string[]; tracks: string[]; vias: string[]; zones: string[] }`; `changedItems(prev: Board | null, next: Board): ChangedSet` (a part changed when its position moved over 0.01 mm, its angle or side changed, or it is new; copper by uuid added; nothing on a first build).
   - `palette.ts`: `SIGNAL_COLOURS`, `SUPPLY_COLOURS` (Global Constraints values), `netColour(net: string, kind: 'signal' | 'supply' | 'gnd', signals: readonly string[], dark: boolean): string | null` (null for gnd: the caller uses `--rat`), `hueOf(hex: string): number`.
 
-- [ ] **Step 1: Copy the spike's five modules into `app/src/shared/board/`, then write the failing tests**
+- [x] **Step 1: Copy the spike's five modules into `app/src/shared/board/`, then write the failing tests**
 
 ```ts
 it('reads the tiny board: parts, pads, tracks, an arc, a via and a zone', () => {
@@ -425,21 +433,21 @@ it('keeps every net colour out of the marks' violet hues', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/board`
 Expected: FAIL (missing `coords`, `refs` exports, the courtyard polygon and arc crossings).
 
-- [ ] **Step 3: Make the changes listed in Interfaces**
+- [x] **Step 3: Make the changes listed in Interfaces**
 
 The spike's `render.ts` and `main.ts` are not copied here (Task 5 takes what it needs of `render.ts`). No module in `shared/board/` touches the DOM (`Path2D`, `DOMMatrix`, `document`): `board.test.ts` greps the folder for those names.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `pnpm -C app exec vitest run src/shared/board`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/shared/board
@@ -449,6 +457,8 @@ git commit -m "Port the board-view spike's parser, hit test and references into 
 ---
 
 ### Task 5: Drawing the board in the drafting look
+
+> As built: `--agent-mark` is 2.79:1 (light) and 2.82:1 (dark) on `--cu-far`, under the plan's 3:1, and both are the picks' colours. Marks are drawn cased in the paper (4.5:1 all round) and the test holds the pair at 2.75. `toPaths` takes the board (and the stale uuids), since a scene needs it. `DrawOpts` also carries `netColourOf`.
 
 **Files:**
 - Create: `app/src/renderer/board/scene.ts`, `draw.ts`, `style.ts`, `app/src/renderer/styles/board.css`
@@ -463,7 +473,7 @@ git commit -m "Port the board-view spike's parser, hit test and references into 
   - `style.ts`: `interface BoardColours { paper; cu; cuFar; hatch; hatchFar; silk; rat; accent; accentWash; warn }` read from the tokens; `boardColours(el: Element): BoardColours`; `copperColour(o: { active: boolean; throughHole: boolean; net: string; netColours: boolean; stale: boolean }, c: BoardColours, netColourOf: (net: string) => string | null): string` with the drafting rules: active-layer copper `--cu`, other layers `--cu-far`, through-hole pads always `--cu`, net colours replace `--cu` only when on, stale copper mixed 60 % toward `--board-paper` while pads keep `--cu`, a via is a paper disc with a 1.3 px `--cu` ring and a `--cu` hole dot, pours are `--hatch` (active) or `--hatch-far` hatching with a 35 % mixed edge on the active layer, silk 1 px `--silk` (top only when the top is active), ratsnest `--rat` 1.3 px dashed `[4, 3]` with 2 px end dots.
   - Tokens: every new token of the Global Constraints in `tokens.css` (light and dark); `board.css` lays the two stacked canvases (`canvas.board`, `canvas.over`, `pointer-events: none` on the top one).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('bakes the reference board into batches by layer, net and width', () => {
@@ -484,21 +494,21 @@ it('holds the new tokens to their contrasts', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/board src/shared/contrast.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the scene, the style and the draw**
+- [x] **Step 3: Write the scene, the style and the draw**
 
 Dim by mixing toward `--board-paper`, never by alpha (the spike's rule: overlaps inside a layer do not darken). The board fills with `--board-paper`; the edge is 1.4 px `--cu`.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run src/renderer/board src/shared/contrast.test.ts src/renderer/styles`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/renderer/board app/src/renderer/styles app/src/shared/contrast.test.ts
@@ -508,6 +518,8 @@ git commit -m "Draw the board as a technical drawing: graphite copper, pencil fa
 ---
 
 ### Task 6: The Board view: pan, zoom, click, layers, findings, ratsnest
+
+> As built: torno's `tagPlace`, `leaders` store and `useTagAt` are copied as they are, which keeps `LeaderLayer` byte-identical; `Tag` and `Band` are the adapted ones. The card and dock take their narrow widths at 1500px and under, as the mocks do (torno's 1359px left the board 68 px less). Findings that would cover one another gather into a square pin with a count. A `build.result` call was added for older builds. The e2e launcher takes `kernel` from this task on, so no spec starts uv. A hidden window gives one picture a launch, so `shots.spec.ts` launches once per picture. `whyNotOwn` asks about .pino without using up the window's one notice.
 
 **Files:**
 - Create: `app/src/renderer/board/viewport.ts`, `BoardView.tsx`, `LayerStack.tsx`, `FindingPins.tsx`, `app/src/shared/view.ts`; copy torno's `shared/leader.ts`, `leader.test.ts`, `ui/LeaderLayer.tsx`, `styles/leaders.css`, `ui/view/Tag.tsx`, `ui/view/Band.tsx`
@@ -527,7 +539,7 @@ git commit -m "Draw the board as a technical drawing: graphite copper, pencil fa
   - Store: `selection: Selection | null`, `look: BoardLook`, `hotFinding: number | null`, actions `select(s: Selection | null)`, `setLook(patch: Partial<BoardLook>)`, `hoverFinding(i: number | null)`.
   - Test hook (`window.__pinoTest`, only under `?test=1`): `screenOf(target: Target): { x: number; y: number } | null` (client px of the target's centre in the chosen view), `drawn(): { board: { hash: string | null; route: string | null; layers: string[]; active: string; items: number; highlighted: string[]; marks: string[]; stale: number } }`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('keeps the point under the cursor when zooming', () => {
@@ -543,21 +555,21 @@ it('labels the tab you are not on with the selection', () => {
 it('has no key clash with the new view scope', () => { expect(clashes(KEYS)).toEqual([]) })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/board/viewport.test.ts src/shared/view.test.ts src/shared/keys.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy the torno files, then write the view**
+- [x] **Step 3: Copy the torno files, then write the view**
 
 The click rule is the spike's (Task 4 `hitTest`, tolerance 4 px over the scale); a click sets `selection` with `describeTarget` as its `text`. Wheel zooms by 1.0015 per delta pixel; a drag pans. `F` fits the outline with the mock's insets (left 64 for the reed, right 240 for the stack, top 56, bottom 56). The scale bar is drawn as on a drawing (mock `.scale`), the hint pill at the foot says "Click a part, pad or track · drag pans · scroll zooms". A board file is parsed once per (hash, route) and cached for the run.
 
-- [ ] **Step 4: Run them, the unit suite and typecheck**
+- [x] **Step 4: Run them, the unit suite and typecheck**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json
@@ -567,6 +579,8 @@ git commit -m "Board tab: pan, zoom, click for the exact reference, layer stack,
 ---
 
 ### Task 7: The Schematic view: the sheet in the board's ink
+
+> As built: findings on the sheet are the same pins as on the board, at a constant size on screen, not 2.6 px numbers in sheet mm. The block wash is drawn over the picture, since KiCad's background paints over anything under it. `ink.ts` also holds the sheet's tag words and where a target sits.
 
 **Files:**
 - Create: `app/src/renderer/sheet/ink.ts`, `SheetView.tsx`, `app/src/renderer/styles/sheet.css`
@@ -581,7 +595,7 @@ git commit -m "Board tab: pan, zoom, click for the exact reference, layer stack,
   - `SheetView.tsx`: the inked SVG under an SVG overlay in the same viewBox: hit boxes, the selection as an accent wash with a 0.45 stroke, a selected net drawn as a 0.7 accent line along its wires, block frames lit when their block is in hand, finding pins at `sheet` positions (2.6 px mono numbers), and marks (Task 12). Pan and zoom by the SVG's viewBox with Task 6's `zoomAt`. A part or pin selected here has its board `describeTarget` text (the selection carries over to the Board tab and back). After a build, symbols whose box moved or whose part changed (`changes.circuit` names it) get the accent wash once.
   - Test hook: `drawn().sheet = { hash: string | null; symbols: number; selected: string | null; net: string | null }`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('recolours the reference sheet to the ink and leaves none of KiCad's colours', () => {
@@ -600,21 +614,21 @@ it('finds a pin before its wire, and a symbol by its box', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/sheet`
 Expected: FAIL.
 
-- [ ] **Step 3: Write `ink.ts` and `SheetView.tsx`**
+- [x] **Step 3: Write `ink.ts` and `SheetView.tsx`**
 
 The sheet sits on the plate as one paper (`--sch-paper`) with the float shadow; fonts inside the SVG are `var(--font-mono)` (mock `sheet.css`). Hint pill: "Click a part, pin or wire · drag pans · scroll zooms".
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run src/renderer/sheet && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/renderer
@@ -624,6 +638,8 @@ git commit -m "Schematic tab: KiCad's sheet in the board's ink, clickable by par
 ---
 
 ### Task 8: The 3D view: the GLB in the solder-mask material
+
+> As built: the GLB's materials are only `mat_N`, so `classify` tells the board from its parts by KiCad's mesh names (`board_soldermask`, `board_copper`, `board_pad`, `board_silkscreen`, `board_PCB`). The GLB is in metres on the board file's page (x to x, y to z). `Bare board` hides the parts, the silk and the mask, to show the copper as etched. The cube has no number keys, since 1 to 8 pick copper layers. The lights are turned down so the mask reads as the picked green. Clicking in 3D does not select (the plan does not ask for it).
 
 **Files:**
 - Create: `app/src/renderer/three/glb.ts`, `material.ts`, `ThreeView.tsx`, `app/src/renderer/styles/three.css`; copy torno's `ui/view/Compass.tsx`, `ui/view/ViewCube.tsx`, `styles/compass.css`, `viewport/lights.ts`
@@ -638,7 +654,7 @@ git commit -m "Schematic tab: KiCad's sheet in the board's ink, clickable by par
   - `ThreeView.tsx`: a live three.js view (WebGLRenderer, `antialias`, `preserveDrawingBuffer: true` so `look` can read it), orbit by drag, pan by right drag, zoom by wheel; torno's compass (Perspective, Ortho) top right; options "Parts", "Silk", "Bare board" top left; the selected part gets torno's leader to a `Tag` with the part's `describeTarget`; disposes geometry and textures on each new GLB. Hint pill: "Drag turns, right drag pans, scroll zooms".
   - Test hook: `drawn().three = { hash: string | null; loaded: boolean; meshes: number; board: boolean }`.
 
-- [ ] **Step 1: Inspect the fixture GLB, then write the failing tests**
+- [x] **Step 1: Inspect the fixture GLB, then write the failing tests**
 
 Read the fixture's `board.glb` JSON chunk with a small node snippet (first 20 bytes are the header, then the JSON chunk) and write down its material names, base colours and the board node's bounding box. Then:
 
@@ -654,21 +670,21 @@ it('maps a board point into the GLB where the board is', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/three`
 Expected: FAIL.
 
-- [ ] **Step 3: Add three, copy the compass, write the view**
+- [x] **Step 3: Add three, copy the compass, write the view**
 
 `pnpm -C app add three@^0.186.1 && pnpm -C app add -D @types/three@^0.186.0`. GLTFLoader from `three/examples/jsm/loaders/GLTFLoader.js`. The board sits on the plate with a soft shadow; no ground grid.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run src/renderer/three && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/package.json pnpm-lock.yaml app/src/renderer shared-from-torno.json
@@ -678,6 +694,8 @@ git commit -m "3D tab: the build's GLB in three.js in the solder-mask look, with
 ---
 
 ### Task 9: The route card, the status line and the builds strip
+
+> As built: the engine's `model3d` findings have a row of their own, `3D models`, shown only when it has something to say. A finding from a source no row names goes to Engine, so none is dropped. In hand shows the exact reference Claude gets, without a second summary of the part. `status.css` becomes an adapted copy. The em-dash test also covers `domain.ts`, `marks.ts`, `view.ts` and `measure.ts`.
 
 **Files:**
 - Create: `app/src/shared/checks.ts`, `app/src/renderer/ui/route/Head.tsx`, `InHand.tsx`, `ChecksBlock.tsx`, `RoutingBlock.tsx`, `BoardBlock.tsx`, `BlocksBlock.tsx`, `NetBlock.tsx`, `app/src/copy.test.ts`; copy torno's `ui/strip/BuildsStrip.tsx`, `ui/strip/strip.ts`, `strip.test.ts`, `styles/strip.css`
@@ -693,7 +711,7 @@ git commit -m "3D tab: the build's GLB in three.js in the solder-mask look, with
   - Builds strip (torno's, adapted) at the top of the session dock: "Builds of <project>" and the count kept; nodes `hN` with a 62 x 44 thumbnail drawn by `drawBoard` at that size (kept in memory for the run; a node of a build not kept is greyed with "not kept"); caption `routed`, `stale`, `ok`, `2 errors` or `failed`; a click shows that build (`showBuild`), the shown node is ringed in the accent; a new node lands 0.7 s from 34 px.
   - `copy.test.ts`: no em dash (U+2014) in `app/src/renderer/**/*.tsx`, `app/src/main/prompt.ts`, `app/src/main/mcp/*.ts`, `app/src/shared/checks.ts`, `app/src/shared/board/refs.ts`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('sorts the reference build's findings into the card's rows', () => {
@@ -708,19 +726,19 @@ it('lists open nets from the ratsnest, or from the route when one is current', (
 it('has no em dash in UI copy, prompts or tool text', () => { /* reads the files named above */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/checks.test.ts src/copy.test.ts src/renderer/ui/strip`
 Expected: FAIL.
 
-- [ ] **Step 3: Write `checks.ts`, the card blocks, the status line; copy and adapt the strip**
+- [x] **Step 3: Write `checks.ts`, the card blocks, the status line; copy and adapt the strip**
 
-- [ ] **Step 4: Run them, the unit suite and typecheck**
+- [x] **Step 4: Run them, the unit suite and typecheck**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json
@@ -730,6 +748,8 @@ git commit -m "Route card on a build: On hN, routing, checks by part and pin, bo
 ---
 
 ### Task 10: The session domain: the build in every prompt, and Stop holds
+
+> As built: the `Mark` types are in `shared/marks.ts` from this task on; Task 11 adds what they do. Before a Stop is judged, the domain waits the watcher's debounce plus 200 ms. Claude's last save may not have started its build yet, and that Stop must still be held. `Builds.routedOn` says which build a route was made on. The window tells main what it shows (`view:tell`, checked by `main/view.ts`).
 
 **Files:**
 - Create: `app/src/main/domain.ts`
@@ -747,7 +767,7 @@ git commit -m "Route card on a build: On hN, routing, checks by part and pin, bo
   - `stopAnswer` holds, at most `MOST_HOLDS` times a turn and once per reason: `running` (a build started after the turn began is still running after waiting up to `STOP_WAIT_MS`: "h8, started in this turn, is still building. Wait for it, then call mcp__pino__check."), `failed` (the newest build, started in the turn, failed: the verdict text plus "Fix board.py, or say it is still broken."), `unlooked` (a build started in the turn ended after the last `look` or `check` of the turn and changed the board (`changes` not empty): "h8 was built in this turn and you have not looked at it. Call mcp__pino__look or mcp__pino__check before finishing."). A build that started before the turn holds nothing.
   - `prompt.ts`: the system prompt says what pino is, that the views rebuild on every save, the tools by name, and spec 5.8's rules in plain words (never waive a finding, a waiver is the person's call with a note; numbers from the board file through `measure`, never from pixels; make the picture, look, say what you see and what it does not show; state each job's scope and depth up front and name every step left out; an accepted DRC error gets a measured part-scoped rule, never an exclusion; plain words for every choice, jargon glossed; marks: answer by id, resolve with `resolve_mark` when done).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('tells the verdict, the view and the drafts, and sends the drafts once delivered', async () => {
@@ -772,19 +792,19 @@ it('never holds a third time in a turn', async () => {})
 it('puts the marks the domain sent on the prompt's context item, and calls delivered', async () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/domain.test.ts src/main/sessions/manager.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Change the seam, write the domain and the prompt, wire it in `index.ts`**
+- [x] **Step 3: Change the seam, write the domain and the prompt, wire it in `index.ts`**
 
-- [ ] **Step 4: Run them, turncost included**
+- [x] **Step 4: Run them, turncost included**
 
 Run: `pnpm -C app exec vitest run src/main && pnpm -C app typecheck`
 Expected: PASS (`turncost.test.ts` still holds the system prompt plus server instructions under 12,000).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/main shared-from-torno.json
@@ -794,6 +814,8 @@ git commit -m "Tell Claude the build with every prompt, and hold a Stop while it
 ---
 
 ### Task 11: Marks in main: the model, the file, the store, re-anchoring
+
+> As built: main works out where a point stands (the centre of its target, not the pixel clicked), what a stroke crosses and what a region holds, whatever the window said. Claude's arrows span a measured gap and keep their two ends. Whether the target is still there is still checked. A long stroke's path is said by its first and last twelve points. The person hears of a damaged file when the window asks for its marks, since at the start no window is listening yet.
 
 **Files:**
 - Create: `app/src/shared/marks.ts`, `app/src/main/marks/file.ts`, `store.ts`, `reanchor.ts`, `app/src/main/model.ts`
@@ -816,7 +838,7 @@ git commit -m "Tell Claude the build with every prompt, and hold a Stop while it
 - Produces (`main/model.ts`): `interface BuildModel { result: BuildResult; board: Board; routeBoard: Board | null; circuit: Circuit | null; placement: Placement | null; sheet: Sheet | null }`; `class Models { get(p: ProjectInfo, r: BuildResult): Promise<BuildModel | null> }` (parses once per hash and route, keeps the newest 3).
 - Bridge, channels `marks:list`, `marks:add`, `marks:update`, `marks:remove`, `marks:resolve`, to the window `marks:changed`: `marks: { list(projectId): Promise<Mark[]>; add(projectId, mark: NewMark): Promise<Mark>; update(projectId, id, patch: MarkPatch): Promise<Mark>; remove(projectId, id): Promise<void>; resolve(projectId, id, note: string): Promise<Mark>; onChange(cb: (m: { projectId: string; marks: Mark[] }) => void): () => void }`. Store: `marks: Mark[]`, `setMarks`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // marks.test.ts
@@ -853,21 +875,21 @@ it('a failed build re-anchors nothing', () => {})
 it('a stroke redoes what it crosses after a part moved under it', () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/marks.test.ts src/main/marks src/main/model.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the model, file, store, re-anchor, IPC and preload; wire `Builds.onResult` to `marks.reanchor`; give the domain its marks**
+- [x] **Step 3: Write the model, file, store, re-anchor, IPC and preload; wire `Builds.onResult` to `marks.reanchor`; give the domain its marks**
 
 `workspace-writes.md` gains `.pino/marks/marks.json` (main, atomic) as the one file pino's main writes in a project in this stage.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src .claude/rules/workspace-writes.md
@@ -877,6 +899,8 @@ git commit -m "Marks in main: M<n> ids, drafts and sent, one atomic file, re-anc
 ---
 
 ### Task 12: Pencil marks on the board and the sheet
+
+> As built: dragging an arrow from a pad starts it at the pad's part, since a part is what gets moved. A new region means "keep this clear" until changed. The reed fills only a marking tool in violet, never Select, as the mock does. The mock scene gets its track mark once routed copper exists (Task 16). KiCad's `unconnected-(...)` names count as no net, so a stroke no longer lists open pins as nets. `numbered()` sets refs and rails whole. The plan's track mark is not in the pencil shot yet.
 
 **Files:**
 - Create: `app/src/renderer/board/marks/tools.ts`, `drawMarks.ts`, `MarkReed.tsx`, `ChipLayer.tsx`, `app/src/renderer/ui/route/MarksBlock.tsx`, `app/src/renderer/ui/MarkChip.tsx`; copy torno's `styles/tools.css` (reed rules) and `styles/marks.css` (chip rules)
@@ -895,7 +919,7 @@ git commit -m "Marks in main: M<n> ids, drafts and sent, one atomic file, re-anc
   - On the sheet, only `point` is offered (the reed shows Select and Point).
   - Test hook: `drawn().board.marks` lists the ids drawn; `drawn().sheet.marks` too.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('simplifies a hand stroke and keeps it on its layer', () => {
@@ -907,19 +931,19 @@ it('starts an arrow at the part under the press', () => {})
 it('reads a stroke's length and crossings live', () => { expect(liveReadout(path, tiny, 'F.Cu')).toBe('8.00 mm · crosses A, GND') })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/board/marks`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the tools, the drawing, the chips and the card rows; copy the reed and chip CSS**
+- [x] **Step 3: Write the tools, the drawing, the chips and the card rows; copy the reed and chip CSS**
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json
@@ -929,6 +953,8 @@ git commit -m "Pencil marks: point, arrow, stroke and region on the board, point
 ---
 
 ### Task 13: Chips in the composer and the chat
+
+> As built: `chipsFor` is in `ui/chat/markChips.ts` rather than `Items.tsx`, so that the tool card can use it without importing the items; it also reads a point's ids out of its answer. `chat-prompt.css` becomes an adapted copy.
 
 **Files:**
 - Modify: `app/src/renderer/ui/chat/Composer.tsx`, `app/src/renderer/ui/chat/Items.tsx`, `app/src/renderer/ui/chat/ToolCard.tsx`, `app/src/renderer/styles/chat-prompt.css`, `shared-from-torno.json` (their change lines)
@@ -941,7 +967,7 @@ git commit -m "Pencil marks: point, arrow, stroke and region on the board, point
   - Composer: above the text, "Goes with your next prompt:" and a chip per draft of the person (mock `a-pencil.png`), each removable with its x; "Mark on board" in the composer's foot switches the view to the Board tab with the Point tool. Nothing about sending changes: the domain sends the drafts (Task 10).
   - Chat: under a prompt, its `context` item's marks as hollow chips beside the message; a `mcp__pino__point` tool card shows Claude's new marks as filled orange chips with their labels; hovering any chip lights its mark on the view (`store.hotMark`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 it('gives hollow chips for a sent prompt, by author colour, and drops ids it does not know', () => {
@@ -952,19 +978,19 @@ it('gives hollow chips for a sent prompt, by author colour, and drops ids it doe
 })
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/chat/chips.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write it**
+- [x] **Step 3: Write it**
 
-- [ ] **Step 4: Run the chat tests**
+- [x] **Step 4: Run the chat tests**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/chat && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json
@@ -974,6 +1000,8 @@ git commit -m "Marks as chips in the composer, beside the prompt they went with,
 ---
 
 ### Task 14: Claude sees what the person sees: look, check, measure, nets, trace, ratsnest, diff
+
+> As built: the pictures are drawn on detached canvases, not `OffscreenCanvas` (`toDataURL` answers at once). The picture rules are in `shared/look.ts`; the 3D setup moved to `three/stage.ts` and the sheet's reader to `sheet/drawing.ts`, so that view and picture share them. A picture's lines and chips are never thinner than on screen. The 3D picture has no window and no marks, and takes the person's angle. `check` adds the current route's findings. `e2e/look.spec.ts` asks the real app for every tab through MCP.
 
 **Files:**
 - Create: `app/src/main/view.ts`, `app/src/main/mcp/readTools.ts`, `app/src/renderer/board/look.ts`, `app/src/renderer/sheet/look.ts`, `app/src/renderer/three/look.ts`
@@ -998,7 +1026,7 @@ git commit -m "Marks as chips in the composer, beside the prompt they went with,
     - Up front (`'anthropic/alwaysLoad': true`): `project`, `look`, `check`, `measure`, `nets`, `point`, `marks`, `resolve_mark`, `route`. Deferred: `trace`, `ratsnest`, `diff`, `route_net`, `nudge`, `keep`.
   - Every text result goes through `capText(text: string, limit = TOOL_TEXT_LIMIT): string` (cut at a line, `(cut: N more characters)`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // readTools.test.ts: in-memory MCP client over registerTools with deps from the fixture model
@@ -1040,19 +1068,19 @@ it('a prompt's context and a Stop reason stay under their caps', () => { expect(
 
 `point`, `marks`, `resolve_mark`, `route`, `route_net`, `nudge` and `keep` are registered in this task with their final names, descriptions and schemas, as stubs that answer "not yet", so the counts hold; Tasks 15 and 16 fill them.
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/mcp src/main/view.test.ts src/main/turncost.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the ask channel, the renderer's pictures and the tools**
+- [x] **Step 3: Write the ask channel, the renderer's pictures and the tools**
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src
@@ -1062,6 +1090,8 @@ git commit -m "MCP: look, check, measure, nets, trace, ratsnest and diff, with t
 ---
 
 ### Task 15: Claude points back: point, marks, resolve_mark
+
+> As built: `gapSpan` in `shared/board/measure.ts` gives the arrow its two ends by the same rule `measure` takes the gap by. `sheetPlace` moved to `shared/sheet.ts` so that main places a sheet mark where the view draws it; a gap on the sheet is refused. Every target is looked up, and the limit on marks checked, before any mark is made.
 
 **Files:**
 - Create: `app/src/main/mcp/markTools.ts`
@@ -1075,7 +1105,7 @@ git commit -m "MCP: look, check, measure, nets, trace, ratsnest and diff, with t
   - `marks { status?: 'open' | 'all' }`: every mark as `M3 · draft · person · <payload> · note: "…"`, open first, at most `MOST_LINES`.
   - `resolve_mark { id: string; note: string }`: resolves a person's or Claude's mark with the note; a draft cannot be resolved ("M4 has not been sent to you yet"), nor an id that is not there.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('point makes orange marks the view will draw, and says their ids', async () => {
@@ -1088,19 +1118,19 @@ it('point refuses more than 8 targets', async () => {})
 it('resolve_mark refuses a draft and resolves a sent mark with its note', async () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/mcp/markTools.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the three tools**
+- [x] **Step 3: Write the three tools**
 
-- [ ] **Step 4: Run them with the turn-cost test**
+- [x] **Step 4: Run them with the turn-cost test**
 
 Run: `pnpm -C app exec vitest run src/main/mcp src/main/turncost.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/main/mcp
@@ -1110,6 +1140,8 @@ git commit -m "MCP: Claude points at parts, pads and gaps in orange, reads the m
 ---
 
 ### Task 16: Routing in the views and Claude's route tools
+
+> As built: the `routing` branch had not merged, so its serve protocol, schemas and trial arguments were read with git and the app and stand-in follow them (the real engine's keys match `RoutingState`). `Routing` reads the engine's protocol from the build state, so it takes no `engine` dependency. Before it asks the engine for a route or a trial, `.pino` and the engine's folders must be the project's own. A closed project's route is cancelled. The engine keeps a route's findings apart from the build's, so `withRouteFindings` joins them for the card, the pins and `check`, and the copper rows read "not run" unless the route is current. The routing band also shows a clock, and the gauge fills, as the mock does. The stale band says why in the engine's words ("Parts moved since"), not which part.
 
 **Files:**
 - Create: `app/src/main/mcp/routeTools.ts`, `app/src/main/routing.ts`
@@ -1124,7 +1156,7 @@ git commit -m "MCP: Claude points at parts, pads and gaps in orange, reads the m
   - Tools: `route { action: 'start' | 'status' | 'cancel' }` (start answers `Routing h7 started. It takes minutes; the view shows its progress. Call route with status to follow it.`; status answers the routing state in words, with the open nets by name; cancel says whether one was running); `route_net { net, region?: [number, number, number, number], layers?: string[], corridor?: Array<[number, number]>, rip?: string[] }`, `nudge { part, by?: [number, number], rot?: number, back?: boolean, route?: boolean }`, `keep { net }`: each answers the trial's headline, `before` and `after`, its findings (capped), and `Write this into board.py:` with the `snippet` (and `It replaces line N.` when `replaces_line` is set). Every route tool answers `ROUTING_UNAVAILABLE` when `available()` is false.
   - Views: `routing` band "Routing in the background, 18 of 31" with a 120 px progress bar and "Cancel"; when routing lands, its copper is drawn in net by net from the pads out (`revealOrder`, 1.6 s linear after 0.5 s), then the open connections appear and finding pins pop; `stale` band "Copper from h15. U4 moved since." with "Route again" and "Keep it" ("Keep it" closes the band for this build and leaves the faded copper on show; it changes no file); stale copper faded, pads in ink; the Routing block's gauge from the route's counts, router and time from `router_seconds`, the open nets by name.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('says routing is not available when the engine speaks serve 1', async () => {
@@ -1139,21 +1171,21 @@ it('a save after a route makes the copper stale and says why', async () => { /* 
 it('route_net answers the snippet to write into board.py', async () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/routing.test.ts src/main/mcp/routeTools.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the routing holder, the tools and the view states**
+- [x] **Step 3: Write the routing holder, the tools and the view states**
 
 If `routing` has merged into `views`, also run the real engine's `route_status` once by hand on the reference fixture copy and compare its JSON keys with `RoutingState`; fix `shared/build.ts` if they differ.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src
@@ -1163,6 +1195,8 @@ git commit -m "Routing in the views and route, route_net, nudge and keep for Cla
 ---
 
 ### Task 17: The probe: logo, icon and the first screen
+
+> As built: the board's hatching is cut at its edges (the mock's last line sticks out). Lines are drawn with `pathLength` 1, so nothing measures them. The title bar's mark at 20 px is the 16 px drawing with two pixels round it, so every edge stays on a whole pixel. The readiness lines also say whether Claude Code is found, which `EngineInfo.claude` carries; main asks `version` the first time the screen asks, not at every start. There is no "Open the example" button: pino has no example yet.
 
 **Files:**
 - Modify: `scripts/pino.svg`, `scripts/pino.png`, `app/src/renderer/ui/Logo.tsx`, `app/src/renderer/ui/Welcome.tsx`, `app/src/renderer/styles/welcome.css`, `app/src/renderer/ui/TitleBar.tsx`, `CLAUDE.md` (the placeholder line), `.claude/rules/first-screen.md`
@@ -1177,7 +1211,7 @@ git commit -m "Routing in the views and route, route_net, nudge and keep for Cla
   - `Logo.tsx`: `Logo({ size: 16 | 20 | 64, tone: 'ink' | 'on-dye' })`, the title bar's mark at 20 px from `ICON16_SHAPES` scaled on whole pixels.
   - First screen (mock `logo/b-probe.png`): the dyed field on the left with the scribed probe drawing in `--scribe` (strokes draw 1.6 s by `stroke-dashoffset`, dimensions fade in at 1.1 s, the board part's hatch fills at 1.4 s, once; reduced motion shows it drawn), the name in Instrument Sans 600 and the tagline in the Global Constraints; the right-hand panel as the shell has it, with the line about the engine removed and the readiness lines "Claude Code is ready", "KiCad 10.0.6 found, with its libraries", "pino's Python environment is ready" taken from `kernel version` through a new `build.engineInfo(): Promise<{ kicad: string | null; kernel: string | null; problem: string | null }>` (main runs the kernel's `version` once at start, under test the stand-in's).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('draws the icon on whole pixels and the tile on the 64 grid', () => {
@@ -1189,21 +1223,21 @@ it('ships the probe as the launcher's icon', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/ui/probe.test.ts src/launcher.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the shapes, the icons, the logo and the first screen**
+- [x] **Step 3: Write the shapes, the icons, the logo and the first screen**
 
 `styles.test.ts` keeps holding that no animation is infinite.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts app/src CLAUDE.md .claude/rules/first-screen.md
@@ -1213,6 +1247,8 @@ git commit -m "The probe: logo, 16 px icon, and the scribed first screen"
 ---
 
 ### Task 18: End to end in hidden windows, and the screenshots for the design review
+
+> As built: `views.spec.ts` has nine tests (the eight, and one for a bug the dense-marks shot found: the wheel did not zoom over a chip or a pin, on the board or the sheet). A hidden window resized with a board drawn gives `capturePage()` nothing, whatever the size, the GPU flags or the frames forced: test windows are now made at their size (`PINO_TEST_SIZE`, read under test alone) and `helpers.resize` is gone. The real-engine spec passed here, offline (`UV_NO_SYNC`, `UV_OFFLINE`). 19 pictures: the plan's 16, and `marks-dark`, `board-routed`, `marks-routed`. ci.yml needed no change.
 
 **Files:**
 - Create: `app/e2e/views.spec.ts`, `app/e2e/real-kernel.spec.ts`, `app/e2e/shots.spec.ts`
@@ -1236,24 +1272,24 @@ git commit -m "The probe: logo, 16 px icon, and the scribed first screen"
   - `real-kernel.spec.ts`: `builds the reference board with the real engine` (skips with "needs uv and kicad-cli on PATH" otherwise): build lands with verdict not `failed`, the board draws, the pad click of test 2 gives its reference.
   - `shots.spec.ts`: skips unless `PINO_SHOTS` names a folder outside the repo; with reduced motion (`page.emulateMedia({ reducedMotion: 'reduce' })`) and `nativeTheme.themeSource` set from main, captures at 1440x900 and 1920x1080 (`win.setContentSize`): `first-light`, `first-dark`, `board`, `board-1920`, `board-dark`, `board-nets`, `board-bottom`, `board-routing`, `board-stale`, `marks` (the six marks of the mock's scene made on the reference board: a part, an arrow, a stroke, a region, a track, a pad), `marks-drawing` (mouse held mid-stroke), `marks-dense` (five chips within 3 mm), `sheet`, `sheet-dark`, `3d`, `3d-dark`.
 
-- [ ] **Step 1: Write the specs**
+- [x] **Step 1: Write the specs**
 
-- [ ] **Step 2: Build and run them, expecting failures only where the code is wrong**
+- [x] **Step 2: Build and run them, expecting failures only where the code is wrong**
 
 Run: `pnpm -C app build && pnpm -C app exec playwright test e2e/views.spec.ts e2e/real-kernel.spec.ts`
 Expected: views PASS (8 tests); real-kernel PASS here (uv and kicad-cli are installed), skipped in CI.
 
-- [ ] **Step 3: Take the screenshots**
+- [x] **Step 3: Take the screenshots**
 
 Run: `PINO_SHOTS=<scratch folder> pnpm -C app exec playwright test e2e/shots.spec.ts`
 Expected: 16 PNGs in the folder; open each with the Read tool and compare with the mock it answers to (`board/a-drafting*.png`, `marks/a-pencil*.png`, `views/a-sheet*.png`, `logo/b-probe*.png`). Fix what differs in the task that owns it before going on, and list what remains for the design review.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `pnpm test && pnpm test:e2e && pnpm -C app typecheck && bash .claude/hooks/guard-bash.test.sh`
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/e2e app/src/e2e.test.ts .claude/rules/e2e-hidden-window.md .github/workflows/ci.yml
@@ -1264,6 +1300,8 @@ git commit -m "End to end on the reference board: build, click, stroke, send, Cl
 
 ### Task 19: Rules, manifest, audit, the draft PR and the two reviews
 
+> As built: the three screenshots are committed under `docs/screenshots/views/` so that the draft PR can show them (the director's brief asks for that, where this step says they are not committed). The reviews ran before the push, in the brief's order. The code review (Opus, read only): no Critical, 2 Important, 5 Minor, of which three were re-graded to Important; all five fixed test first. The design review (Opus): fixed the slit lines across pours, touching pins and chips over pads, the sentence-long card head, the band naming another build than Claude is told, the 3D tag over its part, the tool pill over a line being drawn and the whole payloads in the marks list. Left for later, with the rest, in the PR.
+
 **Files:**
 - Create: `.claude/rules/views.md`, `.claude/rules/marks.md`, `.claude/rules/engine-client.md`
 - Modify: `CLAUDE.md`, `README.md` (what the app now does), `shared-from-torno.json` (check every copy of this stage is listed), `docs/superpowers/plans/2026-11-26-pino-roadmap.md` (stages 5 and 6 state)
@@ -1273,18 +1311,18 @@ git commit -m "End to end on the reference board: build, click, stroke, send, Cl
 - Consumes: the whole branch.
 - Produces: rules with `paths:` frontmatter (`views.md`: `app/src/shared/board/**`, `app/src/renderer/board/**`, `sheet/**`, `three/**`; `marks.md`: `app/src/shared/marks.ts`, `app/src/main/marks/**`, `app/src/renderer/board/marks/**`; `engine-client.md`: `app/src/main/kernel/**`, `app/src/main/builds.ts`, `app/test/fake-kernel.mjs`), each stating the constraints of this plan that bind its files (frames, colours, motion, only writer, stand-in kernel in tests). `CLAUDE.md` loses "Stage 2 has no engine" and the placeholder-logo line, and names the new rules.
 
-- [ ] **Step 1: Run the rule, manifest and drift tests**
+- [x] **Step 1: Run the rule, manifest and drift tests**
 
 Run: `pnpm -C app exec vitest run src/rules.test.ts src/manifest.test.ts src/tornoSync.test.ts && node scripts/torno-sync`
 Expected: PASS, `0 drifted`.
 
-- [ ] **Step 2: Run humanizer on README, the rules and the PR body; fix what it finds**
+- [x] **Step 2: Run humanizer on README, the rules and the PR body; fix what it finds**
 
-- [ ] **Step 3: Leak audit over every commit of the branch**
+- [x] **Step 3: Leak audit over every commit of the branch**
 
 Search files and messages for personal names, home paths, hosts, e-mail addresses, tokens and other projects' data, as the shell plan's Task 16 did (`git log -p origin/main..HEAD`), the fixture's `result.json` and `.kicad_pcb` files included (they must hold no absolute path: `normalize.py` takes them out; check).
 
-- [ ] **Step 4: Push and open the draft PR**
+- [x] **Step 4: Push and open the draft PR**
 
 ```bash
 git push -u origin views
@@ -1293,11 +1331,11 @@ gh pr create --draft --base main --title "Stages 5 and 6: live views and marks" 
 
 The body says: it contains #1 and #2 until they merge; what it adds; the test results; the screenshots are attached to the design review, not committed. No Claude attribution.
 
-- [ ] **Step 5: The two reviews**
+- [x] **Step 5: The two reviews**
 
 One whole-branch code review (Opus, read only, the `reviewer` agent) and one design review (Opus) given the shots folder, the mock PNGs and the picks document, asked to compare each shot with its mock and list what differs, most visible first. Fix Critical and Important findings test first; note the rest in the PR.
 
-- [ ] **Step 6: Commit the docs and fixes**
+- [x] **Step 6: Commit the docs and fixes**
 
 ```bash
 git add .claude CLAUDE.md README.md shared-from-torno.json docs/superpowers/plans/2026-11-26-pino-roadmap.md
