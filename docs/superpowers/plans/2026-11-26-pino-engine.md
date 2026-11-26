@@ -270,7 +270,7 @@ git commit -m "kernel: kicad-cli wrapper with no display, isolated home and path
   - `SymbolNotFound(KeyError)`, `UnsupportedSymbol(ValueError)`.
   - `turn`, `pin_at`, `pin_outward`, `body_box` as in the spike.
 
-- [ ] **Step 1: Write the fixture libraries and the failing tests**
+- [x] **Step 1: Write the fixture libraries and the failing tests**
 
 `pino_test.kicad_sym` is hand-written, indented with two spaces (not tabs), with: `R` and `C` (pins 1 and 2, vertical, as KiCad's Device:R), `R_Derived` (`extends "R"`, Value `Rd`), `LED` (K=1 left, A=2 right), `LDO3` (VIN=1 left, GND=2 bottom, VOUT=3 right), `IC6` (VDD=1, GND=2, IO1=3, IO2=4, IO3=5, EN=6), `CONN_VBUS` (VBUS on pins 1 to 4, GND on 5, all on the right), `CONN2` (pins 1 and 2 on one side), `DUAL` (two units). `power.kicad_sym` holds `GND`, `+3V3`, `VBUS` and `PWR_FLAG` power symbols.
 
@@ -312,21 +312,21 @@ def test_real_ldo_extends_and_footprint():
 
 `fixture_libs` (in `conftest.py`) sets the three `PINO_KICAD_*_DIR` variables to `tests/fixtures/libs/{symbols,footprints,3dmodels}` with monkeypatch and returns `discover()`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_symbols.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.symbols'`
 
-- [ ] **Step 3: Write `symbols.py`**
+- [x] **Step 3: Write `symbols.py`**
 
 Find a top-level symbol by scanning tokens with a depth counter (strings and parentheses, as the spike's `_STRING_OR_PAREN`) and taking `(symbol "<name>"` at depth 1; never by indentation. Count units from sub-symbol names `<Name>_<unit>_<style>`; more than one unit above 0 raises `UnsupportedSymbol`. Keep the spike's `extends` flattening, pin geometry and pose functions.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_symbols.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/symbols.py kernel/tests/fixtures/libs/symbols kernel/tests/test_symbols.py kernel/tests/conftest.py
