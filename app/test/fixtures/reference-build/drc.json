@@ -1,0 +1,2217 @@
+{
+  "$schema": "https://schemas.kicad.org/drc.v1.json",
+  "coordinate_units": "mm",
+  "ignored_checks": [
+    {
+      "description": "Footprint has no courtyard defined",
+      "key": "missing_courtyard"
+    },
+    {
+      "description": "Track endpoint not centered on via",
+      "key": "track_not_centered_on_via"
+    },
+    {
+      "description": "Tuning profile track geometries",
+      "key": "tuning_profile_track_geometries"
+    },
+    {
+      "description": "Footprint doesn't match symbol's footprint filters",
+      "key": "footprint_filters_mismatch"
+    },
+    {
+      "description": "Footprint component type doesn't match footprint pads",
+      "key": "footprint_type_mismatch"
+    }
+  ],
+  "included_severities": [
+    "error",
+    "warning",
+    "exclusion"
+  ],
+  "kicad_version": "10.0.6",
+  "schematic_parity": [],
+  "source": "board.kicad_pcb",
+  "unconnected_items": [
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 81.675
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 100.8,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 81.675
+          }
+        },
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 83.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 83.65
+          }
+        },
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 83.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 85.625
+          }
+        },
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 85.625
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.26,
+            "y": 111.8
+          }
+        },
+        {
+          "pos": {
+            "x": 101.75,
+            "y": 110.79
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 100.8,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 101.6,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 101.6,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 102.4,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 101.75,
+            "y": 110.79
+          }
+        },
+        {
+          "pos": {
+            "x": 103.25,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 101.75,
+            "y": 111.81
+          }
+        },
+        {
+          "pos": {
+            "x": 101.75,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 81.675
+          }
+        },
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 83.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 83.65
+          }
+        },
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 85.625
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 101.975,
+            "y": 85.625
+          }
+        },
+        {
+          "pos": {
+            "x": 105.95,
+            "y": 88.6
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 102.4,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 103.2,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 103.2,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 104.0,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 103.2,
+            "y": 88.55
+          }
+        },
+        {
+          "pos": {
+            "x": 123.6,
+            "y": 88.96
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 104.0,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 104.8,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 104.32,
+            "y": 114.72
+          }
+        },
+        {
+          "pos": {
+            "x": 104.32,
+            "y": 118.9
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 104.8,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 105.95,
+            "y": 78.7
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 105.95,
+            "y": 88.6
+          }
+        },
+        {
+          "pos": {
+            "x": 112.9,
+            "y": 89.2375
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 111.65,
+            "y": 86.81
+          }
+        },
+        {
+          "pos": {
+            "x": 112.9,
+            "y": 87.6625
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 112.9,
+            "y": 89.2375
+          }
+        },
+        {
+          "pos": {
+            "x": 125.3875,
+            "y": 84.8
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 123.6,
+            "y": 87.94
+          }
+        },
+        {
+          "pos": {
+            "x": 123.8125,
+            "y": 84.8
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 73.1,
+            "y": 85.1
+          }
+        },
+        {
+          "pos": {
+            "x": 73.1,
+            "y": 91.4
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 73.1,
+            "y": 85.1
+          }
+        },
+        {
+          "pos": {
+            "x": 91.1,
+            "y": 79.35
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 76.9,
+            "y": 85.1
+          }
+        },
+        {
+          "pos": {
+            "x": 76.9,
+            "y": 91.4
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 76.9,
+            "y": 85.1
+          }
+        },
+        {
+          "pos": {
+            "x": 89.0,
+            "y": 82.49
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 89.0,
+            "y": 82.49
+          }
+        },
+        {
+          "pos": {
+            "x": 104.0,
+            "y": 88.55
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 89.0,
+            "y": 83.51
+          }
+        },
+        {
+          "pos": {
+            "x": 90.59,
+            "y": 83.25
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 90.59,
+            "y": 83.25
+          }
+        },
+        {
+          "pos": {
+            "x": 91.1,
+            "y": 81.25
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 90.59,
+            "y": 83.25
+          }
+        },
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 97.93
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 91.1,
+            "y": 79.35
+          }
+        },
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 80.27
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 91.1,
+            "y": 81.25
+          }
+        },
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 81.23
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 91.61,
+            "y": 83.25
+          }
+        },
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 84.73
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 80.27
+          }
+        },
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 83.77
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 80.27
+          }
+        },
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 80.45
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 81.23
+          }
+        },
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 81.25
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 92.6,
+            "y": 84.73
+          }
+        },
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 85.25
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 93.2,
+            "y": 113.77
+          }
+        },
+        {
+          "pos": {
+            "x": 94.2,
+            "y": 113.69
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 93.2,
+            "y": 114.73
+          }
+        },
+        {
+          "pos": {
+            "x": 94.2,
+            "y": 114.71
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.05,
+            "y": 78.7
+          }
+        },
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 79.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.05,
+            "y": 78.7
+          }
+        },
+        {
+          "pos": {
+            "x": 95.2,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.05,
+            "y": 88.6
+          }
+        },
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 87.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.05,
+            "y": 88.6
+          }
+        },
+        {
+          "pos": {
+            "x": 96.8,
+            "y": 88.55
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 79.65
+          }
+        },
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 80.45
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.1,
+            "y": 81.25
+          }
+        },
+        {
+          "pos": {
+            "x": 111.65,
+            "y": 85.79
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.2,
+            "y": 113.69
+          }
+        },
+        {
+          "pos": {
+            "x": 96.75,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 94.2,
+            "y": 114.71
+          }
+        },
+        {
+          "pos": {
+            "x": 95.68,
+            "y": 114.72
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 95.05,
+            "y": 101.7
+          }
+        },
+        {
+          "pos": {
+            "x": 96.55,
+            "y": 101.68
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 95.05,
+            "y": 99.8
+          }
+        },
+        {
+          "pos": {
+            "x": 96.55,
+            "y": 100.72
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 95.2,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 96.0,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 95.68,
+            "y": 114.72
+          }
+        },
+        {
+          "pos": {
+            "x": 95.68,
+            "y": 118.9
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 95.68,
+            "y": 118.9
+          }
+        },
+        {
+          "pos": {
+            "x": 104.32,
+            "y": 118.9
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.0,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 96.8,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.05,
+            "y": 110.29
+          }
+        },
+        {
+          "pos": {
+            "x": 97.55,
+            "y": 109.9125
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.05,
+            "y": 111.31
+          }
+        },
+        {
+          "pos": {
+            "x": 97.55,
+            "y": 111.7875
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.55,
+            "y": 100.72
+          }
+        },
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 96.97
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.55,
+            "y": 100.72
+          }
+        },
+        {
+          "pos": {
+            "x": 99.0,
+            "y": 101.6875
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.55,
+            "y": 101.68
+          }
+        },
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 101.6875
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.75,
+            "y": 113.805
+          }
+        },
+        {
+          "pos": {
+            "x": 100.26,
+            "y": 111.8
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.8,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 97.6,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.8,
+            "y": 88.55
+          }
+        },
+        {
+          "pos": {
+            "x": 98.025,
+            "y": 85.625
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 96.8,
+            "y": 88.55
+          }
+        },
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 96.97
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 97.55,
+            "y": 109.9125
+          }
+        },
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 101.6875
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 97.55,
+            "y": 111.7875
+          }
+        },
+        {
+          "pos": {
+            "x": 97.55,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 97.55,
+            "y": 113.805
+          }
+        },
+        {
+          "pos": {
+            "x": 102.45,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 97.6,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 98.4,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.025,
+            "y": 81.675
+          }
+        },
+        {
+          "pos": {
+            "x": 98.025,
+            "y": 83.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.025,
+            "y": 83.65
+          }
+        },
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 83.65
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.025,
+            "y": 85.625
+          }
+        },
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 85.625
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 101.6875
+          }
+        },
+        {
+          "pos": {
+            "x": 99.95,
+            "y": 101.6875
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 97.93
+          }
+        },
+        {
+          "pos": {
+            "x": 98.05,
+            "y": 99.4125
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.4,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 99.2,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 98.75,
+            "y": 113.805
+          }
+        },
+        {
+          "pos": {
+            "x": 99.24,
+            "y": 111.8
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 99.0,
+            "y": 101.6875
+          }
+        },
+        {
+          "pos": {
+            "x": 101.75,
+            "y": 110.79
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 99.2,
+            "y": 78.75
+          }
+        },
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 78.75
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 99.2,
+            "y": 88.55
+          }
+        },
+        {
+          "pos": {
+            "x": 99.25,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 99.25,
+            "y": 113.805
+          }
+        },
+        {
+          "pos": {
+            "x": 100.25,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 99.75,
+            "y": 113.805
+          }
+        },
+        {
+          "pos": {
+            "x": 100.0,
+            "y": 88.55
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "pos": {
+            "x": 99.75,
+            "y": 113.805
+          }
+        },
+        {
+          "pos": {
+            "x": 100.75,
+            "y": 113.805
+          }
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    }
+  ],
+  "violations": [
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of C5",
+          "pos": {
+            "x": 91.44,
+            "y": 80.75
+          },
+          "uuid": "2c4d6355-f9e9-5f83-8c77-d6ea3e1eab1f"
+        },
+        {
+          "description": "Segment of C6 on F.Silkscreen",
+          "pos": {
+            "x": 91.835,
+            "y": 80.561252
+          },
+          "uuid": "ba3c180b-903b-5faa-92d5-69829fe31974"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of R1",
+          "pos": {
+            "x": 99.75,
+            "y": 110.63
+          },
+          "uuid": "ceb10d3d-62ed-5933-b908-930fd02de250"
+        },
+        {
+          "description": "Reference field of R2",
+          "pos": {
+            "x": 100.58,
+            "y": 111.3
+          },
+          "uuid": "e17231a1-dc0b-5942-84ed-d1c0c6725650"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of R9",
+          "pos": {
+            "x": 94.88,
+            "y": 110.8
+          },
+          "uuid": "4babe03c-90fb-5a68-b17c-bdd4846a2e61"
+        },
+        {
+          "description": "Reference field of F1",
+          "pos": {
+            "x": 95.9,
+            "y": 110.85
+          },
+          "uuid": "d7894dcb-8440-526b-a22a-0e759958d343"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of R9 on F.Silkscreen",
+          "pos": {
+            "x": 96.43,
+            "y": 110.953641
+          },
+          "uuid": "663d12b4-a36c-5c16-a9ff-803ce5f74335"
+        },
+        {
+          "description": "Reference field of F1",
+          "pos": {
+            "x": 95.9,
+            "y": 110.85
+          },
+          "uuid": "d7894dcb-8440-526b-a22a-0e759958d343"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of C2",
+          "pos": {
+            "x": 92.04,
+            "y": 114.25
+          },
+          "uuid": "819db0fc-114a-504f-bd9b-6d9a62aa17aa"
+        },
+        {
+          "description": "Reference field of R3",
+          "pos": {
+            "x": 93.03,
+            "y": 114.2
+          },
+          "uuid": "eb67bcc5-eff1-50d2-af66-02e97aad2e45"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of C2 on F.Silkscreen",
+          "pos": {
+            "x": 93.56,
+            "y": 114.357836
+          },
+          "uuid": "831ca31c-a285-5652-acff-e393c06f7762"
+        },
+        {
+          "description": "Reference field of R3",
+          "pos": {
+            "x": 93.03,
+            "y": 114.2
+          },
+          "uuid": "eb67bcc5-eff1-50d2-af66-02e97aad2e45"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of R9 on F.Silkscreen",
+          "pos": {
+            "x": 95.67,
+            "y": 110.953641
+          },
+          "uuid": "61c5b808-63a7-5773-b443-816a2a0e480b"
+        },
+        {
+          "description": "Reference field of F1",
+          "pos": {
+            "x": 95.9,
+            "y": 110.85
+          },
+          "uuid": "d7894dcb-8440-526b-a22a-0e759958d343"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of C3",
+          "pos": {
+            "x": 95.39,
+            "y": 101.2
+          },
+          "uuid": "80369933-553c-5e96-a878-d506cd03fe13"
+        },
+        {
+          "description": "Segment of C1 on F.Silkscreen",
+          "pos": {
+            "x": 95.785,
+            "y": 101.011252
+          },
+          "uuid": "a397f805-a72d-5284-a22f-79f99ae36903"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of C3 on F.Silkscreen",
+          "pos": {
+            "x": 96.19,
+            "y": 101.307836
+          },
+          "uuid": "430eb8d0-a522-5c8f-aa76-a8e787bfcb14"
+        },
+        {
+          "description": "Reference field of U2",
+          "pos": {
+            "x": 96.6,
+            "y": 100.55
+          },
+          "uuid": "b54c47a5-4f6f-523f-996b-b2f79003ffec"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of U2",
+          "pos": {
+            "x": 96.6,
+            "y": 100.55
+          },
+          "uuid": "b54c47a5-4f6f-523f-996b-b2f79003ffec"
+        },
+        {
+          "description": "Segment of C3 on F.Silkscreen",
+          "pos": {
+            "x": 96.91,
+            "y": 101.307836
+          },
+          "uuid": "e3f009ae-595f-58cf-ba69-c37870ea548c"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of J1",
+          "pos": {
+            "x": 100.0,
+            "y": 112.205
+          },
+          "uuid": "7d4a6e18-10b3-5752-9d3c-a1400e8dc68e"
+        },
+        {
+          "description": "Segment of R1 on F.Silkscreen",
+          "pos": {
+            "x": 99.596359,
+            "y": 112.18
+          },
+          "uuid": "ecb6cdbd-b9c6-54c8-8554-24b1cf2b2037"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of J1",
+          "pos": {
+            "x": 100.0,
+            "y": 112.205
+          },
+          "uuid": "7d4a6e18-10b3-5752-9d3c-a1400e8dc68e"
+        },
+        {
+          "description": "Reference field of R2",
+          "pos": {
+            "x": 100.58,
+            "y": 111.3
+          },
+          "uuid": "e17231a1-dc0b-5942-84ed-d1c0c6725650"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of C2 on F.Silkscreen",
+          "pos": {
+            "x": 92.84,
+            "y": 114.357836
+          },
+          "uuid": "df05dc8e-fc43-5673-ab69-4d392aae5e91"
+        },
+        {
+          "description": "Reference field of R3",
+          "pos": {
+            "x": 93.03,
+            "y": 114.2
+          },
+          "uuid": "eb67bcc5-eff1-50d2-af66-02e97aad2e45"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Reference field of C5",
+          "pos": {
+            "x": 91.44,
+            "y": 80.75
+          },
+          "uuid": "2c4d6355-f9e9-5f83-8c77-d6ea3e1eab1f"
+        },
+        {
+          "description": "Reference field of R4",
+          "pos": {
+            "x": 91.1,
+            "y": 82.08
+          },
+          "uuid": "5d66aaaf-ac5f-57e4-88b6-d0472ec4dd49"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of R4 on F.Silkscreen",
+          "pos": {
+            "x": 90.946359,
+            "y": 83.63
+          },
+          "uuid": "561f85c7-0bb8-5d71-aea0-c39177584717"
+        },
+        {
+          "description": "Reference field of C7",
+          "pos": {
+            "x": 91.44,
+            "y": 84.25
+          },
+          "uuid": "8419a295-70ce-55b9-9b61-1042148ed3d7"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of C5",
+          "pos": {
+            "x": 91.44,
+            "y": 80.75
+          },
+          "uuid": "2c4d6355-f9e9-5f83-8c77-d6ea3e1eab1f"
+        },
+        {
+          "description": "Pad 1 [+3V3] of C6 on F.Cu",
+          "pos": {
+            "x": 91.1,
+            "y": 81.25
+          },
+          "uuid": "3d0f2f42-4abb-54c6-8618-e8ef2ca14cc7"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of J1",
+          "pos": {
+            "x": 100.0,
+            "y": 112.205
+          },
+          "uuid": "7d4a6e18-10b3-5752-9d3c-a1400e8dc68e"
+        },
+        {
+          "description": "Pad 2 [GND] of R1 on F.Cu",
+          "pos": {
+            "x": 100.26,
+            "y": 111.8
+          },
+          "uuid": "21b5e5c4-9d90-5e97-803f-480ce67a7115"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of F1",
+          "pos": {
+            "x": 95.9,
+            "y": 110.85
+          },
+          "uuid": "d7894dcb-8440-526b-a22a-0e759958d343"
+        },
+        {
+          "description": "Pad 2 [VBUS] of R9 on F.Cu",
+          "pos": {
+            "x": 96.05,
+            "y": 110.29
+          },
+          "uuid": "f5af71dd-abaa-55ad-8d7b-8e2650d11650"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of C3",
+          "pos": {
+            "x": 95.39,
+            "y": 101.2
+          },
+          "uuid": "80369933-553c-5e96-a878-d506cd03fe13"
+        },
+        {
+          "description": "Pad 1 [VBUS] of C1 on F.Cu",
+          "pos": {
+            "x": 95.05,
+            "y": 101.7
+          },
+          "uuid": "07df8808-d9fc-593c-a8e5-729efd9c60ab"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of R3",
+          "pos": {
+            "x": 93.03,
+            "y": 114.2
+          },
+          "uuid": "eb67bcc5-eff1-50d2-af66-02e97aad2e45"
+        },
+        {
+          "description": "Pad 1 [SHIELD] of C2 on F.Cu",
+          "pos": {
+            "x": 93.2,
+            "y": 114.73
+          },
+          "uuid": "9dc212e8-c5ee-5632-8acc-1304058d49b8"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of R3",
+          "pos": {
+            "x": 93.03,
+            "y": 114.2
+          },
+          "uuid": "eb67bcc5-eff1-50d2-af66-02e97aad2e45"
+        },
+        {
+          "description": "Pad 2 [GND] of C2 on F.Cu",
+          "pos": {
+            "x": 93.2,
+            "y": 113.77
+          },
+          "uuid": "37f917e8-8f52-5cd7-9672-af4be2cfad1d"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of F1",
+          "pos": {
+            "x": 95.9,
+            "y": 110.85
+          },
+          "uuid": "d7894dcb-8440-526b-a22a-0e759958d343"
+        },
+        {
+          "description": "Pad 1 [VBUS_IN] of R9 on F.Cu",
+          "pos": {
+            "x": 96.05,
+            "y": 111.31
+          },
+          "uuid": "64a5356e-4014-5a72-baa8-3bc250d421fd"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of U2",
+          "pos": {
+            "x": 96.6,
+            "y": 100.55
+          },
+          "uuid": "b54c47a5-4f6f-523f-996b-b2f79003ffec"
+        },
+        {
+          "description": "Pad 2 [GND] of C3 on F.Cu",
+          "pos": {
+            "x": 96.55,
+            "y": 100.72
+          },
+          "uuid": "a4967025-7140-5bb8-9f75-85f964e5ab0a"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of R2",
+          "pos": {
+            "x": 100.58,
+            "y": 111.3
+          },
+          "uuid": "e17231a1-dc0b-5942-84ed-d1c0c6725650"
+        },
+        {
+          "description": "Pad 2 [GND] of R1 on F.Cu",
+          "pos": {
+            "x": 100.26,
+            "y": 111.8
+          },
+          "uuid": "21b5e5c4-9d90-5e97-803f-480ce67a7115"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of R4",
+          "pos": {
+            "x": 91.1,
+            "y": 82.08
+          },
+          "uuid": "5d66aaaf-ac5f-57e4-88b6-d0472ec4dd49"
+        },
+        {
+          "description": "Pad 1 [+3V3] of C6 on F.Cu",
+          "pos": {
+            "x": 91.1,
+            "y": 81.25
+          },
+          "uuid": "3d0f2f42-4abb-54c6-8618-e8ef2ca14cc7"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "Reference field of C7",
+          "pos": {
+            "x": 91.44,
+            "y": 84.25
+          },
+          "uuid": "8419a295-70ce-55b9-9b61-1042148ed3d7"
+        },
+        {
+          "description": "Pad 1 [+3V3] of R4 on F.Cu",
+          "pos": {
+            "x": 90.59,
+            "y": 83.25
+          },
+          "uuid": "54c72676-9c2d-5818-9726-e820cf07ff09"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by board edge",
+      "items": [
+        {
+          "description": "Segment on Edge.Cuts",
+          "pos": {
+            "x": 126.0,
+            "y": 78.0
+          },
+          "uuid": "f7b9f2ec-07e0-56c0-8450-37ce866a7557"
+        },
+        {
+          "description": "Segment of U1 on F.Silkscreen",
+          "pos": {
+            "x": 93.25,
+            "y": 89.4
+          },
+          "uuid": "1f90d9cb-dace-583f-bb78-ef504b45dd3b"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_edge_clearance"
+    },
+    {
+      "description": "Silkscreen clipped by board edge",
+      "items": [
+        {
+          "description": "Segment on Edge.Cuts",
+          "pos": {
+            "x": 126.0,
+            "y": 78.0
+          },
+          "uuid": "f7b9f2ec-07e0-56c0-8450-37ce866a7557"
+        },
+        {
+          "description": "Segment of U1 on F.Silkscreen",
+          "pos": {
+            "x": 106.75,
+            "y": 72.5
+          },
+          "uuid": "fef1ef10-d38f-51a4-8482-4a5f60bec2e5"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_edge_clearance"
+    },
+    {
+      "description": "Isolated copper fill",
+      "items": [
+        {
+          "description": "Zone 'GND_B.Cu' [GND] on B.Cu, priority 0",
+          "pos": {
+            "x": 128.0,
+            "y": 80.0
+          },
+          "uuid": "4d7629d8-d6f7-5d60-a94f-cdca8ffed200"
+        }
+      ],
+      "severity": "warning",
+      "type": "isolated_copper"
+    }
+  ]
+}

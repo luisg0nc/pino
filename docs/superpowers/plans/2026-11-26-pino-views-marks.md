@@ -188,6 +188,8 @@ git commit -m "kernel: sheet.json for the views' hit layer, and a diff op betwee
 
 ### Task 2: Build types, the reference build fixture and the engine's stand-in
 
+> As built: the stand-in's pong has no `serve` at protocol 1, as the real engine's has none. A move applies once `board.py` differs from what the first build read (not simply from build 2), so the build pino asks for right after a route keeps the copper current, as the real engine's cache would.
+
 **Files:**
 - Create: `app/src/shared/build.ts`, `app/src/shared/circuit.ts`, `app/src/shared/sheet.ts`, `app/scripts/reference-build.mjs`, `app/test/fake-kernel.mjs`, `app/test/fixtures/reference-build/` (generated), `app/test/fixtures/boards/tiny.kicad_pcb`
 - Test: `app/src/shared/build.test.ts`, `app/src/fakeKernel.test.ts`
@@ -210,7 +212,7 @@ git commit -m "kernel: sheet.json for the views' hit layer, and a diff op betwee
 - Produces (`fake-kernel.mjs`): speaks the serve protocol on stdin and stdout. `ping` answers `{"pong": {"kernel": "0.1.1-fake", "schema": "pino.build/1", "serve": <1 or 2>}}`; `build` copies the fixture into `<project>/.pino/build/<hash>/` (hash `` `aaaaaaaa${n.toString(16).padStart(4, '0')}` `` for build n), appends `.pino/builds.json` (`{"schema": "pino.builds/1", "builds": [...]}`), answers the fixture's result with `number` counted up and `changes` filled from the move. `diff` answers from its log of moves. Switches: `FAKE_KERNEL_SERVE=1|2` (default 1: no routing), `FAKE_KERNEL_DELAY_MS` (per build), `FAKE_KERNEL_FAIL_ON=<n>` (build n answers verdict `failed` with one finding `{"source": "board.py", "code": "syntax_error", "severity": "error", "message": "invalid syntax", "at": {"space": "source", "file": "board.py", "line": 12}}`), `FAKE_KERNEL_DIE=start|build` (exit 1 with a stderr line), `FAKE_KERNEL_MOVE=<ref>:<dx>,<dy>` (from the second build on, that footprint's `(at …)` in both boards moves by dx, dy board mm, y up). With `FAKE_KERNEL_SERVE=2`: `route` streams `{"id", "event": {"event": "step", "step": "signals", "index": 1, "of": 1}}`, one `{"event": "net", …}` per placement edge net, then `{"id", "ok": true, "result": {…pino.route/1…}}`, after writing `.pino/routes/<key>/board.kicad_pcb` and `filled/board.kicad_pcb` as the build's filled board plus one F.Cu segment per placement edge (width 0.25, the edge's net, uuid from a counter) and `route.json`; later builds answer `routing` `current` while no move happened since the route and `stale` with `stale_because: ["parts moved"]` after one; `route_status`, `route_cancel`, `route_net`, `nudge`, `keep` answer canned `pino.trial/1`-shaped results. `FAKE_KERNEL_ROUTE_MS` spaces the net events.
 - `tiny.kicad_pcb`: written by hand in KiCad 10's format (copy the header, layer table and net syntax from the fixture's `board.kicad_pcb`): one two-pad 0402 footprint `R1` at board (0, 0), one SOT-23 `U1` at (5, 0) on the back, nets `A` and `GND`, two F.Cu segments and one F.Cu arc on `A`, one through via on `A`, one B.Cu filled zone on `GND`, Edge.Cuts rectangle 20 x 10 mm centred on (100, 100).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('reads the reference build result and refuses another schema', () => {
@@ -240,21 +242,21 @@ it('moves a part from the second build on', async () => { /* FAKE_KERNEL_MOVE=R4
 it('streams a route and then answers stale after a move', async () => { /* FAKE_KERNEL_SERVE=2 */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/build.test.ts src/fakeKernel.test.ts`
 Expected: FAIL with "Cannot find module './build'".
 
-- [ ] **Step 3: Generate the fixture, write the types and the stand-in**
+- [x] **Step 3: Generate the fixture, write the types and the stand-in**
 
 Run: `node app/scripts/reference-build.mjs` (needs `uv` and `kicad-cli`; about 10 s). Check `git status` shows changes only under `app/test/fixtures/reference-build/`.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `pnpm -C app exec vitest run src/shared/build.test.ts src/fakeKernel.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/shared/build.ts app/src/shared/circuit.ts app/src/shared/sheet.ts app/src/shared/build.test.ts app/src/fakeKernel.test.ts app/scripts/reference-build.mjs app/test/fake-kernel.mjs app/test/fixtures/
