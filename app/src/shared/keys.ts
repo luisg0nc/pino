@@ -8,17 +8,17 @@
  */
 
 /** Where the sheet lists a row. */
-export type KeyContext = 'Everywhere' | 'Session' | 'In a field, a menu or a sheet'
+export type KeyContext = 'Everywhere' | 'The views' | 'Session' | 'In a field, a menu or a sheet'
 
 /**
  * Where a key is listened to. Two rows of one scope would answer the same press.
  * - `global`: everywhere, also while typing. Nobody else may have such a key.
  * - `window`: everywhere outside a field. Nobody else's either.
  * - `composer`: in the box a chat prompt is written in. `ask`: on a card of the chat that asks the person.
- * - `tabs`: on a focused tab of the views.
+ * - `tabs`: on a focused tab of the views. `view`: over a view of the board, outside a field.
  * - `field`, `menu`, `sheet`: in a field, an open menu, a sheet or a question.
  */
-export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'field' | 'menu' | 'sheet'
+export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'field' | 'menu' | 'sheet'
 
 interface Row<Id extends string> {
   id: Id
@@ -36,6 +36,11 @@ const row = <Id extends string>(id: Id, keys: readonly string[], does: string, c
 const ROWS = [
   row('view.prev', ['Left'], 'On a tab of the views: the view before', 'Everywhere', 'tabs'),
   row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
+
+  row('board.layer', ['1', '2', '3', '4', '5', '6', '7', '8'], 'Board: look at the copper layer of that number, from the top', 'The views', 'view'),
+  row('board.fit', ['F'], 'Board: fit the whole board in the view', 'The views', 'view'),
+  row('board.nets', ['N'], 'Board: net colours on or off', 'The views', 'view'),
+  row('view.drop', ['Esc'], 'Put down the tool in hand, then what is selected', 'The views', 'view'),
 
   row('chat.send', ['Enter'], 'Chat: send the prompt', 'Session', 'composer'),
   row('chat.newline', ['Shift+Enter'], 'Chat: a new line in the prompt, not a send', 'Session', 'composer'),
@@ -62,6 +67,7 @@ export const KEYS: readonly KeyRow[] = ROWS
 /** The groups of the sheet, in its order, each with when its keys are listened to. */
 export const CONTEXTS: ReadonlyArray<{ name: KeyContext; when: string }> = [
   { name: 'Everywhere', when: 'Also while typing' },
+  { name: 'The views', when: 'Over a view, outside a field' },
   { name: 'Session', when: 'In the chat' },
   { name: 'In a field, a menu or a sheet', when: 'Where something is typed, chosen or asked' }
 ]

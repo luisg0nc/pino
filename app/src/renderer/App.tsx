@@ -5,6 +5,7 @@ import { actions, store, useStore } from './state/store'
 import type { FolderChoice } from './ui/FolderMenu'
 import { nameOf, openProblem } from './ui/openFolder'
 import { RouteCard } from './ui/RouteCard'
+import { LeaderLayer } from './ui/LeaderLayer'
 import { SessionDock } from './ui/SessionDock'
 import { StatusLine } from './ui/StatusLine'
 import { BareControls, TitleBar } from './ui/TitleBar'
@@ -107,6 +108,7 @@ export function App() {
         <SessionDock key={project.id} project={project} />
       </aside>
       <StatusLine project={project} />
+      <LeaderLayer />
     </div>
   )
 }

@@ -4,9 +4,9 @@ import { createStore, type StoreApi } from 'zustand/vanilla'
 import type { SessionStatus } from '../../shared/bridge'
 import type { BuildState } from '../../shared/build'
 import type { ProjectInfo, RecentFolder } from '../../shared/project'
+import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../../shared/view'
 
-/** The three views over one build of a board. */
-export type ViewTab = 'schematic' | 'board' | '3d'
+export type { ViewTab }
 
 export interface PinoState {
   page: 'first' | 'project'
@@ -17,6 +17,12 @@ export interface PinoState {
   build: BuildState | null
   /** The number of an older build chosen in the strip, which the views then show; null shows the latest. */
   shown: number | null
+  /** What is in hand in the views, the same thing in all three. */
+  selection: Selection | null
+  /** How the Board tab draws. */
+  look: BoardLook
+  /** The finding pointed at, by its place in the shown build's findings: its pin lights and its tag is tied to it. */
+  hotFinding: number | null
   /** The session the dock shows, running or just ended; null when the project has had none since it was opened. */
   session: { sessionId: string; status: SessionStatus } | null
   /** What the status line says once of the open project: a folder pino may not write into, a folder that did not open. */
@@ -25,16 +31,19 @@ export interface PinoState {
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, session: null, notice: null, problem: null }))
+
+/** What of the views belongs to one project, and is not the next one's. */
+const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null } as const
 
 export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
   openProject(project: ProjectInfo): void {
     const other = store.getState().project?.id !== project.id
-    store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab: 'schematic' as const, build: null, shown: null } : {}) })
+    store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab: 'schematic' as const, ...NO_VIEW } : {}) })
   },
   closeProject(): void {
-    store.setState({ page: 'first', project: null, session: null, notice: null, problem: null, tab: 'schematic', build: null, shown: null })
+    store.setState({ page: 'first', project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
   },
   setRecent(recent: RecentFolder[]): void {
     store.setState({ recent })
@@ -47,7 +56,16 @@ export const actions = {
     if (store.getState().project?.id === build.projectId) store.setState({ build })
   },
   showBuild(shown: number | null): void {
-    store.setState({ shown })
+    store.setState({ shown, hotFinding: null })
+  },
+  select(selection: Selection | null): void {
+    store.setState({ selection })
+  },
+  setLook(patch: Partial<BoardLook>): void {
+    store.setState({ look: { ...store.getState().look, ...patch } })
+  },
+  hoverFinding(hotFinding: number | null): void {
+    store.setState({ hotFinding })
   },
   setSession(session: PinoState['session']): void {
     store.setState({ session })
@@ -66,5 +84,5 @@ export function useStore<T>(pick: (s: PinoState) => T): T {
 
 // Only under test (`?test=1`, which main sets with PINO_TEST=1): what the e2e specs read.
 if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('test') === '1') {
-  window.__pinoTest = { state: () => store.getState() }
+  window.__pinoTest = { state: () => store.getState(), screenOf: () => null, drawn: () => ({}) }
 }

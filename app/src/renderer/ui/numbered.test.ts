@@ -19,3 +19,7 @@ describe('what a sentence has set in the face of numbers', () => {
     expect(capital('plane RMS 0.8 mm')).toBe('Plane RMS 0.8 mm')
   })
 })
+
+it("sets pino's build names whole, as h12", () => {
+  expect(numberedPieces('Drawn from h7. h8 failed: board.py line 12')).toEqual(['Drawn from ', 'h7', '. ', 'h8', ' failed: board.py line ', '12', ''])
+})

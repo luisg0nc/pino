@@ -60,6 +60,7 @@ const bridge: PinoBridge = {
   build: {
     state: (projectId) => invoke('build:state', projectId),
     rebuild: (projectId) => invoke('build:rebuild', projectId),
+    result: (projectId, hash) => invoke('build:result', projectId, hash),
     file: (projectId, hash, name) => invoke('build:file', projectId, hash, name),
     routeFile: (projectId, key, name) => invoke('build:routeFile', projectId, key, name),
     onState: (cb) => subscribe('build:state', cb)

@@ -14,7 +14,7 @@ import type { Trust } from './trust'
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
-//            build:state, build:rebuild, build:file, build:routeFile
+//            build:state, build:rebuild, build:result, build:file, build:routeFile
 //   sent:    chat:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, notice, window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
@@ -109,10 +109,11 @@ export function registerIpc({ projects, sessions, trust, models, builds }: IpcDe
     return project ? (builds.state(project.id) ?? null) : null
   })
   handle('build:rebuild', (id: unknown) => builds.rebuild(mustBeOpen(id).id))
+  const buildOf = (project: ProjectInfo, hash: string) => resultOfBuild(project, hash, [builds.latest(project.id), builds.lastGood(project.id)])
+  handle('build:result', (id: unknown, hash: unknown) => buildOf(mustBeOpen(id), String(hash)))
   handle('build:file', async (id: unknown, hash: unknown, name: unknown) => {
     const project = mustBeOpen(id)
-    const result = await resultOfBuild(project, String(hash), [builds.latest(project.id), builds.lastGood(project.id)])
-    return readArtifact(project, String(hash), name as ArtifactName, result)
+    return readArtifact(project, String(hash), name as ArtifactName, await buildOf(project, String(hash)))
   })
   handle('build:routeFile', (id: unknown, key: unknown, name: unknown) => readRouteFile(mustBeOpen(id), String(key), name as RouteFile))
   builds.onState((state) => broadcast('build:state', state))

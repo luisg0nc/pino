@@ -2,10 +2,10 @@ import type { ReactNode } from 'react'
 
 /**
  * What is set in the face of numbers in a sentence: a number; and what names a scan or a mark (`S1`, `M4`), a
- * build (`r12`), or a part's face or edge (`tub/F25`), whole. A ref is one thing: half of it in another face
+ * build (`h12`), or a part's face or edge (`tub/F25`), whole. A ref is one thing: half of it in another face
  * reads as two.
  */
-const SET = /(\b[SM]\d+\b|\br\d+\b|(?<![\w.-])[\w.-]+\/(?:[FE]\d+|@[A-Za-z_]\w*(?:[.-]\w+)*)\b|-?\d[\d.,]*\d|-?\d)/
+const SET = /(\b[SM]\d+\b|\b[hr]\d+\b|(?<![\w.-])[\w.-]+\/(?:[FE]\d+|@[A-Za-z_]\w*(?:[.-]\w+)*)\b|-?\d[\d.,]*\d|-?\d)/
 
 /** A sentence in pieces: every second one, from the second, is a number or a ref. (`['', 'S1', ' is aligned by ', '4', ' pairs']`.) */
 export function numberedPieces(text: string): string[] {

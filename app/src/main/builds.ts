@@ -11,7 +11,7 @@ import type { BuildEntry, BuildResult, BuildState, EngineState, Verdict } from '
 import type { ProjectInfo } from '../shared/project'
 import { BUILD_HASH } from './artifacts'
 import { KernelError, type KernelClient } from './kernel/client'
-import { ownFolder } from './own'
+import { FOLDER, whyNotOwn } from './own'
 
 export const DEBOUNCE_MS = 300
 /** The engine is started again at most this often: a start that fails at once must not become a loop. */
@@ -53,7 +53,8 @@ export function watchProject(dir: string, onChange: OnChange, debounceMs: number
 /** `.pino/builds.json` as the strip lists it, oldest first; empty when there is none to read. */
 export async function readBuildHistory(dir: string): Promise<BuildEntry[]> {
   try {
-    const folder = await ownFolder(dir)
+    if (await whyNotOwn(dir, 'build')) return []
+    const folder = join(dir, FOLDER)
     const file = JSON.parse(await readFile(join(folder, 'builds.json'), 'utf8')) as { schema?: unknown; builds?: unknown }
     if (file.schema !== 'pino.builds/1' || !Array.isArray(file.builds)) return []
     return file.builds.flatMap((entry: Record<string, unknown>) => {
@@ -269,8 +270,12 @@ export class Builds {
   private async run(entry: Entry): Promise<void> {
     const open = () => this.entries.get(entry.project.id) === entry
     try {
-      // The engine writes under .pino: it is asked only when those folders are the project's own.
-      for (const folder of ENGINE_FOLDERS) await ownFolder(entry.project.dir, folder)
+      // The engine writes under .pino: it is asked only when those folders are the project's own. The view says why
+      // not; the window's one notice of the folder stays for what pino's main itself would write.
+      for (const folder of ENGINE_FOLDERS) {
+        const why = await whyNotOwn(entry.project.dir, folder)
+        if (why) throw new Error(why)
+      }
       const client = await this.engine(entry)
       if (!open()) return
       entry.startedAt = this.now()

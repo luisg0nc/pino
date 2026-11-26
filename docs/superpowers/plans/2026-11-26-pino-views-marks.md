@@ -519,6 +519,8 @@ git commit -m "Draw the board as a technical drawing: graphite copper, pencil fa
 
 ### Task 6: The Board view: pan, zoom, click, layers, findings, ratsnest
 
+> As built: torno's `tagPlace`, `leaders` store and `useTagAt` are copied as they are, which keeps `LeaderLayer` byte-identical; `Tag` and `Band` are the adapted ones. The card and dock take their narrow widths at 1500px and under, as the mocks do (torno's 1359px left the board 68 px less). Findings that would cover one another gather into a square pin with a count. A `build.result` call was added for older builds. The e2e launcher takes `kernel` from this task on, so no spec starts uv. A hidden window gives one picture a launch, so `shots.spec.ts` launches once per picture. `whyNotOwn` asks about .pino without using up the window's one notice.
+
 **Files:**
 - Create: `app/src/renderer/board/viewport.ts`, `BoardView.tsx`, `LayerStack.tsx`, `FindingPins.tsx`, `app/src/shared/view.ts`; copy torno's `shared/leader.ts`, `leader.test.ts`, `ui/LeaderLayer.tsx`, `styles/leaders.css`, `ui/view/Tag.tsx`, `ui/view/Band.tsx`
 - Modify: `app/src/renderer/ui/ViewPane.tsx`, `app/src/renderer/state/store.ts`, `app/src/shared/keys.ts`, `app/src/renderer/styles/views.css`, `shared-from-torno.json`
@@ -537,7 +539,7 @@ git commit -m "Draw the board as a technical drawing: graphite copper, pencil fa
   - Store: `selection: Selection | null`, `look: BoardLook`, `hotFinding: number | null`, actions `select(s: Selection | null)`, `setLook(patch: Partial<BoardLook>)`, `hoverFinding(i: number | null)`.
   - Test hook (`window.__pinoTest`, only under `?test=1`): `screenOf(target: Target): { x: number; y: number } | null` (client px of the target's centre in the chosen view), `drawn(): { board: { hash: string | null; route: string | null; layers: string[]; active: string; items: number; highlighted: string[]; marks: string[]; stale: number } }`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('keeps the point under the cursor when zooming', () => {
@@ -553,21 +555,21 @@ it('labels the tab you are not on with the selection', () => {
 it('has no key clash with the new view scope', () => { expect(clashes(KEYS)).toEqual([]) })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/board/viewport.test.ts src/shared/view.test.ts src/shared/keys.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy the torno files, then write the view**
+- [x] **Step 3: Copy the torno files, then write the view**
 
 The click rule is the spike's (Task 4 `hitTest`, tolerance 4 px over the scale); a click sets `selection` with `describeTarget` as its `text`. Wheel zooms by 1.0015 per delta pixel; a drag pans. `F` fits the outline with the mock's insets (left 64 for the reed, right 240 for the stack, top 56, bottom 56). The scale bar is drawn as on a drawing (mock `.scale`), the hint pill at the foot says "Click a part, pad or track · drag pans · scroll zooms". A board file is parsed once per (hash, route) and cached for the run.
 
-- [ ] **Step 4: Run them, the unit suite and typecheck**
+- [x] **Step 4: Run them, the unit suite and typecheck**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json

@@ -1,4 +1,6 @@
-import { expect, type Locator } from '@playwright/test'
+import { writeFileSync } from 'node:fs'
+import { expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
+import type { Target } from '../src/shared/board/refs'
 
 /** An item of the dock's More menu, chosen as a person does. */
 export async function fromMore(dock: Locator, item: string): Promise<void> {
@@ -40,4 +42,44 @@ export async function moreItems(dock: Locator): Promise<string[]> {
   await dock.page().keyboard.press('Escape')
   await expect(menu).toHaveCount(0)
   return items
+}
+
+const captured = new WeakSet<ElectronApplication>()
+
+/**
+ * The window as it is drawn, to a PNG file: main's `capturePage`, since Playwright's own screenshot hangs on a hidden
+ * window.
+ * Once for each launch: a hidden window gives one picture, and the next call never returns.
+ */
+export async function capture(app: ElectronApplication, file: string): Promise<void> {
+  if (captured.has(app)) throw new Error('a hidden window gives one picture a launch: launch again for another')
+  captured.add(app)
+  const png = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].webContents.capturePage()).toPNG().toString('base64'))
+  writeFileSync(file, Buffer.from(png, 'base64'))
+}
+
+/** The window's content at this size, and the page told of it. */
+export async function resize(app: ElectronApplication, page: Page, width: number, height: number): Promise<void> {
+  await app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height), { width, height })
+  await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([width, height])
+}
+
+/** Waits until build `n` has landed and the Board tab (or whichever is chosen) has drawn it. */
+export async function waitForBuild(page: Page, n: number): Promise<void> {
+  await expect.poll(() => page.evaluate(() => window.__pinoTest!.state().build?.lastGood?.number ?? 0), { timeout: 20_000 }).toBeGreaterThanOrEqual(n)
+}
+
+/** Two frames: what was changed is on the canvas. */
+export const settled = (page: Page): Promise<void> => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
+
+/** Where on screen a thing is in the chosen view, once the view says. */
+export async function screenOf(page: Page, target: Target): Promise<{ x: number; y: number }> {
+  await expect.poll(() => page.evaluate((t) => window.__pinoTest!.screenOf(t) !== null, target)).toBe(true)
+  return (await page.evaluate((t) => window.__pinoTest!.screenOf(t), target))!
+}
+
+/** A click on a thing in the chosen view. */
+export async function clickTarget(page: Page, target: Target): Promise<void> {
+  const at = await screenOf(page, target)
+  await page.mouse.click(at.x, at.y)
 }

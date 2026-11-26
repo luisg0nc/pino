@@ -50,5 +50,5 @@ something changed. A sheet copied from torno keeps its rules; pino's own areas h
   of its own (set from the window).
 - No text is dimmed by `opacity`, nothing animates without end, and a sheet that moves something says what it does for
   a person who asked for less motion (`styles/styles.test.ts`).
-- The window's sizes are tokens (`--title-h`, `--card-w`, `--dock-w`, `--status-h`); under 1360px the card and the
-  dock take their narrow widths.
+- The window's sizes are tokens (`--title-h`, `--card-w`, `--dock-w`, `--status-h`); at 1500px and under the card and
+  the dock take their narrow widths, as the design mocks do.

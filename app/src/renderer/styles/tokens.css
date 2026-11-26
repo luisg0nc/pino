@@ -100,8 +100,8 @@
   --ease: cubic-bezier(.2, .8, .2, 1);
 
   /* Layout */
-  /* The window's sizes. The shell is one grid of them (`styles/layout.css`). A window narrower than 1360px takes the
-     narrow defaults at the end of this block. */
+  /* The window's sizes. The shell is one grid of them (`styles/layout.css`). A window of 1500px or less takes the
+     narrow defaults at the end of this block, as the design mocks do: the board needs the room. */
   --title-h: 40px;
   --card-w: 296px;         /* the route card's default */
   --panel-w: var(--card-w); /* what the card was called: the panel docked at the left */
@@ -115,8 +115,8 @@
   --space-6: 32px;
 }
 
-/* Narrow defaults of the card and the dock: a window under 1360px. */
-@media (max-width: 1359px) {
+/* Narrow defaults of the card and the dock: a window of 1500px or less. */
+@media (max-width: 1500px) {
   :root {
     --card-w: 264px;
     --dock-w: 384px;
