@@ -62,6 +62,8 @@ changed.
 - The mark is the probe (`renderer/ui/probe.ts`): the logo, the first screen's drawing and the icons are drawn from it.
 - Linux only. No macOS code paths.
 - Tests never run the real `claude`: they set `PINO_AGENT_CMD` to the stand-in.
+- Tests never reach the network: jlcsearch answers are recorded (`PINO_PARTS_RECORDED`), every launch sets
+  `PINO_PARTS_OFFLINE=1`, and caches go to a temp `PINO_CACHE_DIR`, never the person's home (`kernel/README.md`).
 - Tests never open a visible window: every Electron launch sets `PINO_TEST=1` (hidden window, temp profile), never
   `--ozone-platform=headless`, never `page.screenshot()`, never the clipboard. Tests never steal focus, never touch
   the person's home, and kill only processes they started, by pid.
