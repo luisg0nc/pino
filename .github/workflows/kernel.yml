@@ -1,7 +1,8 @@
 name: Kernel
 
 # The engine's tests (kernel/). `kernel` runs everything that needs no KiCad on a plain runner; `kernel-kicad` runs
-# the whole suite, kicad-cli and KiCad's own libraries included, in KiCad's 10.0.6 image. A change that touches
+# the whole suite, kicad-cli and KiCad's own libraries included, in KiCad's 10.0.6 image, with the router
+# (KiCadRoutingTools at its pinned commit, cached) and the tests that fetch a board from GitHub. A change that touches
 # neither kernel/ nor this file runs neither: `changes` says so, and the jobs it gates are skipped (which a required
 # check accepts). Any doubt (no base, a failed diff) says run.
 
@@ -62,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv run --directory kernel pytest -m "not kicad_cli and not kicad_libs"
+      - run: uv run --directory kernel pytest -m "not kicad_cli and not kicad_libs and not krt and not network"
 
   kernel-kicad:
     name: Kernel (KiCad 10)
@@ -77,4 +78,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: kicad-cli version
-      - run: uv run --directory kernel pytest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pino/krt
+          key: krt-bc48cce8ac60-${{ runner.os }}
+      - run: uv run --directory kernel pino-kernel router install
+      - run: uv run --directory kernel pytest -rP
+        env:
+          PINO_TEST_NETWORK: "1"

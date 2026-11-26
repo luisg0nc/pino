@@ -1,0 +1,203 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://pino.invalid/schema/trial-result-1.schema.json",
+ "title": "pino trial result",
+ "description": "What one finishing trial (route_net, nudge, keep) reports (pino_kernel.routing.result.TrialResult.to_json).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "kind",
+  "base",
+  "number",
+  "ok",
+  "headline",
+  "before",
+  "after",
+  "findings",
+  "truncated",
+  "snippet",
+  "replaces_line",
+  "artifacts",
+  "seconds"
+ ],
+ "properties": {
+  "schema": {
+   "const": "pino.trial/1"
+  },
+  "kind": {
+   "enum": [
+    "route_net",
+    "nudge",
+    "keep"
+   ]
+  },
+  "base": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "build",
+    "route"
+   ],
+   "properties": {
+    "build": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "route": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   }
+  },
+  "number": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "the trial number shown as t<number>; 0 when it could not run"
+  },
+  "ok": {
+   "type": "boolean"
+  },
+  "headline": {
+   "type": "string",
+   "maxLength": 160
+  },
+  "before": {
+   "type": "object",
+   "description": "route_net: net_complete, unrouted_nets, drc_errors; nudge: crossings, length_mm, score (and unrouted, router_share with route)",
+   "additionalProperties": {
+    "type": [
+     "number",
+     "boolean",
+     "null"
+    ]
+   }
+  },
+  "after": {
+   "type": "object",
+   "additionalProperties": {
+    "type": [
+     "number",
+     "boolean",
+     "null"
+    ]
+   }
+  },
+  "findings": {
+   "type": "array",
+   "maxItems": 200,
+   "items": {
+    "$ref": "#/$defs/finding"
+   }
+  },
+  "truncated": {
+   "type": "integer",
+   "minimum": 0
+  },
+  "snippet": {
+   "type": "string",
+   "description": "board.py lines for Claude to write"
+  },
+  "replaces_line": {
+   "type": [
+    "integer",
+    "null"
+   ],
+   "description": "the board.py line the snippet replaces (nudge)"
+  },
+  "artifacts": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string"
+   }
+  },
+  "seconds": {
+   "type": "number",
+   "minimum": 0
+  }
+ },
+ "$defs": {
+  "finding": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "source",
+    "code",
+    "severity",
+    "message"
+   ],
+   "properties": {
+    "source": {
+     "type": "string"
+    },
+    "code": {
+     "type": "string"
+    },
+    "severity": {
+     "enum": [
+      "error",
+      "warning",
+      "info"
+     ]
+    },
+    "message": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "at": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "space"
+     ],
+     "properties": {
+      "space": {
+       "enum": [
+        "board",
+        "sheet",
+        "source"
+       ]
+      },
+      "x": {
+       "type": "number"
+      },
+      "y": {
+       "type": "number"
+      },
+      "layer": {
+       "type": "string"
+      },
+      "file": {
+       "type": "string"
+      },
+      "line": {
+       "type": "integer"
+      }
+     }
+    },
+    "refs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "pins": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "nets": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

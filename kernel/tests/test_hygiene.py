@@ -23,3 +23,9 @@ def test_no_personal_paths():
     me = Path(__file__).resolve()
     hits = [str(p.relative_to(KERNEL)) for p in _files(KERNEL) if p != me and pattern.search(p.read_text(errors="replace"))]
     assert hits == []
+
+
+def test_no_gpl_code():
+    pattern = re.compile(r"GNU General Public License|SPDX-License-Identifier: GPL")
+    hits = [str(p.relative_to(KERNEL)) for p in _files(KERNEL / "src") if pattern.search(p.read_text(errors="replace"))]
+    assert hits == []

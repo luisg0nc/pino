@@ -1,0 +1,126 @@
+{
+  "$schema": "https://schemas.kicad.org/drc.v1.json",
+  "coordinate_units": "mm",
+  "kicad_version": "10.0.6",
+  "schematic_parity": [],
+  "source": "board.kicad_pcb",
+  "unconnected_items": [
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "description": "Pad 10 [SDA] of U4 on F.Cu",
+          "pos": {
+            "x": 101.0,
+            "y": 99.0
+          },
+          "uuid": "p-u4-10"
+        },
+        {
+          "description": "Pad 3 [SDA] of U6 on F.Cu",
+          "pos": {
+            "x": 110.0,
+            "y": 99.0
+          },
+          "uuid": "p-u6-3"
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "description": "Pad 1 [GPIO4] of R3 on F.Cu",
+          "pos": {
+            "x": 94.0,
+            "y": 102.0
+          },
+          "uuid": "p-r3-1"
+        },
+        {
+          "description": "Pad 5 [GPIO4] of U4 on F.Cu",
+          "pos": {
+            "x": 98.0,
+            "y": 101.0
+          },
+          "uuid": "p-u4-5"
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "description": "Pad 5 [GPIO4] of U4 on F.Cu",
+          "pos": {
+            "x": 98.0,
+            "y": 101.0
+          },
+          "uuid": "p-u4-5"
+        },
+        {
+          "description": "Pad 2 [GPIO4] of J1 on F.Cu",
+          "pos": {
+            "x": 90.0,
+            "y": 110.0
+          },
+          "uuid": "p-j1-2"
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    },
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "description": "Pad 1 [VBUS] of J1 on F.Cu",
+          "pos": {
+            "x": 90,
+            "y": 108
+          },
+          "uuid": "p-j1-1"
+        },
+        {
+          "description": "Pad 1 [VBUS] of C1 on F.Cu",
+          "pos": {
+            "x": 92,
+            "y": 108
+          },
+          "uuid": "p-c1-1"
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    }
+  ],
+  "violations": [
+    {
+      "description": "Silkscreen overlap",
+      "items": [
+        {
+          "description": "Reference field of R1",
+          "pos": {
+            "x": 95,
+            "y": 98
+          },
+          "uuid": "s1"
+        },
+        {
+          "description": "Reference field of R2",
+          "pos": {
+            "x": 96,
+            "y": 98
+          },
+          "uuid": "s2"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    }
+  ]
+}

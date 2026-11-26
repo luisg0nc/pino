@@ -101,21 +101,28 @@ class KicadCli:
         env.update(self.libraries.path_vars())
         return env
 
-    def run(self, step: str, *args: str, timeout: float = 120.0) -> CliRun:
+    def run(self, step: str, *args: str, timeout: float = 120.0, cancel=None) -> CliRun:
+        """`cancel`, a threading.Event, stops the call (code -15) when it is set."""
         argv = [*self.argv0, *map(str, args)]
         start = time.perf_counter()
         proc = subprocess.Popen(argv, env=self.env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 stdin=subprocess.DEVNULL, text=True, start_new_session=True)
-        try:
-            out, err = proc.communicate(timeout=timeout)
-            code, output = proc.returncode, (out or "") + (err or "")
-        except subprocess.TimeoutExpired:
+        code = None
+        while code is None:
+            left = timeout - (time.perf_counter() - start)
             try:
-                os.killpg(proc.pid, signal.SIGKILL)  # only the group this call started
-            except ProcessLookupError:
-                pass
-            proc.communicate()
-            code, output = -9, f"timed out after {timeout:g} s"
+                out, err = proc.communicate(timeout=max(0.01, min(0.2, left)) if cancel is not None else max(0.01, left))
+                code, output = proc.returncode, (out or "") + (err or "")
+            except subprocess.TimeoutExpired:
+                stop = -15 if cancel is not None and cancel.is_set() else -9 if left <= 0 else None
+                if stop is None:
+                    continue
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)  # only the group this call started
+                except ProcessLookupError:
+                    pass
+                proc.communicate()
+                code, output = stop, ("cancelled" if stop == -15 else f"timed out after {timeout:g} s")
         return CliRun(step, argv, time.perf_counter() - start, code, output[-OUTPUT_TAIL:])
 
     def _defines(self, words: tuple[str, ...]) -> list[str]:
@@ -130,7 +137,7 @@ class KicadCli:
         return out
 
     def _call(self, step: str, words: tuple[str, ...], flags: Sequence[str], output: Path | None, target: Path,
-              *, output_is_dir: bool = False, timeout: float = 120.0, defines: bool = True) -> CliRun:
+              *, output_is_dir: bool = False, timeout: float = 120.0, defines: bool = True, cancel=None) -> CliRun:
         args = [*words, *flags, *(self._defines(words) if defines else [])]
         if output is not None:
             _remove(output)
@@ -141,7 +148,7 @@ class KicadCli:
                 output.parent.mkdir(parents=True, exist_ok=True)
                 args += ["-o", str(output)]
         args.append(str(target))
-        return self.run(step, *args, timeout=timeout)
+        return self.run(step, *args, timeout=timeout, cancel=cancel)
 
     def version(self) -> str:
         run = self.run("version", "version", timeout=30.0)
@@ -156,14 +163,15 @@ class KicadCli:
     def sch_svg(self, sch: Path, out_dir: Path) -> CliRun:
         return self._call("schematic svg", ("sch", "export", "svg"), [], out_dir, sch, output_is_dir=True)
 
-    def drc(self, pcb: Path, out: Path, *, refill: bool = False, save: bool = False, parity: bool = False) -> CliRun:
+    def drc(self, pcb: Path, out: Path, *, refill: bool = False, save: bool = False, parity: bool = False,
+            cancel=None) -> CliRun:
         flags = ["--format", "json", "--severity-all"]
         flags += ["--refill-zones"] if refill else []
         flags += ["--save-board"] if save else []
         flags += ["--schematic-parity"] if parity else []
         # A saved board keeps every -D variable as a board property, so a run that saves passes the
         # library paths through the environment only.
-        return self._call("drc", ("pcb", "drc"), flags, out, pcb, timeout=300.0, defines=not save)
+        return self._call("drc", ("pcb", "drc"), flags, out, pcb, timeout=300.0, defines=not save, cancel=cancel)
 
     def pcb_svg(self, pcb: Path, out_dir: Path, layers: Sequence[str]) -> CliRun:
         words = ("pcb", "export", "svg")

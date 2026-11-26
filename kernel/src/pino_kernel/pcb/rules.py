@@ -8,8 +8,26 @@ from ..circuit import Circuit
 from ..fab import FabProfile
 from ..sexpr import num
 
+# The Default net class, before the fab's minimums raise it.
+DEFAULT_TRACK_WIDTH = 0.25
 DEFAULT_CLEARANCE = 0.2
-DEFAULT_TRACK = 0.25
+DEFAULT_VIA_DIAMETER = 0.6
+DEFAULT_VIA_DRILL = 0.3
+DEFAULT_TRACK = DEFAULT_TRACK_WIDTH
+
+
+def default_rules(fab: FabProfile) -> tuple[float, float, float, float]:
+    """The Default class as written: (track width, clearance, via diameter, via drill)."""
+    return (max(DEFAULT_TRACK_WIDTH, fab.min_track), max(DEFAULT_CLEARANCE, fab.min_clearance),
+            max(DEFAULT_VIA_DIAMETER, fab.min_via_diameter), max(DEFAULT_VIA_DRILL, fab.min_via_drill))
+
+
+def net_rules(circuit: Circuit, fab: FabProfile, net: str) -> tuple[float, float, float, float]:
+    """(width, clearance, via diameter, via drill) of `net`: its class's values, else the Default class's."""
+    for c in circuit.net_classes:
+        if net in c.nets:
+            return (c.width, c.clearance, c.via_diameter, c.via_drill)
+    return default_rules(fab)
 
 
 def _netclass(name, clearance, track, via_d, via_drill, priority):
@@ -23,8 +41,8 @@ def _netclass(name, clearance, track, via_d, via_drill, priority):
 
 
 def kicad_pro(circuit: Circuit, fab: FabProfile) -> str:
-    classes = [_netclass("Default", max(DEFAULT_CLEARANCE, fab.min_clearance), max(DEFAULT_TRACK, fab.min_track),
-                         max(0.6, fab.min_via_diameter), max(0.3, fab.min_via_drill), 2147483647)]
+    track, clearance, via_d, via_drill = default_rules(fab)
+    classes = [_netclass("Default", clearance, track, via_d, via_drill, 2147483647)]
     for i, c in enumerate(circuit.net_classes):
         classes.append(_netclass(c.name, c.clearance, c.width, c.via_diameter, c.via_drill, i))
     patterns = [{"netclass": c.name, "pattern": n} for c in circuit.net_classes for n in c.nets]
@@ -39,8 +57,9 @@ def kicad_pro(circuit: Circuit, fab: FabProfile) -> str:
     pro = {
         "board": {"design_settings": {
             "defaults": {}, "diff_pair_dimensions": [], "drc_exclusions": [], "rules": rules,
-            "track_widths": [0.0, DEFAULT_TRACK, 0.5],
-            "via_dimensions": [{"diameter": 0.0, "drill": 0.0}, {"diameter": 0.6, "drill": 0.3}],
+            "track_widths": [0.0, DEFAULT_TRACK_WIDTH, 0.5],
+            "via_dimensions": [{"diameter": 0.0, "drill": 0.0},
+                               {"diameter": DEFAULT_VIA_DIAMETER, "drill": DEFAULT_VIA_DRILL}],
         }},
         "boards": [], "libraries": {"pinned_footprint_libs": [], "pinned_symbol_libs": []},
         "meta": {"filename": "board.kicad_pro", "version": 3},

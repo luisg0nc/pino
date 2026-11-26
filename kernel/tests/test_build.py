@@ -53,7 +53,7 @@ def test_build_folder_and_artifacts(make_project, fixture_libs):
     assert all((p / a).is_file() for a in r.artifacts.values() if isinstance(a, str))
     assert r.artifacts["board"] == f".pino/build/{r.hash}/board.kicad_pcb"
     assert [t.step for t in r.timings] == ["libraries", "run board.py", "hash", "place", "write schematic", "write board",
-                                           "checks", "diff"]
+                                           "checks", "diff", "routing"]
     assert r.waiting == ["routing: not started"] and r.counts["parts"] == 8 and r.placement["length_mm"] > 0
 
 

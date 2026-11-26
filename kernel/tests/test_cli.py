@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 from helpers import SMALL_BOARD_PY
+from pino_kernel import __version__
 
 
 def run_cli(*args, **kw):
@@ -34,7 +35,7 @@ def test_serve_answers_in_order_and_survives_bad_lines(make_project, fixture_lib
     p = run_cli("serve", input="\n".join(l if isinstance(l, str) else json.dumps(l) for l in lines) + "\n", timeout=60)
     out = [json.loads(l) for l in p.stdout.splitlines()]
     assert [o["id"] for o in out] == [1, None, 2, 3, 4, 5] and p.returncode == 0
-    assert out[0]["pong"] == {"kernel": "0.1.0", "schema": "pino.build/1"}
+    assert out[0]["pong"] == {"kernel": __version__, "schema": "pino.build/1", "serve": 2, "route_schema": "pino.route/1"}
     assert out[1]["ok"] is False and out[2]["result"]["verdict"] == "failed" and out[3]["result"]["verdict"] != "failed"
     assert out[4]["error"] == "unknown op 'nope'"
 
@@ -52,4 +53,4 @@ def test_serve_build_without_project(fixture_libs):
 
 def test_version(fixture_libs):
     v = json.loads(run_cli("version").stdout)
-    assert v["schema"] == "pino.build/1" and v["kernel"] == "0.1.0" and v["libraries"]["KICAD10_SYMBOL_DIR"].endswith("symbols")
+    assert v["schema"] == "pino.build/1" and v["kernel"] == __version__ and v["libraries"]["KICAD10_SYMBOL_DIR"].endswith("symbols")

@@ -1,7 +1,8 @@
 pino kernel
 Licensed under the Apache License, Version 2.0.
 
-This directory contains code ported from third-party projects. Their notices follow.
+This directory contains code ported from third-party projects, and pino runs one
+third-party program it does not include. Their notices follow.
 
 ------------------------------------------------------------------------------
 pcb-kit
@@ -14,10 +15,47 @@ Ported files (each carries a header naming its origin):
 - src/pino_kernel/outline.py (outline_points and its helpers, from pcbkit/mech.py)
 - src/pino_kernel/placement/ratsnest.py (from pcbkit/placement.py)
 - src/pino_kernel/diff.py (from pcbkit/release/versions.py)
+- src/pino_kernel/pcb/cleanup.py (EPS, key, collinear, within and plan, from pcbkit/checks/cleanup_tracks.py)
+- src/pino_kernel/routing/checks.py (UF and groups, from pcbkit/checks/route_check.py)
 
 MIT License
 
 Copyright (c) 2026 Jeremy Seitz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+------------------------------------------------------------------------------
+KiCadRoutingTools
+------------------------------------------------------------------------------
+
+The router pino runs: a grid-based autorouter for KiCad boards, with a Rust core.
+
+Source: https://github.com/drandyhaas/KiCadRoutingTools, tag v0.17.7
+(commit bc48cce8ac603d5300b24eebddd993098a20d0e4).
+
+pino does not include its code. On first use pino fetches it at that commit
+into the user cache (<cache>/krt/), with the release's prebuilt router core,
+and runs its scripts as separate programs.
+
+MIT License
+
+Copyright (c) 2026 drandyhaas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

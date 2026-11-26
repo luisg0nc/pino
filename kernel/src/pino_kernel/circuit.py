@@ -133,6 +133,90 @@ class Expect:
     line: int | None = None
 
 
+PAIR_SUFFIXES = (("+", "-"), ("_P", "_N"))
+
+
+def pair_base(positive: str, negative: str) -> str | None:
+    """The shared base of two net names that pair (USB_D+ and USB_D-, or USB_D_P and USB_D_N), else None.
+    KiCadRoutingTools pairs nets by these suffixes."""
+    for p, n in PAIR_SUFFIXES:
+        if positive.endswith(p) and negative.endswith(n):
+            base = positive[: -len(p)]
+            if base and base == negative[: -len(n)]:
+                return base
+    return None
+
+
+@dataclass
+class PairSpec:
+    name: str  # the shared base, "USB_D"
+    positive: str
+    negative: str
+    width: float | None
+    gap: float | None
+    line: int | None = None
+
+
+@dataclass
+class RouteStep:
+    kind: str  # point | via
+    x: float
+    y: float
+    layer: str | None  # a via step: the layer the route continues on
+
+
+def _end_json(v):
+    return v.__json__() if isinstance(v, PinRef) else [round(float(v[0]), 6) + 0.0, round(float(v[1]), 6) + 0.0]
+
+
+def _end_from_json(v):
+    if all(isinstance(x, str) for x in v):
+        return PinRef(str(v[0]), str(v[1]))
+    return (float(v[0]), float(v[1]))
+
+
+@dataclass
+class KeptRoute:
+    """A route Claude keeps: from a pin (or a point on other copper) through steps to a pin, on one net."""
+
+    net: str
+    frm: PinRef | tuple[float, float]
+    to: PinRef | tuple[float, float]
+    layer: str
+    width: float | None
+    steps: list[RouteStep]
+    line: int | None = None
+
+    def __json__(self):
+        return {"net": self.net, "frm": _end_json(self.frm), "to": _end_json(self.to), "layer": self.layer,
+                "width": encode(self.width), "steps": encode(self.steps), "line": self.line}
+
+    @classmethod
+    def __from_json__(cls, d):
+        return cls(d["net"], _end_from_json(d["frm"]), _end_from_json(d["to"]), d["layer"], d.get("width"),
+                   [decode(RouteStep, s) for s in d.get("steps", [])], d.get("line"))
+
+
+@dataclass
+class FixedVia:
+    net: str
+    x: float
+    y: float
+    diameter: float | None
+    drill: float | None
+    line: int | None = None
+
+
+@dataclass
+class RouteHint:
+    net: str
+    region: tuple[float, float, float, float] | None
+    layers: list[str] | None
+    corridor: list[tuple[float, float]] | None
+    rip: list[str]
+    line: int | None = None
+
+
 @dataclass
 class Hole:
     name: str
@@ -171,6 +255,10 @@ class Circuit:
     net_classes: list[NetClassSpec]
     expects: list[Expect]
     source_file: str
+    pairs: list[PairSpec] = field(default_factory=list)
+    kept_routes: list[KeptRoute] = field(default_factory=list)
+    fixed_vias: list[FixedVia] = field(default_factory=list)
+    route_hints: list[RouteHint] = field(default_factory=list)
     _pin_nets: dict = field(default=None, init=False, repr=False, compare=False)
 
     def to_json(self) -> str:

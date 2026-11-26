@@ -21,7 +21,8 @@
   "changes",
   "placement",
   "waiting",
-  "cached"
+  "cached",
+  "routing"
  ],
  "properties": {
   "schema": {
@@ -260,6 +261,113 @@
   },
   "cached": {
    "type": "boolean"
+  },
+  "routing": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "additionalProperties": false,
+   "description": "where routing stands for this build; null when the build failed or wrote no board",
+   "required": [
+    "state",
+    "key",
+    "route",
+    "route_key",
+    "number",
+    "stale_because",
+    "complete",
+    "unrouted",
+    "router_share",
+    "router_seconds",
+    "drc_errors",
+    "copper_errors",
+    "verdict"
+   ],
+   "properties": {
+    "state": {
+     "enum": [
+      "none",
+      "running",
+      "current",
+      "stale"
+     ]
+    },
+    "key": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{12}$",
+     "description": "this build's route key"
+    },
+    "route": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "the route folder: the current route, or the latest one (stale or running), relative to the project"
+    },
+    "route_key": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "number": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "stale_because": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "complete": {
+     "type": [
+      "boolean",
+      "null"
+     ]
+    },
+    "unrouted": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "router_share": {
+     "type": [
+      "number",
+      "null"
+     ]
+    },
+    "router_seconds": {
+     "type": [
+      "number",
+      "null"
+     ]
+    },
+    "drc_errors": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "copper_errors": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "verdict": {
+     "enum": [
+      "ok",
+      "errors",
+      "failed",
+      null
+     ]
+    }
+   }
   }
  },
  "$defs": {
