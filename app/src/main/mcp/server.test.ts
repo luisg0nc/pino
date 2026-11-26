@@ -22,7 +22,7 @@ beforeAll(async () => {
   mkdirSync(dir)
   project = { id: 'p0123456789ab', dir, name: 'blinky board' }
   http = await startHttp()
-  const fab = { defaultProfile: () => Promise.reject(new Error('there is no engine in this test')) }
+  const fab = { defaultFab: () => Promise.reject(new Error('there is no engine in this test')) }
   mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined, fab } as unknown as ToolDeps)
   token = http.grant([`/mcp/${project.id}`, '/mcp/pffffffffffff'])
 })

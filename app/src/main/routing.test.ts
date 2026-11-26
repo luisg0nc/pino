@@ -49,6 +49,14 @@ describe('routing', () => {
     await refuses(loop({ FAKE_KERNEL_DIE: 'start' }), 'The engine did not start: fake kernel died at start')
   })
 
+  it('says the engine is starting, of a board that has been built', async () => {
+    const l = loop()
+    await l.built()
+    l.builds.patch(l.info.id, { engine: { state: 'starting' } })
+    expect(l.routing.refusal(l.info.id)).toBe('The engine is starting. Try again in a moment.')
+    await expect(l.routing.start(l.info)).rejects.toThrow('The engine is starting. Try again in a moment.')
+  })
+
   it('has no board to route when the only build failed', async () => {
     const l = loop({ FAKE_KERNEL_FAIL_ON: '1' })
     await l.built()

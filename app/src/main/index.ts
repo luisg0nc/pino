@@ -130,6 +130,7 @@ const routing = new Routing({ kernel: () => kernel.get(), builds })
 let openProjectId: () => string | undefined = () => undefined
 const fab = new Fab({
   kernel: () => kernel.get(),
+  running: () => kernel.current(),
   builds,
   engine: () => {
     const id = openProjectId()

@@ -21,12 +21,12 @@ afterEach(async () => {
   project.remove()
 })
 
-async function fabOn(env: Record<string, string> = {}) {
+async function fabOn(env: Record<string, string> = {}, now?: () => number) {
   const log = join(project.root, 'kernel-log.jsonl')
-  const loop = routedLoop(project, { FAKE_KERNEL_SERVE: '3', FAKE_KERNEL_LOG: log, ...env })
+  const loop = routedLoop(project, { FAKE_KERNEL_SERVE: '3', FAKE_KERNEL_LOG: log, ...env }, now)
   done.push(loop.dispose)
   const states: FabState[] = []
-  const fab = new Fab({ kernel: () => loop.kernel(), builds: loop.builds, engine: () => loop.builds.state(loop.info.id)?.engine ?? { state: 'starting' }, onState: (s) => states.push(structuredClone(s)) })
+  const fab = new Fab({ kernel: () => loop.kernel(), running: loop.running, builds: loop.builds, engine: () => loop.builds.state(loop.info.id)?.engine ?? { state: 'starting' }, onState: (s) => states.push(structuredClone(s)) })
   await loop.built()
   const asked = () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { op: string }) : [])
   return { fab, loop, states, asked }
@@ -55,15 +55,72 @@ describe('the fab holder', () => {
     await expect(fab.readiness(loop.info)).rejects.toThrow('The engine did not start: fake kernel died at start')
   })
 
-  it('ends an engine that never answers a parts lookup, and says so', async () => {
+  /** A parts lookup on an engine that never answers its ping; `running` says whether it ran before it was asked for. */
+  async function silentLookup(running: boolean) {
     rmSync(join(project.dir, 'board.py'))
     const loop = routedLoop(project)
     done.push(loop.dispose)
     let killed = 0
     const silent = { ping: () => new Promise<never>(() => {}), kill: () => void (killed += 1) } as unknown as KernelClient
-    const fab = new Fab({ kernel: () => silent, builds: loop.builds, engine: () => ({ state: 'starting' }), onState: () => {}, pingTimeoutMs: 20 })
+    const fab = new Fab({ kernel: () => silent, running: () => (running ? silent : undefined), builds: loop.builds, engine: () => ({ state: 'starting' }), onState: () => {}, pingTimeoutMs: 20 })
     await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow('The engine did not start: it did not answer within 0 s')
-    expect(killed).toBe(1)
+    return killed
+  }
+
+  it('ends an engine it started that never answers a parts lookup, and says so', async () => {
+    expect(await silentLookup(false)).toBe(1)
+  })
+
+  // It may be busy with a long build, which a ping waits behind.
+  it('does not end an engine it did not start', async () => {
+    expect(await silentLookup(true)).toBe(0)
+  })
+
+  // A ping is answered in turn, behind a build: one sent during a long build would time out on a healthy engine.
+  it('pings no engine again that the build loop has pinged', async () => {
+    const { fab, loop, asked } = await fabOn()
+    await fab.parts(loop.info, { lcsc: 'C25804' })
+    await fab.defaultFab()
+    expect(asked().filter((r) => r.op === 'ping')).toHaveLength(1)
+  })
+
+  it('leaves the build loop nothing to ping on an engine a lookup has pinged', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const { fab, loop, asked } = await fabOn()
+    await fab.parts(loop.info, { lcsc: 'C25804' })
+    writeFileSync(join(project.dir, 'board.py'), 'first')
+    loop.builds.rebuild(loop.info.id)
+    await loop.built()
+    expect(loop.builds.state(loop.info.id)!.engine).toMatchObject({ state: 'ready', serve: 3 })
+    expect(asked().map((r) => r.op).filter((op) => op === 'ping' || op === 'build')).toEqual(['ping', 'build'])
+  })
+
+  it('starts no other engine for 10 s after a start that failed, and says why meanwhile', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    let now = 1_000_000
+    const { fab, loop } = await fabOn({ FAKE_KERNEL_DIE: 'start' }, () => now)
+    const why = 'The engine did not start: fake kernel died at start'
+    await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow(why)
+    now += 9_000
+    await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow(why)
+    await expect(fab.defaultFab()).rejects.toThrow(why)
+    expect(loop.started.size).toBe(1)
+    now += 1_001
+    await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow(why)
+    expect(loop.started.size).toBe(2)
+  })
+
+  it("waits as long after the build loop's own start that failed", async () => {
+    const { fab, loop } = await fabOn({ FAKE_KERNEL_DIE: 'start' })
+    await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow('The engine did not start: fake kernel died at start')
+    expect(loop.started.size).toBe(1)
+  })
+
+  it('says the engine is starting, to a release of a board that has been built', async () => {
+    const { fab, loop } = await fabOn()
+    loop.builds.patch(loop.info.id, { engine: { state: 'starting' } })
+    await expect(fab.release(loop.info)).rejects.toThrow('The engine is starting. Try again in a moment.')
+    await expect(fab.readiness(loop.info)).rejects.toThrow('The engine is starting. Try again in a moment.')
   })
 
   // The engine says which profile a board gets when it names none: the one for the board's layers, 2 unless it says.

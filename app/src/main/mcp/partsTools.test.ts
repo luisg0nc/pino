@@ -26,7 +26,7 @@ async function tools(env: Record<string, string> = {}, over: Partial<ToolDeps> =
   const loop = routedLoop(project, { FAKE_KERNEL_SERVE: '3', ...env })
   done.push(loop.dispose)
   await loop.built()
-  const fab = new Fab({ kernel: () => loop.kernel(), builds: loop.builds, engine: () => loop.builds.state(loop.info.id)!.engine, onState: () => {} })
+  const fab = new Fab({ kernel: () => loop.kernel(), running: loop.running, builds: loop.builds, engine: () => loop.builds.state(loop.info.id)!.engine, onState: () => {} })
   const mcp = await toolsOver({ project: () => loop.info, state: (id) => loop.builds.state(id), fab, ...over }, loop.info.id)
   return { ...mcp, loop, fab }
 }
@@ -93,8 +93,9 @@ describe('parts', () => {
     rmSync(join(project.dir, 'board.py'))
     const t = await tools({ FAKE_KERNEL_DIE: 'start' })
     expect(await t.call('parts', { lcsc: 'C25804' })).toBe('The engine did not start: fake kernel died at start')
-    // The next lookup asks again, with a new engine, and says why again.
+    // The next lookup, right after, says the same and starts nothing.
     expect(await t.call('parts', { lcsc: 'C25804' })).toBe('The engine did not start: fake kernel died at start')
+    expect(t.loop.started.size).toBe(1)
   })
 
   it('puts the fab limits in the project answer', async () => {
@@ -113,13 +114,28 @@ describe('parts', () => {
     const log = join(project.root, 'kernel-log.jsonl')
     const t = await tools({ FAKE_KERNEL_LOG: log }, { fabProfile: async () => null })
     const said = await t.call('project', {})
-    expect(said).toContain("No board.py yet, so these are the default fab's limits: what a board that names no fab gets. That is for 2 layers; with layers=4 it gets JLC's 4-layer profile.")
+    expect(said).toContain("No board.py yet, so these are the default fab's limits: what a board that names no fab gets. That is for 2 layers; with layers=4 it gets JLC standard 4-layer.")
     expect(said).toContain('Fab: JLC standard 2-layer. Tracks and gaps 0.10 mm or more')
     await t.call('project', {})
     const ops = readFileSync(log, 'utf8').trim().split('\n').map((line) => (JSON.parse(line) as { op: string }).op)
     expect(ops.filter((op) => op === 'fab_profiles')).toHaveLength(1)
     expect(ops).not.toContain('build')
     expect(existsSync(join(project.dir, '.pino'))).toBe(false)
+  })
+
+  // A first start under uv may take minutes: `project` is what Claude calls first, and it does not wait for that.
+  it('answers without the limits while the engine is slow to give them, and gives them once it has', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    let give: () => void = () => {}
+    const given = new Promise<void>((done) => (give = done))
+    const slow = { parts: () => Promise.reject(new Error('not asked')), state: () => null as never, defaultFab: () => given.then(() => ({ profile: TWO_LAYER, profiles: [TWO_LAYER] })) }
+    const t = await tools({}, { fabProfile: async () => null, fab: slow, fabWaitMs: 20 })
+    const first = await t.call('project', {})
+    expect(first).toContain('board.py: absent')
+    expect(first).toContain("The fab's limits are still being fetched, as the engine is slow to answer: call project again in a moment, before you offer any choice about layers, copper, holes or tracks.")
+    expect(first).not.toContain('Fab: ')
+    give()
+    expect(await t.call('project', {})).toContain('Fab: JLC standard 2-layer.')
   })
 
   it("says why the default limits are not known, and still answers", async () => {

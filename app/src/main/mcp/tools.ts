@@ -6,7 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { statSync } from 'node:fs'
 import { join } from 'node:path'
 import { verdictWords, type BuildResult, type BuildState } from '../../shared/build'
-import { DEFAULT_FAB_NOTE, fabLine, fabUnknown, type FabProfile } from '../../shared/fab'
+import { defaultFabNote, FAB_STILL_FETCHING, fabLine, fabUnknown, type FabProfile } from '../../shared/fab'
 import type { ProjectInfo } from '../../shared/project'
 import type { LookRequest, LookResult } from '../../shared/view'
 import type { Fab } from '../fab'
@@ -41,10 +41,15 @@ export interface ToolDeps {
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
   /** Parts at JLC, and the release's state. */
-  fab: Pick<Fab, 'parts' | 'state' | 'defaultProfile'>
+  fab: Pick<Fab, 'parts' | 'state' | 'defaultFab'>
   /** The limits of the fab the newest drawn board is built for. */
   fabProfile(project: ProjectInfo): Promise<FabProfile | null>
+  /** How long `project` waits for the default fab's limits; `FAB_WAIT_MS` where none is said. */
+  fabWaitMs?: number
 }
+
+/** `project` is called first, and an engine's first start under uv may take minutes: it is not waited for longer. */
+const FAB_WAIT_MS = 5_000
 
 /** Runs a tool on the open project, or says there is none. */
 export type OnProject = (run: (project: ProjectInfo) => Reply | Promise<Reply>) => Promise<Reply>
@@ -67,11 +72,14 @@ async function fabWords(deps: ToolDeps, project: ProjectInfo): Promise<string | 
   const built = (await deps.fabProfile?.(project).catch(() => null)) ?? null
   if (built) return fabLine(built)
   if (isFile(join(project.dir, 'board.py'))) return null
-  try {
-    return `${DEFAULT_FAB_NOTE}\n${fabLine(await deps.fab.defaultProfile())}`
-  } catch (e) {
-    return fabUnknown((e as Error).message)
-  }
+  const asked = deps.fab.defaultFab().then(
+    ({ profile, profiles }) => `${defaultFabNote(profile, profiles)}\n${fabLine(profile)}`,
+    (e: Error) => fabUnknown(e.message)
+  )
+  // What is asked goes on when it is not waited for: the next call joins it.
+  let timer: NodeJS.Timeout | undefined
+  const slow = new Promise<string>((done) => (timer = setTimeout(() => done(FAB_STILL_FETCHING), deps.fabWaitMs ?? FAB_WAIT_MS)))
+  return Promise.race([asked, slow]).finally(() => clearTimeout(timer))
 }
 
 export function registerTools(server: McpServer, deps: ToolDeps, projectId: string): void {

@@ -2,6 +2,7 @@
 // that the build's own `routing` is the one truth of where the copper stands. The trial tools go through here too.
 
 import { isRecord, type RouteProgress, type RoutingState } from '../shared/build'
+import { ENGINE_STARTING } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
 import { engineMayWrite, type Builds } from './builds'
 import type { KernelClient } from './kernel/client'
@@ -58,7 +59,8 @@ export class Routing {
     const engine = state?.engine
     if (engine?.state === 'failed') return engine.reason
     if (engine?.state === 'ready' && engine.serve < 2) return routingTooOld(engine.serve)
-    return engine?.state === 'ready' && state?.latest ? null : NO_BOARD_TO_ROUTE
+    if (!state?.latest) return NO_BOARD_TO_ROUTE
+    return engine?.state === 'ready' ? null : ENGINE_STARTING
   }
 
   private need(p: ProjectInfo): void {

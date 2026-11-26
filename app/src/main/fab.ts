@@ -3,14 +3,16 @@
 // nothing else outside .pino/; main only reads it.
 
 import type { EngineState } from '../shared/build'
-import { engineDidNotStart, engineTooOld, NO_BUILT_BOARD, type FabProfile, type FabState, type PartsQuery, type PartsResult, type Readiness, type ReleaseResult } from '../shared/fab'
+import { ENGINE_STARTING, engineTooOld, NO_BUILT_BOARD, type FabProfile, type FabState, type PartsQuery, type PartsResult, type Readiness, type ReleaseResult } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
-import { answered, engineMayWrite, PING_TIMEOUT_MS, type Builds } from './builds'
-import type { KernelClient, Pong } from './kernel/client'
+import { engineMayWrite, type Builds } from './builds'
+import type { KernelClient } from './kernel/client'
 
 export interface FabDeps {
   kernel: () => KernelClient
-  builds: Pick<Builds, 'state'>
+  /** The engine that runs, if one does: what `kernel` would give without starting it. */
+  running: () => KernelClient | undefined
+  builds: Pick<Builds, 'state' | 'pong' | 'startFailure'>
   engine: () => EngineState
   onState: (s: FabState) => void
   /** How long an engine a parts lookup started has to answer. */
@@ -36,9 +38,6 @@ export class Fab {
   private known: FabProfile[] = []
   private asked: { client: KernelClient; list: Promise<FabProfile[]> } | null = null
 
-  /** What each engine asked before any build has answered to its ping. */
-  private readonly pongs = new WeakMap<KernelClient, Promise<Pong>>()
-
   constructor(private readonly deps: FabDeps) {}
 
   /** Whether the engine that answers makes fab files: serve protocol 3. */
@@ -52,7 +51,8 @@ export class Fab {
     const engine = this.deps.engine()
     if (engine.state === 'failed') throw new Error(engine.reason)
     if (engine.state === 'ready' && engine.serve < 3) throw new Error(engineTooOld(engine.serve))
-    if (engine.state !== 'ready' || !this.deps.builds.state(p.id)?.latest) throw new Error(NO_BUILT_BOARD)
+    if (!this.deps.builds.state(p.id)?.latest) throw new Error(NO_BUILT_BOARD)
+    if (engine.state !== 'ready') throw new Error(ENGINE_STARTING)
   }
 
   /**
@@ -60,17 +60,11 @@ export class Fab {
    * speaks. A new project has had no build to start one.
    */
   private async lookupEngine(): Promise<KernelClient> {
+    const own = this.deps.running() === undefined
+    const tooSoon = own ? this.deps.builds.startFailure() : null
+    if (tooSoon) throw new Error(tooSoon)
     const client = this.deps.kernel()
-    let pong = this.pongs.get(client)
-    if (!pong) {
-      pong = answered(client, this.deps.pingTimeoutMs ?? PING_TIMEOUT_MS)
-      this.pongs.set(client, pong)
-      // One that did not answer is asked again the next time.
-      pong.catch(() => this.pongs.delete(client))
-    }
-    const { serve } = await pong.catch((e: Error) => {
-      throw new Error(engineDidNotStart(e.message))
-    })
+    const { serve } = await this.deps.builds.pong(client, { own, ...(this.deps.pingTimeoutMs ? { ms: this.deps.pingTimeoutMs } : {}) })
     if (serve < 3) throw new Error(engineTooOld(serve))
     return client
   }
@@ -80,11 +74,15 @@ export class Fab {
     return this.available() ? this.profilesOf(this.deps.kernel()) : Promise.resolve([])
   }
 
-  /** The profile a board gets when it names none, as the engine picks it: its first for the board's layers. */
-  async defaultProfile(): Promise<FabProfile> {
-    const found = (await this.profilesOf(await this.lookupEngine())).find((p) => p.layers === DEFAULT_LAYERS)
-    if (!found) throw new Error(`the engine has no fab profile for ${DEFAULT_LAYERS} layers`)
-    return found
+  /**
+   * The profile a board gets when it names none, as the engine picks it (its first for the board's layers), with all
+   * those it has.
+   */
+  async defaultFab(): Promise<{ profile: FabProfile; profiles: FabProfile[] }> {
+    const profiles = await this.profilesOf(await this.lookupEngine())
+    const profile = profiles.find((p) => p.layers === DEFAULT_LAYERS)
+    if (!profile) throw new Error(`the engine has no fab profile for ${DEFAULT_LAYERS} layers`)
+    return { profile, profiles }
   }
 
   private profilesOf(client: KernelClient): Promise<FabProfile[]> {

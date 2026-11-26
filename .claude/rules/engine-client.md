@@ -26,17 +26,21 @@ paths:
   and the like. A folder with no `board.py` is neither built nor written in. A failed build keeps the last drawing.
   An engine that has not answered its first ping in 2 minutes is ended. A failed or stopped engine is started again
   at most once in 10 s.
+- Each engine is pinged once (`Builds.pong`), whoever asks first, since a ping waits behind a build. A lookup ends a
+  silent engine only if it started it, and for 10 s after a start that failed it says why and starts no other
+  (`Builds.startFailure`).
 - The engine's `routing` field in a build's result is the one account of where copper stands. A route is a job
   (`routing.ts`) with progress told in the build state; when it ends, main asks for a build. Its findings are kept
   apart by the engine: `withRouteFindings` joins them, once, while the route is current. Which build copper is "from"
   has one rule (`Builds.routedOn`, `BuildState.copperFrom`): the first build seen with it current. A build the engine
   had cached is numbered anew with the same hash, and its `changes` are since another board: compare hashes.
 - An engine that speaks protocol 1 does not route. The route tools refuse with what is missing (`Routing.refusal`):
-  no built board, an engine that did not start (and why), or one too old. One below protocol 3
+  no built board, an engine that did not start (and why), one that is starting, or one too old. One below protocol 3
   has no parts and makes no fab files: `parts` and a release say it is too old, and the window shows no `Fab files…`.
 - A parts lookup needs no board and no build (`fab.ts` `lookupEngine` starts and pings the engine itself): Claude looks
   parts up before it writes `board.py`. With no `board.py`, `project` gives the default fab's limits the same way, and
-  says they are the default's (`defaultProfile`: the engine's profile for `DEFAULT_LAYERS`). A release needs a built board. A refusal says which is missing: no built
+  says they are the default's (`defaultFab`: the engine's profile for `DEFAULT_LAYERS`); it waits 5 s for them, then
+  answers without and says they are being fetched. A release needs a built board. A refusal says which is missing: no built
   board, an engine that did not start (and why), or one too old (`shared/fab.ts`).
 - Releasing is a job (`fab.ts`, one a project), started only by the person's `Make fab files`: Claude has no release
   tool. `fab_profiles` is asked once for each engine process.
