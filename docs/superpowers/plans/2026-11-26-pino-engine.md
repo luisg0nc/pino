@@ -864,7 +864,7 @@ git commit -m "kernel: schematic lint with positions; frames per block, satellit
   - `model_findings(placed: list[Placed], lib: FootprintLibrary) -> list[Finding]` (source `model3d`, code `model3d_missing` warning with the unresolved path, `model3d_none` info).
   - `pin_pad_findings(circuit: Circuit, lib: FootprintLibrary) -> list[Finding]` (source `pads`: a pin with no pad is an error; a numbered pad with no pin is a warning; pads numbered `""` are mechanical and ignored).
 
-- [ ] **Step 1: Write the fixture footprints and the failing tests**
+- [x] **Step 1: Write the fixture footprints and the failing tests**
 
 Hand-written footprints in `pino_test.pretty`: `R_0603` (pads 1 at (-0.8, 0) and 2 at (0.8, 0), courtyard rect (-1.5, -0.75)-(1.5, 0.75), model `${KICAD10_3DMODEL_DIR}/pino_test.3dshapes/R_0603.step`, two drawings that carry library UUIDs), `R_0603_oneline` (the same, on one line), `C_0603`, `LED_0603` (model path that does not exist), `SOT23` (3 pads), `SOIC6`, `USB_Edge` (5 pads, a `"PCB Edge"` text on Dwgs.User at local y = +3), `MODULE_ANT` (6 pads, a keep-out zone at local y < 0 whose `layers` list F.Cu, B.Cu and In1.Cu to In30.Cu), `PIN_TH` (one through-hole pad).
 
@@ -906,12 +906,12 @@ def test_touching_squares_do_not_overlap(): ...
 def test_l_shape_containment(): ...                  # a square in the notch of an L is not inside it
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_footprint.py tests/test_geometry.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Port the spike's footprint code**
+- [x] **Step 3: Port the spike's footprint code**
 
 - Keep the spike's flip, absolute pad and text angles, pad option order, KiCad drawing order (`drawing_key`), library-UUID stripping and `Datasheet`/`Description` properties. The footprint UUID is `ids.footprint_uuid(key)`; item UUIDs `ids.uid("footprint", key, str(child_index), kind)`; `(path …)` is `ids.footprint_path(key)`, `(sheetname "/")`, `(sheetfile "board.kicad_sch")`.
 - The placed position goes through `coords.to_kicad`; pad and courtyard results come back in board mm.
@@ -919,12 +919,12 @@ Expected: FAIL with `ModuleNotFoundError`
 - `edge_face`: the side of the footprint's bounding box where a footprint-owned keep-out zone lies; else the side of a `"PCB Edge"` text on Dwgs.User; else `bottom` (KiCad's connector convention: mating face toward local +y).
 - `model_exists`: replace `${KICAD10_3DMODEL_DIR}`, `${KICAD9_3DMODEL_DIR}`, `${KICAD8_3DMODEL_DIR}`, `${KICAD7_3DMODEL_DIR}` and `${KICAD6_3DMODEL_DIR}` with `libraries.models`; true when that file, or the same stem with `.step`, `.stp` or `.wrl`, exists.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_footprint.py tests/test_geometry.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/pcb kernel/src/pino_kernel/geometry.py kernel/tests/fixtures/libs kernel/tests/test_footprint.py kernel/tests/test_geometry.py
