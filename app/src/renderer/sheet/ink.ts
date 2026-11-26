@@ -6,7 +6,9 @@ import { distToSeg, type BBox, type Pt } from '../../shared/board/geom'
 import { netMembers, shortLabel, type Target } from '../../shared/board/refs'
 import type { Circuit } from '../../shared/circuit'
 import type { Mark, PointMark } from '../../shared/marks'
-import type { Sheet, SheetPin, SheetSpot } from '../../shared/sheet'
+import { netShapes, sheetPlace, type Sheet, type SheetSpot } from '../../shared/sheet'
+
+export { netShapes, sheetPlace }
 
 /** KiCad's colours in the export, and the ink each becomes (the design mocks' map). */
 export const KICAD_COLOURS: Record<string, string> = {
@@ -90,31 +92,6 @@ export function sheetTargetAt(sheet: Sheet, p: Pt): Target | null {
   const inside = sheet.symbols.filter((s) => p.x >= s.x0 && p.x <= s.x1 && p.y >= s.y0 && p.y <= s.y1)
   const smallest = inside.sort((a, b) => (a.x1 - a.x0) * (a.y1 - a.y0) - (b.x1 - b.x0) * (b.y1 - b.y0))[0]
   return smallest ? { kind: 'part', ref: smallest.ref } : null
-}
-
-/** Everything a net is drawn with on the sheet. */
-export function netShapes(sheet: Sheet, net: string): { wires: Sheet['wires']; spots: SheetSpot[]; pins: SheetPin[] } {
-  return {
-    wires: sheet.wires.filter((w) => w.net === net),
-    spots: [...sheet.labels, ...sheet.power].filter((s) => s.net === net),
-    pins: sheet.symbols.flatMap((s) => s.pins.filter((p) => p.net === net))
-  }
-}
-
-/** Where on the sheet a target is, sheet mm, or null when the sheet does not draw it. */
-export function sheetPlace(sheet: Sheet, target: Target): Pt | null {
-  if (target.kind === 'part' || target.kind === 'pad') {
-    const symbol = sheet.symbols.find((s) => s.ref === target.ref)
-    if (!symbol) return null
-    if (target.kind === 'pad') return symbol.pins.find((p) => p.number === target.number) ?? null
-    return { x: (symbol.x0 + symbol.x1) / 2, y: (symbol.y0 + symbol.y1) / 2 }
-  }
-  if (target.kind === 'net') {
-    const { pins, spots } = netShapes(sheet, target.name)
-    const at = pins[0] ?? spots[0]
-    return at ? { x: at.x, y: at.y } : null
-  }
-  return null
 }
 
 const MOST_NETS = 5

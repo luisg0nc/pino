@@ -3,7 +3,7 @@
 
 import type { Board, Footprint, Pad, Track, Zone } from './board'
 import { mm } from './coords'
-import { arcPoints, dist, inPoly, segmentDistance, type Pt } from './geom'
+import { arcPoints, dist, inPoly, meetSegment, type Pt } from './geom'
 import { netLength, trackLength } from './nets'
 import { padPolygons, polygonArea } from './outlines'
 import { centreOf, findTarget, hasTarget, layerWords, shortLabel, type Target } from './refs'
@@ -40,14 +40,90 @@ function edges(s: Solid): Array<[Pt, Pt]> {
   return out
 }
 
-function apart(a: Solid, b: Solid): number {
-  if ((a.filled && b.pts.some((p) => inPoly(p, a.pts))) || (b.filled && a.pts.some((p) => inPoly(p, b.pts)))) return 0
-  let least = Infinity
-  for (const [p, q] of edges(a)) for (const [r, s] of edges(b)) least = Math.min(least, segmentDistance(p, q, r, s))
-  return Math.max(0, least - a.r - b.r)
+/** The way across between two things: how far, and where on each of them it starts and ends. */
+export interface Span {
+  d: number
+  from: Pt
+  to: Pt
 }
 
-const nearest = (as: Solid[], bs: Solid[]): number => Math.min(Infinity, ...as.flatMap((a) => bs.map((b) => apart(a, b))))
+const onSegment = (p: Pt, a: Pt, b: Pt): Pt => {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const long = dx * dx + dy * dy
+  const t = long ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / long)) : 0
+  return { x: a.x + t * dx, y: a.y + t * dy }
+}
+
+/** The nearest two points of the segments ab and cd: one point twice where they meet. */
+function closest(a: Pt, b: Pt, c: Pt, d: Pt): [Pt, Pt] {
+  const meet = meetSegment(a, b, c, d)
+  if (meet !== null) {
+    const p = { x: a.x + (b.x - a.x) * meet, y: a.y + (b.y - a.y) * meet }
+    return [p, p]
+  }
+  const pairs: Array<[Pt, Pt]> = [
+    [a, onSegment(a, c, d)],
+    [b, onSegment(b, c, d)],
+    [onSegment(c, a, b), c],
+    [onSegment(d, a, b), d]
+  ]
+  return pairs.reduce((best, next) => (dist(...next) < dist(...best) ? next : best))
+}
+
+function spanBetween(a: Solid, b: Solid): Span {
+  const inside = (a.filled ? b.pts.find((p) => inPoly(p, a.pts)) : undefined) ?? (b.filled ? a.pts.find((p) => inPoly(p, b.pts)) : undefined)
+  if (inside) return { d: 0, from: inside, to: inside }
+  let pair: [Pt, Pt] | null = null
+  for (const [p, q] of edges(a)) {
+    for (const [r, s] of edges(b)) {
+      const next = closest(p, q, r, s)
+      if (!pair || dist(...next) < dist(...pair)) pair = next
+    }
+  }
+  const [u, v] = pair!
+  const apart = dist(u, v)
+  const d = Math.max(0, apart - a.r - b.r)
+  if (d === 0) {
+    const mid = { x: (u.x + v.x) / 2, y: (u.y + v.y) / 2 }
+    return { d, from: mid, to: mid }
+  }
+  // In from each centre line by that thing's own half width.
+  const way = { x: (v.x - u.x) / apart, y: (v.y - u.y) / apart }
+  return { d, from: { x: u.x + way.x * a.r, y: u.y + way.y * a.r }, to: { x: v.x - way.x * b.r, y: v.y - way.y * b.r } }
+}
+
+function nearestSpan(as: Solid[], bs: Solid[]): Span | null {
+  let best: Span | null = null
+  for (const a of as) {
+    for (const b of bs) {
+      const next = spanBetween(a, b)
+      if (!best || next.d < best.d) best = next
+    }
+  }
+  return best
+}
+
+const nearest = (as: Solid[], bs: Solid[]): number => nearestSpan(as, bs)?.d ?? Infinity
+
+/** The gap between a and b as `measure` takes it: over the copper layers they share, else outline to outline. */
+function gapBetween(board: Board, a: Target, b: Target): { span: Span; shared: boolean } {
+  need(board, a)
+  need(board, b)
+  const [one, two] = [copperOf(board, a), copperOf(board, b)]
+  const layers = [...one.keys()].filter((l) => two.has(l))
+  const spans = layers.length
+    ? layers.map((l) => nearestSpan(one.get(l)!, two.get(l)!))
+    : [nearestSpan(outlineOf(board, a), outlineOf(board, b))]
+  const best = spans.reduce((x, y) => (!x || (y && y.d < x.d) ? y : x))
+  if (!best) throw new Error(`there is nothing to measure between ${shortLabel(board, a)} and ${shortLabel(board, b)}`)
+  return { span: best, shared: layers.length > 0 }
+}
+
+/** Where the gap between a and b is, in the board file's frame: from a's nearest point to b's. */
+export function gapSpan(board: Board, a: Target, b: Target): Span {
+  return gapBetween(board, a, b).span
+}
 
 type Copper = Map<string, Solid[]>
 
@@ -93,17 +169,13 @@ const needNet = (board: Board, net: string) => need(board, { kind: 'net', name: 
 export function measure(board: Board, m: Measure): Measured {
   switch (m.what) {
     case 'gap': {
-      need(board, m.a)
-      need(board, m.b)
+      const {
+        span: { d: value },
+        shared
+      } = gapBetween(board, m.a, m.b)
       const names = `gap ${shortLabel(board, m.a)} to ${shortLabel(board, m.b)}`
-      const [a, b] = [copperOf(board, m.a), copperOf(board, m.b)]
-      const shared = [...a.keys()].filter((l) => b.has(l))
-      if (shared.length) {
-        const value = Math.min(...shared.map((l) => nearest(a.get(l)!, b.get(l)!)))
-        return { value, unit: 'mm', said: `${names}: ${mm(value)} mm, ${value < 0.0005 ? 'they touch' : 'copper edge to copper edge'}` }
-      }
-      const value = nearest(outlineOf(board, m.a), outlineOf(board, m.b))
-      return { value, unit: 'mm', said: `${names}: ${mm(value)} mm, outline to outline (they share no copper layer)` }
+      const how = !shared ? 'outline to outline (they share no copper layer)' : value < 0.0005 ? 'they touch' : 'copper edge to copper edge'
+      return { value, unit: 'mm', said: `${names}: ${mm(value)} mm, ${how}` }
     }
     case 'distance': {
       need(board, m.a)

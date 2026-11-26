@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { verdictWords, type BuildResult, type BuildState } from '../../shared/build'
 import type { ProjectInfo } from '../../shared/project'
 import type { LookRequest, LookResult } from '../../shared/view'
+import type { MarkStore } from '../marks/store'
 import type { BuildModel } from '../model'
 import { registerMarkTools } from './markTools'
 import { registerReadTools } from './readTools'
@@ -28,6 +29,8 @@ export interface ToolDeps {
   diff(project: ProjectInfo, from: string, to: string): Promise<{ circuit: string[]; layout: string[] }>
   /** A picture from the window. */
   look(project: ProjectInfo, request: LookRequest): Promise<LookResult>
+  /** The project's marks: Claude reads them, adds its own and resolves what it has done. */
+  marks: Pick<MarkStore, 'list' | 'add' | 'resolve'>
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
 }

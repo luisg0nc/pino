@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { tinyBoard } from '../../test/fixtures'
 import { readBoard } from './board'
-import { measure } from './measure'
+import { gapSpan, measure } from './measure'
 import type { Target } from './refs'
 
 const tiny = readBoard(tinyBoard())
@@ -52,4 +52,21 @@ it('measures how near the board edge a thing comes', () => {
 it('refuses what is not on the board, in words', () => {
   expect(() => measure(tiny, { what: 'distance', a: part('R9'), b: part('U1') })).toThrow('R9 is not on this board')
   expect(() => measure(tiny, { what: 'length', net: 'NOPE' })).toThrow('there is no net NOPE')
+})
+
+it('spans a gap with the two nearest points of copper, edge to edge', () => {
+  const span = gapSpan(tiny, pad('R1', '1'), pad('R1', '2'))
+  expect(Math.hypot(span.to.x - span.from.x, span.to.y - span.from.y)).toBeCloseTo(0.4, 4)
+  // from the first pad's edge: nearer to it than to the second
+  const [one, two] = ['1', '2'].map((n) => tiny.footprints.find((f) => f.ref === 'R1')!.pads.find((p) => p.number === n)!.center)
+  const away = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.hypot(p.x - q.x, p.y - q.y)
+  expect(away(span.from, one)).toBeLessThan(away(span.from, two))
+  expect(away(span.to, two)).toBeLessThan(away(span.to, one))
+})
+
+it('spans nothing where two things touch, and the outlines where they share no layer', () => {
+  const touching = gapSpan(tiny, pad('R1', '1'), { kind: 'track', uuid: tiny.tracks[0].uuid })
+  expect(touching.from).toEqual(touching.to)
+  const apart = gapSpan(tiny, part('R1'), part('U1'))
+  expect(Math.hypot(apart.to.x - apart.from.x, apart.to.y - apart.from.y)).toBeCloseTo(2.17, 4)
 })

@@ -329,6 +329,7 @@ void app.whenReady().then(async () => {
     project: (id) => (holder.open()?.id === id ? holder.open() : undefined),
     state: (id) => builds.state(id),
     model: drawnModel,
+    marks,
     buildResult: (project, hash) => resultOfBuild(project, hash, [builds.latest(project.id), builds.lastGood(project.id)]),
     diff: async (project, from, to) => (await kernel.get().request<{ changes: { circuit: string[]; layout: string[] } }>('diff', { project: project.dir, from, to })).changes,
     look: (_project, request) => {

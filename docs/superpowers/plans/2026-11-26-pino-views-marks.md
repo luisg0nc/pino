@@ -1091,6 +1091,8 @@ git commit -m "MCP: look, check, measure, nets, trace, ratsnest and diff, with t
 
 ### Task 15: Claude points back: point, marks, resolve_mark
 
+> As built: `gapSpan` in `shared/board/measure.ts` gives the arrow its two ends by the same rule `measure` takes the gap by. `sheetPlace` moved to `shared/sheet.ts` so that main places a sheet mark where the view draws it; a gap on the sheet is refused. Every target is looked up, and the limit on marks checked, before any mark is made.
+
 **Files:**
 - Create: `app/src/main/mcp/markTools.ts`
 - Modify: `app/src/main/mcp/tools.ts`, `app/src/main/mcp/schemas.ts`
@@ -1103,7 +1105,7 @@ git commit -m "MCP: look, check, measure, nets, trace, ratsnest and diff, with t
   - `marks { status?: 'open' | 'all' }`: every mark as `M3 · draft · person · <payload> · note: "…"`, open first, at most `MOST_LINES`.
   - `resolve_mark { id: string; note: string }`: resolves a person's or Claude's mark with the note; a draft cannot be resolved ("M4 has not been sent to you yet"), nor an id that is not there.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('point makes orange marks the view will draw, and says their ids', async () => {
@@ -1116,19 +1118,19 @@ it('point refuses more than 8 targets', async () => {})
 it('resolve_mark refuses a draft and resolves a sent mark with its note', async () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/mcp/markTools.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the three tools**
+- [x] **Step 3: Write the three tools**
 
-- [ ] **Step 4: Run them with the turn-cost test**
+- [x] **Step 4: Run them with the turn-cost test**
 
 Run: `pnpm -C app exec vitest run src/main/mcp src/main/turncost.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/main/mcp
