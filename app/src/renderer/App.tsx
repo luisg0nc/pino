@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
+import { which } from '../shared/keys'
 import type { ProjectInfo } from '../shared/project'
 import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
+import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
 import { actions, store, useStore } from './state/store'
 import type { FolderChoice } from './ui/FolderMenu'
 import { nameOf, openProblem } from './ui/openFolder'
@@ -10,8 +12,13 @@ import { LeaderLayer } from './ui/LeaderLayer'
 import { SessionDock } from './ui/SessionDock'
 import { StatusLine } from './ui/StatusLine'
 import { BareControls, TitleBar } from './ui/TitleBar'
+import { giveKeysBack } from './ui/typing'
 import { ViewPane } from './ui/ViewPane'
 import { Welcome } from './ui/Welcome'
+
+const KEY_STEP = 16
+/** The card's width where it cannot be measured: `--card-w` in `styles/tokens.css`. */
+const CARD_DEFAULT = 296
 
 /** Why a folder did not open, in one sentence: main's own already names the folder and says why. */
 function why(what: string, e: unknown): string {
@@ -29,6 +36,68 @@ export function App() {
   const page = useStore((s) => s.page)
   const project = useStore((s) => s.project)
   const [busy, setBusy] = useState(false)
+  const shell = useRef<HTMLDivElement>(null)
+  // The width the person gave the dock, kept by the window; none until they do, and then the CSS default (`--dock-w`) stands.
+  const [kept, setKept] = useState<number | null>(() => readDock(windowStorage()))
+  const dockWidth = kept ?? dockDefault(window.innerWidth)
+  // While the edge is dragged the width goes straight to the CSS variable, so
+  // React renders once at the end rather than on every pointer move.
+  const drag = useRef<{ startX: number; startWidth: number; width: number } | null>(null)
+
+  const leftNow = (): number => document.querySelector('.left')?.getBoundingClientRect().width ?? CARD_DEFAULT
+
+  function onEdgeDown(e: PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const startWidth = document.querySelector('.dock')?.getBoundingClientRect().width ?? dockWidth
+    drag.current = { startX: e.clientX, startWidth, width: startWidth }
+    shell.current!.toggleAttribute('data-resizing', true)
+  }
+
+  function onEdgeMove(e: PointerEvent<HTMLDivElement>) {
+    const d = drag.current
+    if (!d) return
+    d.width = clampDock(d.startWidth + d.startX - e.clientX, window.innerWidth, leftNow())
+    shell.current!.style.setProperty('--dock-w', `${d.width}px`)
+  }
+
+  function onEdgeUp(e: PointerEvent<HTMLDivElement>) {
+    const d = drag.current
+    if (!d) return
+    drag.current = null
+    shell.current!.toggleAttribute('data-resizing', false)
+    // A press that moved nothing keeps what there was (the default stays the default of the window).
+    if (d.width !== d.startWidth) keepDock(d.width)
+    // Dragged with the pointer, the edge is done with: the next letter is the view's, not the session pane's.
+    giveKeysBack(e.currentTarget)
+  }
+
+  function onEdgeKey(e: KeyboardEvent<HTMLDivElement>) {
+    const way = which(e, 'dock.resize')
+    if (way < 0) return
+    e.preventDefault()
+    const now = document.querySelector('.dock')?.getBoundingClientRect().width ?? dockWidth
+    keepDock(clampDock(now + (way === 0 ? KEY_STEP : -KEY_STEP), window.innerWidth, leftNow()))
+  }
+
+  function keepDock(width: number): void {
+    setKept(width)
+    writeDock(windowStorage(), width)
+  }
+
+  // A window made smaller than the dock the person kept leaves the view its room: the width shown follows, what is kept does not.
+  const onProject = page !== 'first' && project !== null
+  useEffect(() => {
+    if (kept === null || !onProject) return
+    const fit = (): void => {
+      const el = shell.current
+      if (!el || el.hasAttribute('data-resizing')) return
+      el.style.setProperty('--dock-w', `${clampDock(kept, window.innerWidth, leftNow())}px`)
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [kept, onProject])
 
   // What main tells of chats and has to say unasked is heard from the start, before any session is begun.
   useEffect(() => {
@@ -123,13 +192,27 @@ export function App() {
   const choose = (choice: FolderChoice): void => void (choice === 'pick' ? pick() : choice === 'close' ? close() : openAt(choice.root))
 
   return (
-    <div className="shell">
+    <div ref={shell} className="shell" style={kept === null ? undefined : ({ '--dock-w': `${kept}px` } as CSSProperties)}>
       <TitleBar project={project} disabled={busy} onChoose={choose} />
       <aside className="left" data-region="left" aria-label="Project">
         <RouteCard project={project} />
       </aside>
       <ViewPane />
       <aside className="dock" data-region="session" aria-label="Session">
+        <div
+          className="dock-edge"
+          role="separator"
+          aria-label="Resize session"
+          aria-orientation="vertical"
+          aria-valuenow={dockWidth}
+          aria-valuemin={DOCK_MIN}
+          tabIndex={0}
+          onPointerDown={onEdgeDown}
+          onPointerMove={onEdgeMove}
+          onPointerUp={onEdgeUp}
+          onPointerCancel={onEdgeUp}
+          onKeyDown={onEdgeKey}
+        />
         <SessionDock key={project.id} project={project} />
       </aside>
       <StatusLine project={project} />

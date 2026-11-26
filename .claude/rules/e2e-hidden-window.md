@@ -22,6 +22,7 @@ The person is working on this desktop. No test, script or check may put a window
   creates the window with `show: false`, never shows it, and exposes the test hooks.
 - Under `PINO_TEST=1` Electron's own profile (`userData`, `sessionData`, `crashDumps`) is a folder of the run,
   `<tmp>/pino-test-<pid>-…` (`src/main/testProfile.ts`), set before `ready` and removed once the process has gone.
+  Only a spec of what is kept across a relaunch names one, a `tempFolder`, in `PINO_TEST_PROFILE`.
   `launch` also gives the run a `HOME` and XDG folders of its own in the temporary folder, and a config file of its
   own, so nothing of a test is written under the person's home. It sets `PINO_PARTS_OFFLINE=1`, so the real engine
   asks jlcsearch nothing. A check that launches Electron without `PINO_TEST`
