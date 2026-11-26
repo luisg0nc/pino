@@ -203,5 +203,17 @@ class KicadCli:
         flags = ["--side", side, "--width", str(width), "--height", str(height), "--quality", "basic"]
         return self._call("render", ("pcb", "render"), flags, out, pcb)
 
+    def gerbers(self, pcb: Path, out_dir: Path, layers: Sequence[str], *, cancel=None) -> CliRun:
+        """Protel extensions and X2 are kicad-cli's defaults. Zones are not refilled: a route's board is filled."""
+        flags = ["--layers", ",".join(layers), "--subtract-soldermask", "--use-drill-file-origin"]
+        return self._call("gerbers", ("pcb", "export", "gerbers"), flags, out_dir, pcb, output_is_dir=True,
+                          cancel=cancel)
+
+    def drill(self, pcb: Path, out_dir: Path, *, cancel=None) -> CliRun:
+        flags = ["--format", "excellon", "--excellon-units", "mm", "--excellon-zeros-format", "decimal",
+                 "--excellon-oval-format", "alternate", "--excellon-separate-th", "--drill-origin", "plot"]
+        return self._call("drill", ("pcb", "export", "drill"), flags, out_dir, pcb, output_is_dir=True,
+                          defines=False, cancel=cancel)
+
     def sch_upgrade(self, sch: Path) -> CliRun:
         return self._call("upgrade", ("sch", "upgrade"), ["--force"], None, sch)
