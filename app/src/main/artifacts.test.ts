@@ -57,6 +57,16 @@ it("names a route's files by its key", async () => {
   await expect(readRouteFile(project(), 'cccccccc00000001', 'board')).rejects.toThrow()
 })
 
+it("reads a route's text as text and its model as bytes", async () => {
+  const folder = join(temp.dir, '.pino/routes/cccccccc00000001')
+  mkdirSync(folder, { recursive: true })
+  writeFileSync(join(folder, 'route.json'), '{}')
+  writeFileSync(join(folder, 'board.glb'), Buffer.from([4, 5, 255]))
+  expect(routePath(project(), 'cccccccc00000001', 'glb')).toBe(join(folder, 'board.glb'))
+  expect(await readRouteFile(project(), 'cccccccc00000001', 'route')).toBe('{}')
+  expect([...((await readRouteFile(project(), 'cccccccc00000001', 'glb')) as Uint8Array)]).toEqual([4, 5, 255])
+})
+
 it('finds the result of a build by its hash: the one in hand, else the one its folder keeps', async () => {
   const known = result()
   expect(await resultOfBuild(project(), HASH, [null, known])).toBe(known)

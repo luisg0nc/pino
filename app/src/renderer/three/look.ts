@@ -3,8 +3,10 @@
 
 import * as THREE from 'three'
 import { lookSaid, lookSize } from '../../shared/look'
+import { modelNote } from '../../shared/model3d'
 import type { LookRequest, LookResult } from '../../shared/view'
 import { pictureOf } from '../board/look'
+import { store } from '../state/store'
 import type { ViewModel } from '../state/viewModel'
 import { aimKeyLight } from '../viewport/lights'
 import { dispose, FOV, framing, FROM, kept, loadModel, makeScene, place, show } from './stage'
@@ -14,7 +16,7 @@ const SHAPE = { w: 4, h: 3 }
 
 export async function threeLook(model: ViewModel, request: LookRequest, size: number): Promise<LookResult> {
   if (request.window) throw new Error('A window crops the board or the sheet, not the 3D view.')
-  if (!model.result.artifacts.glb) throw new Error(`h${model.result.number} has no 3D model.`)
+  if (model.model3d.from === 'build' && !model.result.artifacts.glb) throw new Error(`h${model.result.number} has no 3D model.`)
   const loaded = await loadModel(model)
   const { scene, key, shadow } = makeScene()
   place(scene, shadow, loaded)
@@ -45,7 +47,9 @@ export async function threeLook(model: ViewModel, request: LookRequest, size: nu
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--board-paper').trim()
     ctx.fillRect(0, 0, width, height)
     ctx.drawImage(renderer.domElement, 0, 0, width, height)
-    return pictureOf(canvas, lookSaid({ tab: '3d', build: model.result.number, marks: null }))
+    // What the 3D view would say under its switches, Claude is told too.
+    const said = [lookSaid({ tab: '3d', build: model.result.number, marks: null }), modelNote(model.model3d, model.route, model.result.routing, model.routeFindings, Boolean(store.getState().build?.route))]
+    return pictureOf(canvas, said.filter(Boolean).join(' '))
   } finally {
     dispose(scene)
     renderer.dispose()

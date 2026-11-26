@@ -37,8 +37,12 @@ route's copper while there is one.
 - Stale copper fades toward the paper; pads never do.
 - The Schematic is KiCad's SVG in pino's ink (`sheet/ink.ts` maps KiCad's colours to tokens and strips anything that
   runs, restyles the window or reaches out). What is where comes from `sheet.json`. Pins and chips on it are HTML at a fixed size.
-- 3D is the build's GLB, lit and recoloured (`three/stage.ts`, `material.ts`, by mesh name), drawn only when
-  something changed. Where there is no WebGL the tab says so: an error thrown out of an effect blanks the window.
+- 3D is a GLB, lit and recoloured (`three/stage.ts`, `material.ts`, by mesh name). Which one has one rule
+  (`shared/model3d.ts`), so that 3D shows the copper the Board view shows: the route's `board.glb` while that copper is
+  a route's, fresh or stale, else the build's, which has no routed tracks. Where 3D is then not the board on the Board
+  view (a stale route's parts, a route with no model), it says so under its switches, and so does Claude's picture.
+- It is drawn only when something changed. Where there is no WebGL the tab says so: an error thrown out of an effect
+  blanks the window.
 - The route card's head says how the build stands in a word or three (`headSaid`); the counts are in its checks.
 - Pins nearer than `GATHER` are one pin with a count. A chip stands off what it marks: at a part's or a pad's corner.
 - A tag stands clear of what it names and is tied to it by a leader. What lies over a view carries `data-tag-avoid`.

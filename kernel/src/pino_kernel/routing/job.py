@@ -8,6 +8,7 @@
     cleanup   stubs, duplicates and dead ends off the router's copper
     drc       the cleaned board refilled with DRC and schematic parity, with pino's own project files
     checks    DRC the routing added, nets left, copper checks, failed steps
+    glb       the 3D model of the routed, filled board, exported as a build exports its own
 
 A route runs in `<key>.tmp-<pid>-<thread>/` and is renamed into place when it is done, so a half-written folder is
 never read. One route runs per project (`.pino/routes/job.lock`).
@@ -47,6 +48,8 @@ KEEP_ROUTES = 10
 LOG_PER_STEP = 200_000  # characters of each step's output kept in log.txt
 PROJECT_FILES = ("board.kicad_pro", "board.kicad_dru", "board.kicad_sch", "sym-lib-table", "fp-lib-table")
 ROUTER = {"name": "KiCadRoutingTools", "version": KRT_VERSION, "commit": KRT_COMMIT}
+# The app tells this warning by these words (app/src/shared/model3d.ts).
+GLB_FAILED = "kicad-cli glb failed"
 
 
 @dataclass
@@ -248,6 +251,59 @@ def _counts(outcome: RouteOutcome, drc_found: list[Finding], copper_found: list[
             "copper_warnings": sum(f.severity == "warning" for f in copper_found)}
 
 
+def _export_model(kicad: KicadCli, filled: Path, out: Path,
+                  cancel: threading.Event) -> tuple[Finding | None, float]:
+    """The routed, zone-filled board's 3D model at `out`, exported and normalized as a build's. (warning, seconds):
+    with a warning, or when cancelled, nothing is left at `out`."""
+    t0 = time.perf_counter()
+    run = kicad.glb(filled, out, cancel=cancel)
+    for extra in filled.parent.glob("*.kicad_prl"):
+        extra.unlink()
+    warning = None
+    if cancel.is_set():
+        out.unlink(missing_ok=True)
+    elif run.ok and out.is_file():
+        normalize(out)
+    else:
+        out.unlink(missing_ok=True)
+        # The copper is good without it: a warning, so that the route's verdict stays about the board.
+        why = run.last_line() or f"exit code {run.returncode}"
+        warning = Finding("kernel", "kicad_cli_failed", "warning", f"{GLB_FAILED}: {why}"[:300])
+    return warning, time.perf_counter() - t0
+
+
+def _model_for_kept(project: Path, final: Path, stored: RouteResult, cancel: threading.Event) -> Timing | None:
+    """Gives a kept route that has no model (made before routes had one, or its export failed) its model, from the
+    board it kept, and writes what came of it into its route.json, which the app reads. Without kicad-cli the route
+    is left as it is."""
+    try:
+        libs = discover()
+    except LibrariesNotFound:
+        return None
+    argv = KicadCli.find()
+    if not argv:
+        return None
+    kicad = KicadCli(libs, project / ".pino" / "kicad", argv)
+    # Under another name until it is whole: a board.glb that is there is taken to be good.
+    part = final / "board.part.glb"
+    warning, seconds = _export_model(kicad, final / "filled" / "board.kicad_pcb", part, cancel)
+    if cancel.is_set():
+        return None
+    findings = [f for f in stored.findings
+                if not (f.code == "kicad_cli_failed" and f.message.startswith(GLB_FAILED))]
+    if warning:
+        findings.append(warning)
+    else:
+        part.replace(final / "board.glb")
+        stored.artifacts["glb"] = (final / "board.glb").relative_to(project).as_posix()
+    stored.findings, over = sort_and_cap(findings)
+    stored.truncated += over
+    new = final / "route.json.new"
+    new.write_text(stored.to_json(), encoding="utf-8")
+    new.replace(final / "route.json")
+    return Timing("glb", seconds)
+
+
 def _write_log(folder: Path, steps: list[StepRun], work: Path) -> None:
     parts = []
     for s in steps:
@@ -352,10 +408,18 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
             except (ValueError, KeyError, json.JSONDecodeError):
                 stored = None
             if stored is not None and stored.state == "done":
+                exported = None
+                if not (final / "board.glb").is_file():
+                    exported = _model_for_kept(project, final, stored, cancel)
+                    if cancel.is_set():
+                        return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", [],
+                                      key.key, build_hash)
                 stored.number, stored.build, stored.cached = number, build_hash, True
                 stored.headline = route_headline(number, build_number, "done", stored.counts, stored.share, None)
                 stored.timings = clock.times + [Timing("plan", plan_seconds)] + \
-                    [Timing(t.step, t.seconds, True) for t in stored.timings if t.step not in ("router", "plan")]
+                    [Timing(t.step, t.seconds, True) for t in stored.timings
+                     if t.step not in ("router", "plan") and not (exported and t.step == "glb")] + \
+                    ([exported] if exported else [])
                 history.record(number, key.key, build_hash, "done", stored.complete)
                 return stored
 
@@ -400,6 +464,14 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                            "timed_out": f"timed out after {seconds:.0f} s"}.get(outcome.stopped, outcome.problem)
                 return failed(outcome.stopped, problem or "the route failed", outcome.findings, key.key, build_hash,
                               outcome.steps)
+            shutil.copytree(tmp / "work" / "filled", tmp / "filled")
+            no_model, seconds = _export_model(kicad, tmp / "filled" / "board.kicad_pcb", tmp / "board.glb", cancel)
+            clock.times.append(Timing("glb", seconds))
+            if cancel.is_set():
+                return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", outcome.findings,
+                              key.key, build_hash, outcome.steps)
+            if no_model:
+                outcome.findings.append(no_model)
             drc_found = [f for f in outcome.findings if f.source == "drc"]
             copper_found = [f for f in outcome.findings if f.source == "copper"]
             counts = _counts(outcome, drc_found, copper_found)
@@ -411,6 +483,8 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
             artifacts = {"folder": final.relative_to(project).as_posix(), "board": rel("board.kicad_pcb"),
                          "filled": rel("filled/board.kicad_pcb"), "copper": rel("copper.json"), "drc": rel("drc.json"),
                          "plan": rel("plan.json"), "key": rel("key.json"), "log": rel("log.txt")}
+            if (tmp / "board.glb").is_file():
+                artifacts["glb"] = rel("board.glb")
             headline = route_headline(number, build_number, "done", counts, share, None)
             result = RouteResult(SCHEMA, __version__, dict(ROUTER), key.key, build_hash, number, "done", verdict, headline,
                                  complete, counts, share, kept, truncated, outcome.steps, timings, artifacts, False)
@@ -418,7 +492,6 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
             (tmp / "plan.json").write_text(plan.to_json(), encoding="utf-8")
             (tmp / "board.kicad_pcb").write_text(outcome.board_text, encoding="utf-8")
             (tmp / "copper.json").write_text(copper_json(outcome.copper), encoding="utf-8")
-            shutil.copytree(tmp / "work" / "filled", tmp / "filled")
             shutil.copy(tmp / "work" / "drc.json", tmp / "drc.json")
             normalize(tmp / "drc.json")
             _write_log(tmp, outcome.steps, tmp / "work")

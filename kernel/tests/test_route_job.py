@@ -62,12 +62,12 @@ def test_route_folder_layout_and_result(routed_project):
     d = routed_project / ".pino/routes" / r.key
     assert r.state == "done" and r.number == 1 and r.build == latest_build(routed_project)
     assert {x.name for x in d.iterdir()} == {"key.json", "plan.json", "route.json", "board.kicad_pcb", "copper.json",
-                                            "filled", "drc.json", "log.txt"}
+                                            "filled", "drc.json", "log.txt", "board.glb"}
     assert {x.name for x in (d / "filled").iterdir()} >= {"board.kicad_pcb", "board.kicad_pro", "board.kicad_dru",
                                                          "board.kicad_sch", "sym-lib-table", "fp-lib-table"}
     assert not list((routed_project / ".pino/routes").glob("*.tmp-*"))
     jsonschema.validate(json.loads(r.to_json()), ROUTE_SCHEMA)
-    assert [t.step for t in r.timings] == ["router", "plan", "chain", "refill", "cleanup", "drc", "checks"]
+    assert [t.step for t in r.timings] == ["router", "plan", "chain", "refill", "cleanup", "drc", "checks", "glb"]
     assert r.verdict == "ok" and r.complete and r.counts["tracks"] > 0 and r.router["version"] == "0.17.7"
     assert RouteResult.from_json((d / "route.json").read_text()).key == r.key
     assert r.artifacts["board"] == f".pino/routes/{r.key}/board.kicad_pcb"
@@ -94,7 +94,7 @@ def test_same_bytes_twice(routed_project, tmp_path):
     other = Path(shutil.copytree(routed_project, tmp_path / "again"))
     a, b = route_project(routed_project), route_project(other)
     assert a.key == b.key
-    for name in ("board.kicad_pcb", "copper.json", "plan.json", "key.json", "filled/board.kicad_pcb"):
+    for name in ("board.kicad_pcb", "copper.json", "plan.json", "key.json", "filled/board.kicad_pcb", "board.glb"):
         assert digest(routed_project / ".pino/routes" / a.key / name) == digest(other / ".pino/routes" / b.key / name)
 
 
@@ -110,6 +110,96 @@ def test_no_cache_routes_again(routed_project, argv_log):
     n = len(argv_log())
     r = route_project(routed_project, options=RouteOptions(cache=False))
     assert not r.cached and len(argv_log()) > n
+
+
+def test_route_exports_a_model_of_the_routed_filled_board(routed_project):
+    """The 3D view of a routed board: the build's flags, on the board with the route's copper and filled zones, and
+    with kicad-cli's date taken out as in a build."""
+    r = route_project(routed_project)
+    d = routed_project / ".pino/routes" / r.key
+    assert r.artifacts["glb"] == f".pino/routes/{r.key}/board.glb"
+    model = json.loads((d / "board.glb").read_text())
+    assert model["board"] == digest(d / "filled/board.kicad_pcb")
+    assert {"--include-tracks", "--include-pads", "--include-zones", "--include-silkscreen",
+            "--include-soldermask"} <= set(model["flags"])
+    assert set(model["generated_at"]) == {"0"}
+    assert not list((d / "filled").glob("*.kicad_prl"))
+    jsonschema.validate(json.loads(r.to_json()), ROUTE_SCHEMA)
+
+
+def test_a_failed_model_export_keeps_the_route(routed_project, monkeypatch):
+    monkeypatch.setenv("FAKE_KICAD_GLB_FAIL", "no model for you")
+    r = route_project(routed_project)
+    assert r.state == "done" and r.complete and r.verdict == "ok" and "glb" not in r.artifacts
+    found = [f for f in r.findings if f.code == "kicad_cli_failed"]
+    assert [f.severity for f in found] == ["warning"] and "no model for you" in found[0].message
+    assert not (routed_project / ".pino/routes" / r.key / "board.glb").exists()
+
+
+def without_model(project: Path, key: str) -> Path:
+    """The kept route as one made before routes had a model."""
+    d = project / ".pino/routes" / key
+    (d / "board.glb").unlink()
+    kept = json.loads((d / "route.json").read_text())
+    del kept["artifacts"]["glb"]
+    kept["timings"] = [t for t in kept["timings"] if t["step"] != "glb"]
+    (d / "route.json").write_text(json.dumps(kept))
+    return d
+
+
+def glb_warnings(result) -> list:
+    return [f for f in result.findings if f.code == "kicad_cli_failed"]
+
+
+def test_a_cached_route_with_no_model_gets_one_without_routing_again(routed_project, argv_log):
+    first = route_project(routed_project)
+    d = without_model(routed_project, first.key)
+    copper = digest(d / "board.kicad_pcb")
+    n = len(argv_log())
+    r = route_project(routed_project)
+    assert r.cached and r.number == 2 and r.key == first.key and len(argv_log()) == n
+    assert r.artifacts["glb"] == f".pino/routes/{r.key}/board.glb" and digest(d / "board.kicad_pcb") == copper
+    model = json.loads((d / "board.glb").read_text())
+    assert model["board"] == digest(d / "filled/board.kicad_pcb") and set(model["generated_at"]) == {"0"}
+    # the app reads route.json, so the stored result lists the model too
+    assert RouteResult.from_json((d / "route.json").read_text()).artifacts["glb"] == r.artifacts["glb"]
+    assert [t.step for t in r.timings if not t.cached] == ["router", "plan", "glb"]
+    assert [t.step for t in r.timings].count("glb") == 1
+    assert not list(d.glob("*.tmp*")) and not list((d / "filled").glob("*.kicad_prl"))
+    jsonschema.validate(json.loads(r.to_json()), ROUTE_SCHEMA)
+
+
+def test_a_model_export_that_fails_on_a_cached_route_is_a_warning_until_it_works(routed_project, argv_log, monkeypatch):
+    monkeypatch.setenv("FAKE_KICAD_GLB_FAIL", "no model for you")
+    first = route_project(routed_project)
+    n = len(argv_log())
+    r = route_project(routed_project)
+    d = routed_project / ".pino/routes" / first.key
+    assert r.cached and r.state == "done" and r.verdict == "ok" and "glb" not in r.artifacts and len(argv_log()) == n
+    for kept in (r, RouteResult.from_json((d / "route.json").read_text())):
+        assert [f.severity for f in glb_warnings(kept)] == ["warning"]
+        assert glb_warnings(kept)[0].message.startswith("kicad-cli glb failed")
+    monkeypatch.delenv("FAKE_KICAD_GLB_FAIL")
+    r = route_project(routed_project)
+    assert r.cached and "glb" in r.artifacts and not glb_warnings(r) and len(argv_log()) == n
+    assert not glb_warnings(RouteResult.from_json((d / "route.json").read_text()))
+
+
+def test_a_cached_route_is_still_answered_without_kicad_cli(routed_project, monkeypatch):
+    d = without_model(routed_project, route_project(routed_project).key)
+    monkeypatch.setattr(job.KicadCli, "find", staticmethod(lambda *a, **k: None))
+    r = route_project(routed_project)
+    assert r.cached and r.state == "done" and "glb" not in r.artifacts and not (d / "board.glb").exists()
+
+
+def test_a_cancel_while_a_cached_route_gets_its_model_leaves_the_route(routed_project):
+    d = without_model(routed_project, route_project(routed_project).key)
+    kept = (d / "route.json").read_text()
+    cancel = threading.Event()
+    cancel.set()
+    r = route_project(routed_project, cancel=cancel)
+    assert r.state == "cancelled" and (d / "route.json").read_text() == kept
+    assert not (d / "board.glb").exists() and not list(d.glob("*.tmp*"))
 
 
 def test_busy_when_a_route_runs(routed_project):
