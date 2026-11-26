@@ -831,6 +831,10 @@ git add -A && git commit -m "Add the first screen and title bar in torno's langu
 
 ### Task 12: The project grid: route card, view tabs, status line
 
+> **Note from the build:** `keys.ts` and its test came in with Task 11. `view.prev` and `view.next` have a scope of their own, `tabs`: in `window` they would clash with the menu's arrows.
+>
+> **Note from the build:** The store also holds the session the dock shows, which the status line says. `ui/sessionWords.ts` holds the status words for both.
+
 **Files:**
 - Copy adapted: `app/src/shared/keys.ts`. Keep the mechanics (`KeyPress`, `pressOf`, `keyName`, `domKey`, `which`, `pressed`, `hint`, `typed`, `keyClashes`, `cheatSheet`). Keep only the scopes `global`, `window`, `composer`, `ask`, `field`, `menu`, `sheet`, and only the rows pino uses (this task adds `view.prev` and `view.next` for Left and Right on a focused tab; Task 13 adds the chat rows). Drop the tool, view, gizmo and scan tables.
 - Copy adapted: `app/src/shared/keys.test.ts` (the clash and key-name cases)
@@ -846,7 +850,7 @@ Copy, exact:
 - Each view tab's empty panel sits on the dye: "Nothing to draw yet." and "Claude writes board.py. pino draws the schematic, the board and the 3D view here on every save."
 - Status line: the project folder name in `num`, then "No build yet", then the session's status word at the right (`Idle`, `Working`, `Needs you`, `Starting`, `Ended`, or `No session`).
 
-- [ ] **Step 1: Write the failing specs and tests**
+- [x] **Step 1: Write the failing specs and tests**
 
 ```ts
 // boot.spec.ts
@@ -862,19 +866,19 @@ test('Close project goes back to the first screen', ...)
 it('has no two rows on one key in one scope', () => { expect(keyClashes()).toEqual([]) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/keys.test.ts && pnpm test:e2e`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt `keys.ts`; write the four components and their sheets**
+- [x] **Step 3: Copy and adapt `keys.ts`; write the four components and their sheets**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the project grid: route card with an empty Brief, three empty views, status line"

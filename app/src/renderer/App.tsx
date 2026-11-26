@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { actions, store, useStore } from './state/store'
 import type { FolderChoice } from './ui/FolderMenu'
 import { nameOf, openProblem } from './ui/openFolder'
+import { RouteCard } from './ui/RouteCard'
+import { SessionDock } from './ui/SessionDock'
+import { StatusLine } from './ui/StatusLine'
 import { BareControls, TitleBar } from './ui/TitleBar'
+import { ViewPane } from './ui/ViewPane'
 import { Welcome } from './ui/Welcome'
 
 /** Why a folder did not open, in one sentence: main's own already names the folder and says why. */
@@ -70,7 +74,14 @@ export function App() {
   return (
     <div className="shell">
       <TitleBar project={project} disabled={busy} onChoose={choose} />
-      <main data-region="viewport">{project.name}</main>
+      <aside className="left" data-region="left" aria-label="Project">
+        <RouteCard project={project} />
+      </aside>
+      <ViewPane />
+      <aside className="dock" data-region="session" aria-label="Session">
+        <SessionDock key={project.id} project={project} />
+      </aside>
+      <StatusLine project={project} />
     </div>
   )
 }

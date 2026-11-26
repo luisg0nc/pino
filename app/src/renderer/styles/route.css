@@ -1,1 +1,30 @@
 /* The route card at the left of an open project (`ui/RouteCard.tsx`). */
+
+/* In the left column of the grid (`layout.css`): the card is the column. */
+.left .route-card {
+  overflow-y: auto;
+}
+
+.route-head {
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: var(--divider);
+}
+
+.route-name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.route-title {
+  font-weight: 600;
+}

@@ -41,6 +41,12 @@ it('names a key press as the table does', () => {
   expect(domKey('Enter')).toBe('Enter')
 })
 
+it('has Left and Right for a focused view tab, in a scope of its own', () => {
+  expect(pressed({ key: 'ArrowLeft' }, 'view.prev')).toBe(true)
+  expect(pressed({ key: 'ArrowRight' }, 'view.next')).toBe(true)
+  expect(KEYS.filter((r) => r.id.startsWith('view.')).map((r) => r.scope)).toEqual(['tabs', 'tabs'])
+})
+
 it('says which key of a row was pressed', () => {
   expect(which({ key: 'ArrowDown' }, 'menu.next')).toBe(0)
   expect(which({ key: 'ArrowRight' }, 'menu.next')).toBe(1)

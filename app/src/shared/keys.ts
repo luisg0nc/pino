@@ -15,9 +15,10 @@ export type KeyContext = 'Everywhere' | 'Session' | 'In a field, a menu or a she
  * - `global`: everywhere, also while typing. Nobody else may have such a key.
  * - `window`: everywhere outside a field. Nobody else's either.
  * - `composer`: in the box a chat prompt is written in. `ask`: on a card of the chat that asks the person.
+ * - `tabs`: on a focused tab of the views.
  * - `field`, `menu`, `sheet`: in a field, an open menu, a sheet or a question.
  */
-export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'field' | 'menu' | 'sheet'
+export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'field' | 'menu' | 'sheet'
 
 interface Row<Id extends string> {
   id: Id
@@ -33,6 +34,9 @@ interface Row<Id extends string> {
 const row = <Id extends string>(id: Id, keys: readonly string[], does: string, context: KeyContext, scope: KeyScope, hidden?: true): Row<Id> => ({ id, keys, does, context, scope, ...(hidden ? { hidden } : {}) })
 
 const ROWS = [
+  row('view.prev', ['Left'], 'On a tab of the views: the view before', 'Everywhere', 'tabs'),
+  row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
+
   row('menu.next', ['Down', 'Right'], 'Menu: the next item', 'In a field, a menu or a sheet', 'menu'),
   row('menu.previous', ['Up', 'Left'], 'Menu: the one before', 'In a field, a menu or a sheet', 'menu'),
   row('menu.ends', ['Home', 'End'], 'Menu: the first or the last', 'In a field, a menu or a sheet', 'menu'),
