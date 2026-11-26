@@ -36,10 +36,10 @@ async function read(p: ProjectInfo, r: BuildResult): Promise<Read> {
     json('sheet', sheetOf)
   ])
   const key = r.routing?.route_key
-  const routeBoard = key ? await readRouteFile(p, key, 'filled').then(readBoard, () => null) : null
+  const routeBoard = key ? await readRouteFile(p, key, 'filled').then((t) => readBoard(String(t)), () => null) : null
   const routeFindings = key
     ? await readRouteFile(p, key, 'route').then(
-        (t) => (JSON.parse(t) as { findings?: Finding[] }).findings ?? [],
+        (t) => (JSON.parse(String(t)) as { findings?: Finding[] }).findings ?? [],
         () => null
       )
     : null

@@ -11,7 +11,7 @@ import { ownFolder } from './own'
 export const BUILD_HASH = /^[0-9a-f]{12}$/
 export const ROUTE_KEY = /^[0-9a-f]{8,64}$/
 
-const ROUTE_FILES = { board: 'board.kicad_pcb', filled: 'filled/board.kicad_pcb', route: 'route.json' } as const
+const ROUTE_FILES = { board: 'board.kicad_pcb', filled: 'filled/board.kicad_pcb', route: 'route.json', glb: 'board.glb' } as const
 export type RouteFile = keyof typeof ROUTE_FILES
 
 /** Whether `path` lies inside `folder` (both absolute and normal). */
@@ -52,9 +52,11 @@ export async function readArtifact(project: ProjectInfo, hash: string, name: Art
   return name === 'glb' ? new Uint8Array(bytes) : bytes.toString('utf8')
 }
 
-export async function readRouteFile(project: ProjectInfo, key: string, name: RouteFile): Promise<string> {
+/** A file of a route, as a build's are read: text, and the model's bytes as they are. */
+export async function readRouteFile(project: ProjectInfo, key: string, name: RouteFile): Promise<string | Uint8Array> {
   const path = routePath(project, key, name)
-  return (await readIn(project, ['routes', key], path, name)).toString('utf8')
+  const bytes = await readIn(project, ['routes', key], path, name)
+  return name === 'glb' ? new Uint8Array(bytes) : bytes.toString('utf8')
 }
 
 /** The result of the build with this hash: one already in hand, else the `result.json` its folder keeps. */

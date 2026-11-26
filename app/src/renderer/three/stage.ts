@@ -40,6 +40,11 @@ export const kept = new Map<string, Angle>()
 
 export interface Loaded {
   hash: string
+  /** Which file this is: `modelId` of the view model it was read for. */
+  id: string
+  source: 'build' | 'route'
+  /** The names KiCad gave the board's own meshes: what of the board is in the model. */
+  boardMeshes: string[]
   root: THREE.Group
   box: THREE.Box3
   frame: GlbFrame
@@ -109,18 +114,26 @@ export function framing(box: THREE.Box3, from: THREE.Vector3, aspect: number): {
   return { target: sphere.center, position: sphere.center.clone().addScaledVector(from.clone().normalize(), distance), height: distance * Math.tan(half) }
 }
 
+/** Which GLB a view model's 3D is, as one string: a new one is read again. A route's number counts its runs. */
+export const modelId = (model: ViewModel): string =>
+  model.model3d.from === 'route' ? `route:${model.model3d.key}:${model.result.routing?.number ?? ''}` : `build:${model.hash}`
+
 /** The GLB read into a group, its meshes told their names in the file, the board in the solder-mask look. */
 export async function loadModel(model: ViewModel): Promise<Loaded> {
-  const bytes = (await window.pino.build.file(model.projectId, model.hash, 'glb')) as Uint8Array
+  const file = model.model3d
+  const read = file.from === 'route' ? window.pino.build.routeFile(model.projectId, file.key, 'glb') : window.pino.build.file(model.projectId, model.hash, 'glb')
+  const bytes = (await read) as Uint8Array
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   const gltf = await new GLTFLoader().parseAsync(buffer, '')
   const json = gltf.parser.json as { meshes: Array<{ name?: string }> }
   let meshes = 0
+  const boardMeshes = new Set<string>()
   gltf.scene.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return
     meshes += 1
     const index = gltf.parser.associations.get(o)?.meshes
     o.userData.meshName = index === undefined ? '' : (json.meshes[index]?.name ?? '')
+    if (String(o.userData.meshName).startsWith('board_')) boardMeshes.add(o.userData.meshName as string)
   })
   restyle(gltf.scene)
   gltf.scene.updateMatrixWorld(true)
@@ -130,6 +143,6 @@ export async function loadModel(model: ViewModel): Promise<Loaded> {
   })
   const board = !substrate.isEmpty()
   const box = board ? substrate : new THREE.Box3().setFromObject(gltf.scene)
-  const frame = glbFrame(model.board.box, { min: box.min.toArray(), max: box.max.toArray() })
-  return { hash: model.hash, root: gltf.scene, box, frame, meshes, board }
+  const frame = glbFrame(file.box, { min: box.min.toArray(), max: box.max.toArray() })
+  return { hash: model.hash, id: modelId(model), source: file.from, boardMeshes: [...boardMeshes].sort(), root: gltf.scene, box, frame, meshes, board }
 }

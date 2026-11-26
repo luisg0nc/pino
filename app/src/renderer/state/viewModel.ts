@@ -7,6 +7,7 @@ import { withStaleCopper } from '../../shared/board/stale'
 import type { BuildResult, Finding } from '../../shared/build'
 import { withRouteFindings } from '../../shared/checks'
 import { circuitOf, placementOf, type Circuit, type Placement } from '../../shared/circuit'
+import { modelFile, type ModelFile } from '../../shared/model3d'
 import { useStore } from './store'
 
 export interface ViewModel {
@@ -26,11 +27,14 @@ export interface ViewModel {
   routedBuild: string | null
   /** What the router and its checks said of the route on the board; `result` holds them too while it is current. */
   routeFindings: Finding[] | null
+  /** The model 3D loads: the route's while its copper is on the board, else the build's. */
+  model3d: ModelFile
   circuit: Circuit | null
   placement: Placement | null
 }
 
-const keyOf = (projectId: string, r: BuildResult): string => `${projectId}|${r.hash}|${r.routing?.state ?? 'none'}|${r.routing?.route_key ?? ''}`
+// The route's number too: the same key routed again may bring a file that was not there, its model.
+const keyOf = (projectId: string, r: BuildResult): string => `${projectId}|${r.hash}|${r.routing?.state ?? 'none'}|${r.routing?.route_key ?? ''}|${r.routing?.number ?? ''}`
 
 const cache = new Map<string, Promise<ViewModel>>()
 const KEPT = 4
@@ -55,23 +59,25 @@ async function read(projectId: string, result: BuildResult, key: string): Promis
   let route: string | null = null
   let routedBuild: string | null = null
   let routeFindings: Finding[] | null = null
+  let model3d = modelFile(built.box, null)
   if (routing?.route_key && (routing.state === 'current' || routing.state === 'stale' || routing.state === 'running')) {
-    const routed = await window.pino.build.routeFile(projectId, routing.route_key, 'filled').then(readBoard, () => null)
+    const routed = await window.pino.build.routeFile(projectId, routing.route_key, 'filled').then((t) => readBoard(String(t)), () => null)
     if (routed) {
       route = routing.route_key
       const said = await window.pino.build.routeFile(projectId, routing.route_key, 'route').then(
-        (t) => JSON.parse(t) as { build?: string; findings?: Finding[] },
+        (t) => JSON.parse(String(t)) as { build?: string; findings?: Finding[]; artifacts?: { glb?: unknown } },
         () => null
       )
       routedBuild = said?.build ?? null
       routeFindings = said?.findings ?? null
+      model3d = modelFile(built.box, { key: route, box: routed.box, glb: typeof said?.artifacts?.glb === 'string' })
       if (routing.state === 'current') {
         board = routed
         open = new Set((said?.findings ?? []).filter((f) => f.code === 'net_unrouted').flatMap((f) => f.nets ?? []))
       } else ({ board, stale } = withStaleCopper(built, routed))
     }
   }
-  return { key, projectId, result: withRouteFindings(result, routeFindings), hash, board, stale, route, open, routedBuild, routeFindings, circuit, placement }
+  return { key, projectId, result: withRouteFindings(result, routeFindings), hash, board, stale, route, open, routedBuild, routeFindings, model3d, circuit, placement }
 }
 
 export function loadViewModel(projectId: string, result: BuildResult): Promise<ViewModel> {
