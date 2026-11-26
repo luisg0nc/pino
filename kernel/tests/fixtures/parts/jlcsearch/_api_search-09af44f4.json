@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C72043&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 72043,
+    "mfr": "19-217/GHC-YR1S2/3T",
+    "package": "0603",
+    "description": "-40℃~+85℃ 110mW 120° 199mcd 20mA 3.3V 518nm 520nm~535nm Discrete Diode Emerald Green Water Clear 0603 LED Indication - Discrete ROHS",
+    "is_basic": false,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.024,
+    "stock_checked_at": "2026-11-02T06:47:30.000Z"
+   }
+  ]
+ }
+}

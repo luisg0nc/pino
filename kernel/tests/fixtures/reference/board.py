@@ -1,6 +1,7 @@
 """pino's reference board: an ESP32-C6 module on USB-C power, a 3V3 LDO, a boot button and two LEDs.
 
-Parts come from KiCad's own libraries only. LCSC fields are left empty: no part numbers here.
+Symbols and footprints come from KiCad's own libraries. The LCSC numbers are JLC's parts, chosen with jlcsearch
+on 2026-11-26: basic parts where one fits, and each extended part says why. R9 is not fitted, so it has none.
 """
 
 from pino import Board
@@ -15,32 +16,38 @@ b = Board("pino-reference", layers=2, outline="outline.json")
 
 usb = b.block("usb", "USB power in")
 j1 = usb.path("J1", "Connector:USB_C_Receptacle_USB2.0_16P", "USB-C",
-              footprint="Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12")
-f1 = usb.path("F1", "Device:Polyfuse_Small", "500mA", footprint="Fuse:Fuse_0805_2012Metric")
+              footprint="Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", lcsc="C165948",
+              why="the USB-C receptacle this footprint is drawn for, the HRO TYPE-C-31-M-12")
+f1 = usb.path("F1", "Device:Polyfuse_Small", "500mA", footprint="Fuse:Fuse_0805_2012Metric",
+              lcsc="C910822", why="an 0805 resettable fuse holding 500 mA at 24 V; jlcsearch listed no basic one")
 r9 = usb.across("R9", R, "0R DNP", footprint=R0402, dnp=True)
-c1 = usb.shunt("C1", C, "10uF", footprint=C0805)
-r1 = usb.shunt("R1", R, "5.1k", footprint=R0402)
-r2 = usb.shunt("R2", R, "5.1k", footprint=R0402)
-r3 = usb.shunt("R3", R, "1M", footprint=R0402)
-c2 = usb.shunt("C2", C, "4.7nF", footprint=C0402)
+c1 = usb.shunt("C1", C, "10uF", footprint=C0805, lcsc="C15850")
+r1 = usb.shunt("R1", R, "5.1k", footprint=R0402, lcsc="C25905")
+r2 = usb.shunt("R2", R, "5.1k", footprint=R0402, lcsc="C25905")
+r3 = usb.shunt("R3", R, "1M", footprint=R0402, lcsc="C26083")
+c2 = usb.shunt("C2", C, "4.7nF", footprint=C0402, lcsc="C1538")
 
 reg = b.block("reg", "3V3 regulator")
-c3 = reg.shunt("C3", C, "1uF", footprint=C0402)
-u2 = reg.path("U2", "Regulator_Linear:AP2112K-3.3")
-c4 = reg.shunt("C4", C, "1uF", footprint=C0402)
+c3 = reg.shunt("C3", C, "1uF", footprint=C0402, lcsc="C52923")
+u2 = reg.path("U2", "Regulator_Linear:AP2112K-3.3", lcsc="C51118",
+              why="the AP2112K-3.3 the design uses: 600 mA from a SOT-23-5")
+c4 = reg.shunt("C4", C, "1uF", footprint=C0402, lcsc="C52923")
 
 mcu = b.block("mcu", "MCU")
-u1 = mcu.path("U1", "RF_Module:ESP32-C6-MINI-1")
-c5 = mcu.shunt("C5", C, "100nF", footprint=C0402)
-c6 = mcu.shunt("C6", C, "10uF", footprint=C0805)
-r4 = mcu.tap("R4", R, "10k", footprint=R0402)
-c7 = mcu.shunt("C7", C, "1uF", footprint=C0402)
-r5 = mcu.tap("R5", R, "10k", footprint=R0402)
-sw1 = mcu.shunt("SW1", "Switch:SW_Push", "BOOT", footprint="Button_Switch_SMD:SW_SPST_TL3342")
-r6 = mcu.path("R6", R, "1k", footprint=R0402)
-d1 = mcu.shunt("D1", "Device:LED", "green", footprint=LED0603)
-r7 = mcu.tap("R7", R, "1k", footprint=R0402)
-d2 = mcu.shunt("D2", "Device:LED", "red", footprint=LED0603, id="power-led")
+u1 = mcu.path("U1", "RF_Module:ESP32-C6-MINI-1", lcsc="C5736265",
+              why="the ESP32-C6 module itself, with 4 MB of flash")
+c5 = mcu.shunt("C5", C, "100nF", footprint=C0402, lcsc="C1525")
+c6 = mcu.shunt("C6", C, "10uF", footprint=C0805, lcsc="C15850")
+r4 = mcu.tap("R4", R, "10k", footprint=R0402, lcsc="C25744")
+c7 = mcu.shunt("C7", C, "1uF", footprint=C0402, lcsc="C52923")
+r5 = mcu.tap("R5", R, "10k", footprint=R0402, lcsc="C25744")
+sw1 = mcu.shunt("SW1", "Switch:SW_Push", "BOOT", footprint="Button_Switch_SMD:SW_SPST_TL3342", lcsc="C2886894",
+                why="the TL3342 button this footprint is drawn for")
+r6 = mcu.path("R6", R, "1k", footprint=R0402, lcsc="C11702")
+d1 = mcu.shunt("D1", "Device:LED", "green", footprint=LED0603, lcsc="C72043",
+               why="a green 0603 LED; jlcsearch listed no basic one")
+r7 = mcu.tap("R7", R, "1k", footprint=R0402, lcsc="C11702")
+d2 = mcu.shunt("D2", "Device:LED", "red", footprint=LED0603, id="power-led", lcsc="C2286")
 
 b.net("VBUS_IN", j1["VBUS"], f1[1], r9[1])
 b.supply("VBUS", f1[2], r9[2], c1[1], c3[1], u2["VIN"], u2["EN"], external=True)

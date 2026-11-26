@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C52923&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 52923,
+    "mfr": "CL05A105KA5NQNC",
+    "package": "0402",
+    "description": "1uF 25V X5R ±10% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.0063,
+    "stock_checked_at": "2026-11-03T21:34:03.000Z"
+   }
+  ]
+ }
+}

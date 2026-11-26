@@ -14,11 +14,14 @@ uv run --directory kernel pino-kernel version
 uv run --directory kernel pino-kernel serve
 uv run --directory kernel pino-kernel route <project folder>
 uv run --directory kernel pino-kernel router status
+uv run --directory kernel pino-kernel parts get C25804
+uv run --directory kernel pino-kernel release <project folder> --dry-run
 ```
 
 `build` prints the result on stdout and exits 0 when the verdict is `ok`, 1 for `errors` and 2 for `failed`.
 Options: `--timeout S` (how long board.py may run, 30 s by default), `--render` (also a top render of the board),
-`--no-kicad` (skip every kicad-cli step) and `--no-cache` (build again even when this input was built before).
+`--no-kicad` (skip every kicad-cli step), `--no-cache` (build again even when this input was built before) and
+`--offline` (look no parts up; use what the parts cache holds).
 
 `version` prints `{"kernel", "schema", "kicad_cli", "libraries"}`.
 
@@ -32,19 +35,25 @@ to stderr.
 {"id": 2, "op": "build", "project": "/path/to/project", "options": {"timeout": 30, "render": false, "kicad": true, "cache": true}}
 {"id": 3, "op": "route", "project": "/path/to/project", "options": {"build": null, "timeout": 900, "step_timeout": 300, "install": true, "cache": true}}
 {"id": 4, "op": "route_status", "project": "/path/to/project"}
-{"id": 5, "op": "route_cancel", "job": 3}
-{"id": 6, "op": "shutdown"}
+{"id": 5, "op": "cancel", "job": 3}
+{"id": 6, "op": "parts", "action": "get", "lcsc": "C25804"}
+{"id": 7, "op": "fab_profiles"}
+{"id": 8, "op": "release_status", "project": "/path/to/project"}
+{"id": 9, "op": "release", "project": "/path/to/project", "options": {"bump": null, "network": true}}
+{"id": 10, "op": "shutdown"}
 ```
 
-Ordered ops are answered in request order: `ping` gives `{"id": 1, "ok": true, "pong": {"kernel": "0.2.0",
-"schema": "pino.build/1", "serve": 2, "route_schema": "pino.route/1"}}`, `build` gives `{"id": 2, "ok": true,
-"result": {...}}`, `route_status` gives `{"id": 4, "ok": true, "status": {...}}` (the `routing` field of the latest
-build) and `shutdown` gives `{"id": 6, "ok": true}`.
+Ordered ops are answered in request order: `ping` gives `{"id": 1, "ok": true, "pong": {"kernel": "0.3.0",
+"schema": "pino.build/1", "serve": 3, "route_schema": "pino.route/1", "parts_schema": "pino.parts/1",
+"release_schema": "pino.release/1"}}`, `build` gives `{"id": 2, "ok": true, "result": {...}}`, `route_status` gives
+`{"id": 4, "ok": true, "status": {...}}` (the `routing` field of the latest build), `fab_profiles` gives the fab's
+limits, `release_status` says whether a release would go through, and `shutdown` gives `{"id": 10, "ok": true}`.
 
-A job op (`route`) runs in its own child process and does not hold up the ordered ops. Its progress comes back as
-`{"id": 3, "event": {...}}` lines and its end as one `{"id": 3, "ok": true, "result": {...}}`. `route_cancel` is
-answered at once, out of order, with `{"id": 5, "ok": true, "cancelled": true}` (`false` when no such job runs).
-`shutdown` and the end of input cancel running jobs and wait up to 10 s for them.
+Job ops (`route`, `parts`, `release`) run in child processes and do not hold up the ordered ops. Their progress
+comes back as `{"id": 3, "event": {...}}` lines and their end as one `{"id": 3, "ok": true, "result": {...}}`.
+`cancel` (or its older name `route_cancel`) is answered at once, out of order, with
+`{"id": 5, "ok": true, "cancelled": true}` (`false` when no such job runs). `shutdown` and the end of input cancel
+running jobs and wait up to 10 s for them.
 
 A line that is not JSON, or an unknown op, gets `{"id": <id or null>, "ok": false, "error": "..."}` and the loop
 goes on. Each build still runs board.py in a fresh child process.
@@ -107,6 +116,76 @@ Measured on this machine (KiCad 10.0.6, a 64-core desktop):
   footprint, whose two pads sit inside its own no-net copper, and the hand-routed original has them too. The strict
   pass mark is not met on this board, and its test is marked as an expected failure with these numbers.
 
+## Parts
+
+A part can be named by its LCSC number, JLC's part number. pino asks jlcsearch
+(https://github.com/tscircuit/jlcsearch, MIT) about it: stock, price, package, and whether JLC calls it basic,
+preferred or extended (an extended part costs a setup fee per part type). `pino-kernel parts search <text>`
+(`--basic`, `--preferred`, `--package`, `--limit`), `parts get <LCSC>`, `parts fetch <LCSC>...` and
+`parts refresh <project>` print one `pino.parts/1` result. Text search leaves out parts whose stock jlcsearch does
+not know, which includes many basic parts, so look those up by number.
+
+What jlcsearch said is cached under `<cache>/parts/` with its date. Stock is fresh for 24 hours, and "no such part"
+is remembered for 6 hours. `PINO_CACHE_DIR` moves the cache, `PINO_JLCSEARCH_URL` points at another server,
+`PINO_PARTS_OFFLINE=1` makes pino ask nothing, and `PINO_PARTS_RECORDED=<folder>` answers from recorded files (tests
+use it; `scripts/record_parts.py` records them by hand). A request carries pino's version in its User-Agent and
+nothing about you.
+
+board.py can name a part by number alone, `r.path("R1", lcsc="C25744")`. Then pino picks the KiCad symbol and
+footprint from KiCad's own libraries: `data/jlc/kicad_map.csv` has a row per number checked by hand, and rules for
+plain two-pin passives (0402 to 1206 resistors and capacitors, 0402 to 0805 LEDs) from jlcsearch's category and
+package. For any other part, board.py fails at that line and asks for `symbol=` and `footprint=` (with `lcsc=`
+kept). pino does not use EasyEDA's library. The build looks up the numbers board.py spells out before it runs,
+because board.py's own process only reads the cache.
+
+`hand_fit=True` marks a part you solder yourself: it is left out of JLC's BOM and CPL and of KiCad's position
+files. `why="..."` says why board.py chose an extended part. `rotation=` replaces pino's CPL rotation correction
+for one part, in degrees counter-clockwise.
+
+Every build checks the assembled parts again (source `parts`): a number JLC does not have, no stock or less than the
+board needs (errors), less than five boards' worth or stock that cannot be confirmed (warnings), a part with no
+number, and extended parts without `why=`. Stock changes by the day, so these findings are never stored with the
+build and never change its hash.
+
+## Fab files
+
+`pino-kernel release <project>` writes `fab/v<version>/` from the newest build and its route, and nothing else
+outside `.pino/`:
+
+```
+fab/v1.0.0/
+  README.md                  what to upload, the parts, what to check in JLC's preview, what changed
+  manifest.json              versions, hashes and the circuit this release holds
+  <name>-v1.0.0-gerbers.zip  Gerbers and drill files, for the PCB order
+  <name>-v1.0.0-bom.csv      Comment, Designator, Footprint, JLCPCB Part #, Quantity
+  <name>-v1.0.0-cpl.csv      Designator, Val, Package, Mid X, Mid Y, Rotation, Layer
+  gerbers/                   the same files, unzipped
+```
+
+Release refuses, and says why, when:
+
+- there is no build, or the newest one failed, has errors or ran without kicad-cli
+- board.py, or any `.py` or `.json` file of the project, changed since that build
+- the board is not routed, a route is running, the copper is stale or incomplete, or it has DRC errors
+- a part has no LCSC number, an extended part has no `why=`, or a part is out of stock
+- the board is outside the sizes JLC assembles
+
+Before plotting, it puts the route's copper onto the newest build's board, refills it and runs DRC with parity once
+more, so the Gerbers match the BOM and CPL even when only a value changed after the route. It asks jlcsearch for
+stock again, and says which stock it could not confirm.
+
+The first release is 1.0.0. A change to the circuit (parts, values, footprints, numbers, what is fitted, or which
+pins share a net) makes a minor release; anything else that changes the files makes a patch. `--major`, `--minor`
+and `--patch` choose for you. The same files make no new release, and pino never writes over a `fab/v<version>/`
+that is there. The same project gives the same bytes, zip included. `--dry-run` only says whether a release would
+go through; `--offline` looks nothing up.
+
+Positions in the CPL are millimetres from the centre of the board outline, y up, and the Gerbers use the same
+origin. The CPL's rotation is KiCad's angle plus a correction per footprint family (`data/jlc/rotations.csv`,
+worked out from EIA-481-D tape orientations; its docstring and `NOTICE` say how). None of the corrections has been
+checked in JLC's placement preview yet, so release lists every part whose rotation could matter. Look at each one in
+the preview before you pay.
+
 ## Libraries and kicad-cli
 
 The engine reads KiCad's symbol, footprint and 3D model libraries itself. For each kind it takes
@@ -126,7 +205,7 @@ Everything goes under `<project>/.pino/`. The engine never edits `board.py`, `ou
 project.
 
 ```
-.pino/builds.json             build history: number, hash, verdict, time (newest 100)
+.pino/builds.json             build history: number, hash, verdict, time, digest of the sources (newest 100)
 .pino/build/<hash>/
   circuit.json                the circuit board.py declared
   placement.json              poses and ratsnest edges
@@ -167,10 +246,12 @@ uv run --directory kernel pytest
 Tests that need kicad-cli or KiCad's own libraries carry the `kicad_cli` and `kicad_libs` markers and skip with a
 message when those are missing. Tests marked `krt` run the installed router and skip when there is none (they never
 install it). Tests marked `network` fetch from GitHub and run only with `PINO_TEST_NETWORK=1`. Every test gets its
-own `PINO_CACHE_DIR`. The fake router in `tests/fake_krt/` stands in for KiCadRoutingTools everywhere else. The unit tests use hand-written libraries in `tests/fixtures/libs/`.
+own `PINO_CACHE_DIR` and runs with parts offline; a test that tries to open an internet socket fails. Parts tests
+answer from `tests/fixtures/parts/jlcsearch/` (recorded by hand, with a few made-up parts marked `synthetic`). The fake router in `tests/fake_krt/` stands in for KiCadRoutingTools everywhere else. The unit tests use hand-written libraries in `tests/fixtures/libs/`.
 `tests/fixtures/reference/` holds the reference board, built end to end.
 
 ## Licences
 
 Apache-2.0, like the rest of pino. Some modules are ported from pcb-kit (MIT); `NOTICE` lists them with pcb-kit's
-licence. KiCadRoutingTools (MIT) is fetched on first use, not shipped; `NOTICE` carries its licence too.
+licence. KiCadRoutingTools (MIT) is fetched on first use, not shipped; `NOTICE` carries its licence too. The CPL
+rotation table is pino's own.

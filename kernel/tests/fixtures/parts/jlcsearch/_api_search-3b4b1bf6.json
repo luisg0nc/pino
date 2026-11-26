@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C11702&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 11702,
+    "mfr": "0402WGF1001TCE",
+    "package": "0402",
+    "description": "-55℃~+155℃ 1kΩ 50V 62.5mW Thick Film Resistor ±1% ±100ppm/℃ 0402 Chip Resistor - Surface Mount ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.0013,
+    "stock_checked_at": "2026-11-10T05:34:39.000Z"
+   }
+  ]
+ }
+}
