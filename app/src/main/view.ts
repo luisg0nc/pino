@@ -1,6 +1,7 @@
 // What the person has on screen, as the window says it: the tab, how the board is looked at and what is selected.
 // What comes from the window is not taken at its word.
 
+import type { BrowserWindow } from 'electron'
 import type { Target } from '../shared/board/refs'
 import { isRecord } from '../shared/build'
 import type { BoardLook, Selection, ViewTab } from '../shared/view'
@@ -59,4 +60,47 @@ export class ViewHolder {
   forget(projectId: string): void {
     if (this.held?.projectId === projectId) this.held = null
   }
+}
+
+/** The window gave no answer: it took too long, or was closed. */
+export class NoAnswer extends Error {}
+
+const waiting = new Map<number, (answer: unknown) => void>()
+let nextId = 1
+
+/**
+ * Asks the window to do something it alone can, and waits for what it answers (torno's request pattern). Rejects with
+ * the window's own words, when it does not answer in time, and when it is closed meanwhile.
+ */
+export function askWindow<T>(win: BrowserWindow, kind: 'look', request: unknown, timeoutMs = 10_000): Promise<T> {
+  if (win.isDestroyed()) return Promise.reject(new NoAnswer('the window is closed'))
+  return new Promise<T>((resolve, reject) => {
+    const id = nextId++
+    const end = () => {
+      waiting.delete(id)
+      clearTimeout(timer)
+      win.removeListener('closed', closed)
+    }
+    const closed = () => {
+      end()
+      reject(new NoAnswer('the window was closed'))
+    }
+    const timer = setTimeout(() => {
+      end()
+      reject(new NoAnswer(`the window did not answer within ${Math.round(timeoutMs / 1000)} s`))
+    }, timeoutMs)
+    waiting.set(id, (answer) => {
+      end()
+      const error = isRecord(answer) && typeof answer.error === 'string' ? answer.error : null
+      if (error !== null) reject(new Error(error))
+      else resolve(answer as T)
+    })
+    win.once('closed', closed)
+    win.webContents.send('view:ask', { id, kind, req: request })
+  })
+}
+
+/** The window's answer to question `id`. One that is late, repeated or of no question is dropped. */
+export function takeAnswer(id: unknown, answer: unknown): void {
+  if (typeof id === 'number') waiting.get(id)?.(answer)
 }

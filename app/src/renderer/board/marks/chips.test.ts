@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { toKicad } from '../../../shared/board/coords'
 import { arrow, point, region, stroke, tiny } from '../../../test/marks'
-import { chipAnchor, stackChips } from './chips'
+import { chipAnchor, chipBoxes, stackChips } from './chips'
 
 it("puts a mark's chip on its point", () => {
   const near = (p: { x: number; y: number } | null, x: number, y: number) => expect([+p!.x.toFixed(3), +p!.y.toFixed(3)]).toEqual([toKicad({ x, y }).x, toKicad({ x, y }).y])
@@ -21,4 +21,13 @@ it('moves a chip up while it would cover another, three steps at most', () => {
   expect(stackChips([box(0, 100), box(4, 102), box(8, 98)]).map((b) => b.y)).toEqual([100, 82, 64])
   const heap = stackChips(Array.from({ length: 6 }, () => box(0, 100)))
   expect(Math.min(...heap.map((b) => b.y))).toBe(100 - 3 * 18)
+})
+
+it('boxes each mark just right of and above its point, leaving out what has none, and stacks them', () => {
+  const marks = [point({ id: 'M1', label: 'M1' }), point({ id: 'M2', label: 'gap 0.83 mm' }), point({ id: 'M3', label: 'M3' })]
+  const boxes = chipBoxes(marks, (m) => (m.id === 'M3' ? null : { x: 100, y: 100 }))
+  expect(boxes.map((b) => [b.mark.id, b.x, b.y, b.w, b.h])).toEqual([
+    ['M1', 104, 83, 24, 17],
+    ['M2', 104, 65, 87, 17]
+  ])
 })

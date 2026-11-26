@@ -3,9 +3,11 @@
 import { readBoard, type Board } from '../shared/board/board'
 import { toKicad } from '../shared/board/coords'
 import type { BuildResult } from '../shared/build'
+import { circuitOf, placementOf } from '../shared/circuit'
 import type { ArrowMark, MarkBase, PointMark, RegionMark, StrokeMark } from '../shared/marks'
+import { sheetOf } from '../shared/sheet'
 import type { BuildModel } from '../main/model'
-import { fx, readJson, tinyBoard } from './fixtures'
+import { fx, read, readJson, tinyBoard } from './fixtures'
 
 export const tiny = readBoard(tinyBoard())
 
@@ -19,7 +21,7 @@ export function tinyWith(from: string | RegExp, to: string): Board {
 
 export function modelOf(board: Board = tiny, over: Partial<BuildResult> = {}): BuildModel {
   const result = { ...readJson<BuildResult>(fx('result.json')), number: 2, hash: 'aaaaaaaa0002', ...over }
-  return { result, board, routeBoard: null, circuit: null, placement: null, sheet: null }
+  return { result, board, routeBoard: null, routeFindings: null, circuit: null, placement: null, sheet: null }
 }
 
 const base = (id: string): MarkBase => ({ id, author: 'user', status: 'sent', anchor: 'ok', build: 1, note: '', payload: '', label: id, createdAt: '2026-11-26T08:00:00Z' })
@@ -33,3 +35,17 @@ export const region = (over: Partial<RegionMark> = {}): RegionMark => ({
 })
 
 export { toKicad }
+
+/** The reference build as main reads it, from the fixture's files. */
+export function referenceModel(over: Partial<BuildResult> = {}): BuildModel {
+  const result = { ...readJson<BuildResult>(fx('result.json')), ...over }
+  return {
+    result,
+    board: readBoard(read(fx('filled/board.kicad_pcb'))),
+    routeBoard: null,
+    routeFindings: null,
+    circuit: circuitOf(readJson(fx('circuit.json'))),
+    placement: placementOf(readJson(fx('placement.json'))),
+    sheet: sheetOf(readJson(fx('sheet.json')))
+  }
+}

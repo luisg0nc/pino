@@ -10,7 +10,7 @@ import type { Sessions } from './sessions/manager'
 import type { KnownModels } from './sessions/models'
 import { storedConversation } from './sessions/resume'
 import type { Trust } from './trust'
-import type { ViewHolder } from './view'
+import { takeAnswer, type ViewHolder } from './view'
 
 // The channels the window may ask on (src/preload/index.ts, `shared/bridge.ts`):
 //   invoked: project:pick, project:open, project:current, project:recent, project:close,
@@ -19,9 +19,9 @@ import type { ViewHolder } from './view'
 //            chat:setEffort, chat:models,
 //            build:state, build:rebuild, build:result, build:file, build:routeFile, view:tell,
 //            marks:list, marks:add, marks:update, marks:remove, marks:resolve
-//   sent:    chat:answer, window:minimize, window:toggleMaximize, window:close
+//   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
-//            window:maximized (index.ts)
+//            view:ask (view.ts), window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
 
 /** What main holds of the open project, as the window may ask for it. */
@@ -142,6 +142,9 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
   handle('view:tell', (id: unknown, view: unknown) => {
     const project = projectOf(id)
     if (project) views.tell(project.id, view)
+  })
+  ipcMain.on('view:answer', (event, id: unknown, answer: unknown) => {
+    if (ours(event)) takeAnswer(id, answer)
   })
 
   sessions.on('status', (m) => broadcast('session:status', { sessionId: m.sessionId, status: m.status }))

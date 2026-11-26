@@ -4,7 +4,7 @@ import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
-import type { BoardLook, Selection, ViewTab } from './view'
+import type { BoardLook, LookRequest, LookResult, Selection, ViewTab } from './view'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
 export type AgentView = 'chat' | 'terminal'
@@ -82,6 +82,9 @@ export interface PinoBridge {
   view: {
     /** What the window shows, so that Claude can be told what the person sees. */
     tell(projectId: string, view: { tab: ViewTab; look: BoardLook; selection: Selection | null }): Promise<void>
+    /** Main asks for something only the window can make: a picture for Claude's `look`. Answered once, by id. */
+    onAsk(cb: (m: { id: number; kind: 'look'; req: LookRequest }) => void): () => void
+    answer(id: number, result: LookResult | { error: string }): void
   }
   marks: {
     list(projectId: string): Promise<Mark[]>

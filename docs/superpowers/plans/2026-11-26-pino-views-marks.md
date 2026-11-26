@@ -1001,6 +1001,8 @@ git commit -m "Marks as chips in the composer, beside the prompt they went with,
 
 ### Task 14: Claude sees what the person sees: look, check, measure, nets, trace, ratsnest, diff
 
+> As built: the pictures are drawn on detached canvases, not `OffscreenCanvas` (`toDataURL` answers at once). The picture rules are in `shared/look.ts`; the 3D setup moved to `three/stage.ts` and the sheet's reader to `sheet/drawing.ts`, so that view and picture share them. A picture's lines and chips are never thinner than on screen. The 3D picture has no window and no marks, and takes the person's angle. `check` adds the current route's findings. `e2e/look.spec.ts` asks the real app for every tab through MCP.
+
 **Files:**
 - Create: `app/src/main/view.ts`, `app/src/main/mcp/readTools.ts`, `app/src/renderer/board/look.ts`, `app/src/renderer/sheet/look.ts`, `app/src/renderer/three/look.ts`
 - Modify: `app/src/main/mcp/tools.ts`, `app/src/main/mcp/schemas.ts`, `app/src/main/turncost.test.ts`, `app/src/main/index.ts`, `app/src/shared/bridge.ts`, `app/src/preload/index.ts`, `app/src/renderer/App.tsx`
@@ -1024,7 +1026,7 @@ git commit -m "Marks as chips in the composer, beside the prompt they went with,
     - Up front (`'anthropic/alwaysLoad': true`): `project`, `look`, `check`, `measure`, `nets`, `point`, `marks`, `resolve_mark`, `route`. Deferred: `trace`, `ratsnest`, `diff`, `route_net`, `nudge`, `keep`.
   - Every text result goes through `capText(text: string, limit = TOOL_TEXT_LIMIT): string` (cut at a line, `(cut: N more characters)`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // readTools.test.ts: in-memory MCP client over registerTools with deps from the fixture model
@@ -1066,19 +1068,19 @@ it('a prompt's context and a Stop reason stay under their caps', () => { expect(
 
 `point`, `marks`, `resolve_mark`, `route`, `route_net`, `nudge` and `keep` are registered in this task with their final names, descriptions and schemas, as stubs that answer "not yet", so the counts hold; Tasks 15 and 16 fill them.
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/mcp src/main/view.test.ts src/main/turncost.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the ask channel, the renderer's pictures and the tools**
+- [x] **Step 3: Write the ask channel, the renderer's pictures and the tools**
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src

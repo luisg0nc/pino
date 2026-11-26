@@ -14,8 +14,10 @@ import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
 import { applyLoginPath } from './loginPath'
 import { MarkStore } from './marks/store'
 import { mountMcp } from './mcp/server'
-import { Models } from './model'
+import { type BuildModel, Models } from './model'
 import { onNotOwn } from './own'
+import { resultOfBuild } from './artifacts'
+import type { LookResult } from '../shared/view'
 import { openProject } from './project'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
@@ -25,7 +27,7 @@ import { Sessions } from './sessions/manager'
 import { KnownModels } from './sessions/models'
 import { makeTestProfile, removeTestProfileAfterExit } from './testProfile'
 import { Trust } from './trust'
-import { ViewHolder } from './view'
+import { askWindow, NoAnswer, ViewHolder } from './view'
 
 // Environment switches:
 //   PINO_TEST=1            the window is created hidden and never shown, the profile is a temporary folder, any number
@@ -118,12 +120,12 @@ const builds = new Builds({ kernel: () => kernel.get() })
 const views = new ViewHolder()
 /** Each build as main reads it, and the marks, made on the newest board that was drawn. */
 const buildModels = new Models()
-const marks = new MarkStore({
-  model: async (project) => {
-    const drawn = builds.lastGood(project.id)
-    return drawn ? buildModels.get(project, drawn) : null
-  }
-})
+/** The newest build that drew something, read. */
+async function drawnModel(project: ProjectInfo): Promise<BuildModel | null> {
+  const drawn = builds.lastGood(project.id)
+  return drawn ? buildModels.get(project, drawn) : null
+}
+const marks = new MarkStore({ model: drawnModel })
 
 /** The one project open, and the rules of opening and closing it. */
 function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: string, said: boolean): Promise<void> } {
@@ -307,7 +309,6 @@ void app.whenReady().then(async () => {
   // What the agent's CLI talks to: its hooks, and the MCP server through which it asks pino.
   const http = await startHttp()
   const holder = (projects = projectHolder(() => sessions!))
-  mountMcp(http, { project: (id) => (holder.open()?.id === id ? holder.open() : undefined) })
   // The files an agent is given by path (its MCP server's, which holds no secret): what a pino that crashed left is of no use.
   const configDir = join(app.getPath('userData'), 'agent')
   rmSync(configDir, { recursive: true, force: true })
@@ -323,6 +324,18 @@ void app.whenReady().then(async () => {
       return open ? views.of(open.id) : null
     },
     toolName
+  })
+  mountMcp(http, {
+    project: (id) => (holder.open()?.id === id ? holder.open() : undefined),
+    state: (id) => builds.state(id),
+    model: drawnModel,
+    buildResult: (project, hash) => resultOfBuild(project, hash, [builds.latest(project.id), builds.lastGood(project.id)]),
+    diff: async (project, from, to) => (await kernel.get().request<{ changes: { circuit: string[]; layout: string[] } }>('diff', { project: project.dir, from, to })).changes,
+    look: (_project, request) => {
+      const win = BrowserWindow.getAllWindows()[0]
+      return win ? askWindow<LookResult>(win, 'look', request) : Promise.reject(new NoAnswer('there is no window'))
+    },
+    looked: (id) => domain.looked(id)
   })
   sessions = new Sessions({
     http,

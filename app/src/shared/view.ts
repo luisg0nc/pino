@@ -42,6 +42,28 @@ export interface BoardLook {
 
 export const DEFAULT_LOOK: BoardLook = { active: 'F.Cu', pours: true, ratsnest: true, silk: true, netColours: false }
 
+/** A picture Claude asks for. */
+export interface LookRequest {
+  /** Without one, the tab the person is on. */
+  tab?: ViewTab
+  /** The copper layers drawn, the first on top. */
+  layers?: string[]
+  /** A box of the board (board mm, y up) or of the sheet (sheet mm, y down) to crop to. */
+  window?: { x0: number; y0: number; x1: number; y1: number }
+  marks?: boolean
+  /** The long edge, px. */
+  size?: number
+}
+
+export interface LookResult {
+  /** Base64. */
+  png: string
+  width: number
+  height: number
+  /** What is in the picture, in words. */
+  said: string
+}
+
 export type BandKind = 'failed' | 'older'
 
 /** The sentence at the foot of a view when what it draws is not the latest build. `shown`: an older build chosen in the strip. */

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ProjectInfo } from '../shared/project'
+import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
 import { actions, store, useStore } from './state/store'
 import type { FolderChoice } from './ui/FolderMenu'
@@ -38,6 +39,9 @@ export function App() {
       offNotices()
     }
   }, [])
+
+  // Claude's pictures are drawn here, when main asks.
+  useEffect(() => answerLooks(), [])
 
   // The marks of the project on show: as they stand, and every change main says.
   useEffect(() => window.pino.marks.onChange((m) => actions.setMarks(m.projectId, m.marks)), [])

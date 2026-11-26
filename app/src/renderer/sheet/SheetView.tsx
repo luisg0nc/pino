@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { Pt } from '../../shared/board/geom'
 import { describeTarget, shortLabel, type Target } from '../../shared/board/refs'
 import { pressed } from '../../shared/keys'
-import { sheetOf, type Sheet } from '../../shared/sheet'
+import type { Sheet } from '../../shared/sheet'
 import type { View } from '../board/draw'
 import { FindingPins } from '../board/FindingPins'
 import { ChipLayer } from '../board/marks/ChipLayer'
@@ -16,37 +16,13 @@ import { registerView } from '../state/testHooks'
 import type { ViewModel } from '../state/viewModel'
 import { numbered } from '../ui/numbered'
 import { Tag } from '../ui/view/Tag'
-import { contentBox, inkSvg, netShapes, sheetChipAt, sheetMarks, sheetPlace, sheetTargetAt, sheetWords } from './ink'
+import { type Drawing, readDrawing } from './drawing'
+import { contentBox, netShapes, sheetChipAt, sheetMarks, sheetPlace, sheetTargetAt, sheetWords } from './ink'
 
 const WHEEL = 1.0015
 /** On the sheet one can point: arrows, strokes and regions are the board's. */
 const SHEET_TOOLS: readonly MarkTool[] = ['select', 'point']
 const INSET = { l: 8, r: 8, t: 8, b: 8 }
-
-interface Drawing {
-  hash: string
-  svg: string
-  sheet: Sheet | null
-}
-
-const drawings = new Map<string, Promise<Drawing>>()
-
-function readDrawing(model: ViewModel): Promise<Drawing> {
-  const key = `${model.projectId}|${model.hash}`
-  let held = drawings.get(key)
-  if (!held) {
-    const file = (name: 'schematic_svg' | 'sheet') => window.pino.build.file(model.projectId, model.hash, name).then(String)
-    held = Promise.all([file('schematic_svg'), model.result.artifacts.sheet ? file('sheet').then((t) => sheetOf(JSON.parse(t))) : null]).then(([svg, sheet]) => ({
-      hash: model.hash,
-      svg: inkSvg(svg),
-      sheet
-    }))
-    drawings.set(key, held)
-    held.catch(() => drawings.delete(key))
-    while (drawings.size > 4) drawings.delete(drawings.keys().next().value!)
-  }
-  return held
-}
 
 /** Where the person left each project's sheet, and the sheet each project's view drew last. */
 const kept = new Map<string, View>()

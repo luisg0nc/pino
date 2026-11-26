@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { ProjectInfo } from '../../shared/project'
 import { type HttpRouter, SESSION_HEADER, startHttp } from '../http'
 import { mountMcp } from './server'
+import type { ToolDeps } from './tools'
 
 let http: HttpRouter
 let root: string
@@ -21,7 +22,7 @@ beforeAll(async () => {
   mkdirSync(dir)
   project = { id: 'p0123456789ab', dir, name: 'blinky board' }
   http = await startHttp()
-  mountMcp(http, { project: (id) => (id === project.id ? project : undefined) })
+  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined } as unknown as ToolDeps)
   token = http.grant([`/mcp/${project.id}`, '/mcp/pffffffffffff'])
 })
 
@@ -72,10 +73,11 @@ describe("pino's MCP server", () => {
     expect(reply.status).toBe(413)
   })
 
-  it('lists one tool, project, loaded up front', async () => {
+  it('lists its fifteen tools, project first, loaded up front', async () => {
     const client = await connect()
     const { tools } = await client.listTools()
-    expect(tools.map((t) => t.name)).toEqual(['project'])
+    expect(tools).toHaveLength(15)
+    expect(tools[0].name).toBe('project')
     expect(tools[0]._meta?.['anthropic/alwaysLoad']).toBe(true)
     expect(client.getServerVersion()?.name).toBe('pino')
     await client.close()
@@ -84,7 +86,7 @@ describe("pino's MCP server", () => {
   it("calls project and gets the project's name and folder", async () => {
     const client = await connect()
     const bare = textOf(await client.callTool({ name: 'project', arguments: {} }))
-    expect(bare).toBe(`Project blinky board in ${project.dir}. board.py: absent. brief.md: absent. pino has no engine yet: nothing is built or drawn.`)
+    expect(bare).toBe(`Project blinky board in ${project.dir}. board.py: absent. brief.md: absent. Nothing has been built yet.`)
     writeFileSync(join(project.dir, 'board.py'), '')
     writeFileSync(join(project.dir, 'brief.md'), '')
     expect(textOf(await client.callTool({ name: 'project', arguments: {} }))).toContain('board.py: present. brief.md: present.')

@@ -2,7 +2,7 @@
 // and a route, and kept for the last few, for the marks and for Claude's tools.
 
 import { readBoard, type Board } from '../shared/board/board'
-import type { ArtifactName, BuildResult } from '../shared/build'
+import type { ArtifactName, BuildResult, Finding } from '../shared/build'
 import { circuitOf, placementOf, type Circuit, type Placement } from '../shared/circuit'
 import type { ProjectInfo } from '../shared/project'
 import { sheetOf, type Sheet } from '../shared/sheet'
@@ -14,6 +14,8 @@ export interface BuildModel {
   board: Board
   /** The board of the route that is current or stale for this build, when there is one. */
   routeBoard: Board | null
+  /** What the router and its checks said of that route. */
+  routeFindings: Finding[] | null
   circuit: Circuit | null
   placement: Placement | null
   sheet: Sheet | null
@@ -35,7 +37,13 @@ async function read(p: ProjectInfo, r: BuildResult): Promise<Read> {
   ])
   const key = r.routing?.route_key
   const routeBoard = key ? await readRouteFile(p, key, 'filled').then(readBoard, () => null) : null
-  return { board, routeBoard, circuit, placement, sheet }
+  const routeFindings = key
+    ? await readRouteFile(p, key, 'route').then(
+        (t) => (JSON.parse(t) as { findings?: Finding[] }).findings ?? [],
+        () => null
+      )
+    : null
+  return { board, routeBoard, routeFindings, circuit, placement, sheet }
 }
 
 export class Models {

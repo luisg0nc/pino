@@ -32,6 +32,20 @@ export interface ChipBox {
 const MOST_STEPS = 3
 const covers = (a: ChipBox, b: ChipBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
 
+export const CHIP_HEIGHT = 17
+/** A chip is as wide as its label in the number face, near enough to keep chips off one another. */
+const widthOf = (label: string) => 10 + label.length * 7
+
+/** Each mark's chip just right of and above its point. `place` puts a mark's point in pixels, or says it has none. */
+export function chipBoxes<M extends Mark>(marks: readonly M[], place: (mark: M) => Pt | null): Array<ChipBox & { mark: M }> {
+  return stackChips(
+    marks.flatMap((mark) => {
+      const at = place(mark)
+      return at ? [{ mark, x: at.x + 4, y: at.y - CHIP_HEIGHT, w: widthOf(mark.label), h: CHIP_HEIGHT }] : []
+    })
+  )
+}
+
 /** The boxes, each moved up just clear of one placed before it that it would cover, three times at most. */
 export function stackChips<T extends ChipBox>(boxes: readonly T[]): T[] {
   const placed: T[] = []

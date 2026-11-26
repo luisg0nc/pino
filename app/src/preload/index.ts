@@ -66,7 +66,9 @@ const bridge: PinoBridge = {
     onState: (cb) => subscribe('build:state', cb)
   },
   view: {
-    tell: (projectId, view) => invoke('view:tell', projectId, view)
+    tell: (projectId, view) => invoke('view:tell', projectId, view),
+    onAsk: (cb) => subscribe('view:ask', cb),
+    answer: (id, result) => ipcRenderer.send('view:answer', id, result)
   },
   marks: {
     list: (projectId) => invoke('marks:list', projectId),

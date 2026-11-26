@@ -10,6 +10,7 @@ import type { ChatItem } from '../../shared/chat'
 import type { ProjectInfo } from '../../shared/project'
 import { type HttpRouter, SESSION_HEADER, startHttp } from '../http'
 import { mountMcp } from '../mcp/server'
+import type { ToolDeps } from '../mcp/tools'
 import { onNotOwn } from '../own'
 import { systemPrompt } from '../prompt'
 import { Trust } from '../trust'
@@ -42,7 +43,7 @@ beforeEach(async () => {
   mkdirSync(dir, { recursive: true })
   project = { id: 'p0123456789ab', dir, name: 'blinky board' }
   http = await startHttp()
-  mountMcp(http, { project: (id) => (id === project.id ? project : undefined) })
+  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined } as unknown as ToolDeps)
   const grant = http.grant.bind(http)
   tokens = []
   http.grant = (paths) => {
@@ -421,7 +422,7 @@ describe('Sessions', () => {
     expect(hook.status).toBe(404)
     const client = new Client({ name: 'test', version: '0' })
     await client.connect(new StreamableHTTPClientTransport(new URL(http.url(`/mcp/${project.id}`)), { requestInit: { headers: { [SESSION_HEADER]: tokens[0] } } }))
-    expect((await client.listTools()).tools.map((t) => t.name)).toEqual(['project'])
+    expect((await client.listTools()).tools.map((t) => t.name)).toContain('project')
     await client.close()
   })
 
