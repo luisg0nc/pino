@@ -69,7 +69,8 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
   }
 }
 
-const changed = (number: number): BuildResult => ({ ...ref, number, changes: { circuit: [], layout: ['moves 1 part: R4'] } })
+// A build that changed the board has a folder of its own, by another hash.
+const changed = (number: number, hash = `bbbbbbbb${String(number).padStart(4, '0')}`): BuildResult => ({ ...ref, number, hash, changes: { circuit: [], layout: ['moves 1 part: R4'] } })
 const failed: BuildResult = { ...ref, number: 2, verdict: 'failed', hash: null, headline: 'On h2: board.py failed at line 12: invalid syntax', findings: [{ source: 'board.py', code: 'syntax_error', severity: 'error', message: 'invalid syntax', at: { space: 'source', file: 'board.py', line: 12 } }] }
 
 describe("the build in Claude's prompt", () => {
@@ -226,6 +227,41 @@ describe('holding a Stop', () => {
     same.begins()
     same.lands({ ...ref, number: 2, changes: { circuit: [], layout: [] } })
     expect(await same.d.stopAnswer(project)).toBeNull()
+  })
+
+  // The engine numbers a build it has cached anew, and says what changed since the last one with another hash.
+  it('holds nothing for a save that built the board the turn began with again', async () => {
+    const t = domain()
+    await turn(t)
+    t.begins()
+    t.later(5)
+    t.lands(changed(2, ref.hash!))
+    expect(await t.d.stopAnswer(project)).toBeNull()
+  })
+
+  it('holds nothing for a board Claude has looked at, built again', async () => {
+    const t = domain()
+    await turn(t)
+    t.begins()
+    t.lands(changed(2, 'cccccccc0002'))
+    t.later(5)
+    t.d.looked(project.id)
+    t.later(5)
+    t.begins()
+    t.later(5)
+    t.lands(changed(3, 'cccccccc0002'))
+    expect(await t.d.stopAnswer(project)).toBeNull()
+  })
+
+  it('still holds for a new board built twice in a turn and never looked at', async () => {
+    const t = domain()
+    await turn(t)
+    for (const number of [2, 3]) {
+      t.begins()
+      t.later(5)
+      t.lands(changed(number, 'cccccccc0002'))
+    }
+    expect((await t.d.stopAnswer(project))!.reason).toContain('h3 was built in this turn')
   })
 
   it('holds nothing for a build begun before the turn', async () => {

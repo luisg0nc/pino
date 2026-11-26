@@ -30,6 +30,16 @@ describe('the sheet in pino ink', () => {
     expect([...used].filter((c) => !(c in KICAD_COLOURS))).toEqual([])
   })
 
+  // The picture stands in the window's own page: a style in it would restyle the window, a permission card included.
+  it('keeps nothing that could restyle the window or reach out of the picture', () => {
+    const inked = inkSvg(
+      '<svg><style>.ask{display:none}</style><style/><g onclick=y() onfocus = "z()"/><image/onerror=alert(1) href="https://example.org/x.png"/>' +
+        '<a xlink:href="&#106;avascript:z()"><use href="#symbol"/></a><iframe src=x></iframe><img src="x"></svg>'
+    )
+    expect(inked).not.toMatch(/<(style|iframe|img|image)|onclick|onfocus|onerror|example\.org|avascript/i)
+    expect(inked).toContain('<use href="#symbol"/>')
+  })
+
   it('strips scripts and event attributes', () => {
     expect(inkSvg('<svg><script>x()</script><g onclick="y()"/></svg>')).toBe('<svg width="100%" height="100%"><g/></svg>')
     expect(inkSvg('<?xml version="1.0"?>\n<svg width="10mm" height="5mm"><script/><a href="javascript:z()"><g onLoad=\'a()\'></g></a><foreignObject><div/></foreignObject></svg>')).toBe(

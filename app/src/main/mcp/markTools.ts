@@ -4,7 +4,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { toBoard } from '../../shared/board/coords'
 import { gapSpan } from '../../shared/board/measure'
 import { centreOf, shortLabel, type Target } from '../../shared/board/refs'
-import { MOST_AGENT_TARGETS, MOST_MARKS, type Mark, type NewMark } from '../../shared/marks'
+import { MAX_NOTE, MOST_AGENT_TARGETS, MOST_MARKS, type Mark, type NewMark } from '../../shared/marks'
 import { sheetPlace } from '../../shared/sheet'
 import type { BuildModel } from '../model'
 import { boardOf, targetOfName } from './readTools'
@@ -26,7 +26,7 @@ function markFor(model: BuildModel, asked: Asked, space: 'board' | 'sheet', note
     if ('error' in a) return a
     if ('error' in b) return b
     const span = gapSpan(board, a, b)
-    return { kind: 'arrow', from: a, fromAt: toBoard(span.from), to: toBoard(span.to), note }
+    return { kind: 'arrow', from: a, toward: b, fromAt: toBoard(span.from), to: toBoard(span.to), note }
   }
   const target: Target | { error: string } = named(asked)
   if ('error' in target) return target
@@ -46,6 +46,8 @@ export function registerMarkTools(server: McpServer, deps: ToolDeps, onProject: 
   server.registerTool('point', { description: DESCRIPTIONS.point, inputSchema: pointInput, _meta: ALWAYS }, (input) =>
     onProject(async (project) => {
       if (!input.targets.length || input.targets.length > MOST_AGENT_TARGETS) return refused(`point takes 1 to ${MOST_AGENT_TARGETS} targets.`)
+      const long = (input.note ?? '').trim().length
+      if (long > MAX_NOTE) return refused(`A note is ${MAX_NOTE} characters at most: this one is ${long}.`)
       const model = await deps.model(project)
       if (!model) return refused(NOTHING_BUILT)
       // Every target is looked up before any mark is made: all of them, or none.

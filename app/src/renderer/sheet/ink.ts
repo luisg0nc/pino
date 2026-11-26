@@ -28,19 +28,39 @@ export const KICAD_COLOURS: Record<string, string> = {
 
 const COLOUR = new RegExp(Object.keys(KICAD_COLOURS).join('|'), 'gi')
 
+/** What may not stand in the page: what runs, what restyles it, and what brings something in from outside. */
+const BARRED = 'script|style|foreignObject|iframe|object|embed|img|image'
+const BARRED_ELEMENTS = [
+  new RegExp(`<(?:${BARRED})\\b[^>]*/>`, 'gi'),
+  new RegExp(`<(${BARRED})\\b[\\s\\S]*?</\\1\\s*>`, 'gi'),
+  // One left open, or that closes itself the way a page's parser lets it.
+  new RegExp(`</?(?:${BARRED})\\b[^>]*>`, 'gi')
+]
+
+/** `text` with the patterns taken out until none is left: what one removal puts together is removed too. */
+function without(text: string, patterns: readonly RegExp[]): string {
+  let out = text
+  for (;;) {
+    const next = patterns.reduce((s, pattern) => s.replace(pattern, ''), out)
+    if (next === out) return out
+    out = next
+  }
+}
+
 /**
  * The export ready to stand in the page: recoloured, as large as its box, without its title, and with nothing in it
- * that runs or reaches out (scripts, event attributes, script links, embedded pages).
+ * that runs, restyles the window or reaches out: no scripts, styles, embedded pages or pictures, no event attributes,
+ * and no link but one within the drawing. The file is the engine's, but a project can bring a `.pino` of its own.
  */
 export function inkSvg(svg: string): string {
   const from = svg.indexOf('<svg')
-  const body = (from < 0 ? svg : svg.slice(from))
-    .replace(/<title\b[\s\S]*?<\/title>/gi, '')
-    .replace(/<(script|foreignObject)\b[^>]*\/>/gi, '')
-    .replace(/<(script|foreignObject)\b[\s\S]*?<\/\1\s*>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*')/gi, '')
-    .replace(/\s(?:xlink:)?href\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi, '')
-    .replace(COLOUR, (c) => KICAD_COLOURS[c.toUpperCase()])
+  const body = without(from < 0 ? svg : svg.slice(from), [
+    /<title\b[\s\S]*?<\/title>/gi,
+    ...BARRED_ELEMENTS,
+    // An attribute may follow a space or the slash after a tag's name, and needs no quotes.
+    /[\s/]on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
+    /[\s/](?:xlink:)?href\s*=\s*(?!["']?#)(?:"[^"]*"|'[^']*'|[^\s>]+)/gi
+  ]).replace(COLOUR, (c) => KICAD_COLOURS[c.toUpperCase()])
   return body.replace(/^<svg\b([^>]*)>/, (_, attributes: string) => `<svg${attributes.replace(/\s(width|height)\s*=\s*"[^"]*"/g, '')} width="100%" height="100%">`)
 }
 

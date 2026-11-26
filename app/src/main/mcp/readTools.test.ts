@@ -163,6 +163,14 @@ describe('ratsnest and diff', () => {
     expect(await pruned.call('diff', { from: 7 })).toBe('There is no build h7.')
   })
 
+  it('says nothing changed between two builds of one board, whatever the later one says changed since another', async () => {
+    const again = history.map((e) => (e.number === 2 ? { ...e, hash: third.result.hash! } : e))
+    const diff = vi.fn()
+    const t = await tools(third, { state: () => stateOf(third, { history: again }), diff })
+    expect(await t.call('diff')).toBe('From h2 to h3:\nnothing changed')
+    expect(diff).not.toHaveBeenCalled()
+  })
+
   it('says so when nothing changed', async () => {
     const same = referenceModel({ number: 3, hash: 'aaaaaaaa0003', changes: { circuit: [], layout: [] } })
     expect(await (await tools(same, { state: () => stateOf(same, { history }) })).call('diff')).toBe('From h2 to h3:\nnothing changed')

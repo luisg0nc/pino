@@ -132,6 +132,19 @@ describe('the build loop', () => {
     expect(results).toEqual([3])
   })
 
+  // `uv` waiting on a lock, or a sync that hangs: the engine is there and says nothing.
+  it('gives up on an engine that starts and never answers, ends it, and says why', async () => {
+    let killed = 0
+    const mute = { alive: true, onExit: () => () => {}, ping: () => new Promise(() => {}), kill: () => void killed++ } as unknown as KernelClient
+    const builds = new Builds({ kernel: () => mute, watch: () => () => {}, readHistory: async () => [], pingTimeoutMs: 50 })
+    writeFileSync(join(project.dir, 'board.py'), '')
+    builds.open(info())
+    const state = await builds.whenSettled(info().id, Date.now() + 5000)
+    expect(state).toMatchObject({ building: false, engine: { state: 'failed', reason: 'The engine did not start: it did not answer within 0 s' } })
+    expect(killed).toBe(1)
+    builds.close(info().id)
+  })
+
   it('a failed build keeps the last good one for the views', async () => {
     const l = loop(() => ({ FAKE_KERNEL_FAIL_ON: '2' }))
     l.builds.open(info())

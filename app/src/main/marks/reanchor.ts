@@ -1,9 +1,11 @@
 // A mark found again on a newer build, by the stable ids it is anchored to: refs, pins, nets and uuids. What moved is
 // marked moved and its line redone; what is gone stays where it was, marked stale. A resolved mark is history.
 
+import { toBoard } from '../../shared/board/coords'
+import { gapSpan } from '../../shared/board/measure'
 import { centreOf, hasTarget } from '../../shared/board/refs'
 import type { Pt } from '../../shared/board/geom'
-import { markPayload, withCrossings, type Mark } from '../../shared/marks'
+import { markLabel, markPayload, withCrossings, type Mark } from '../../shared/marks'
 import type { BuildModel } from '../model'
 
 const MOVED = 0.01 // mm
@@ -34,9 +36,18 @@ export function reanchor(mark: Mark, model: BuildModel): Mark {
     const moved = far(centre, mark.at)
     return found({ ...mark, anchor: moved ? 'moved' : 'ok', at: moved ? centre : mark.at })
   }
+  if (mark.kind === 'arrow' && mark.from && mark.toward) {
+    // A gap Claude pointed at: measured again, so that its ends and the number on its chip are the board's as it is now.
+    if (!hasTarget(board, mark.from) || !hasTarget(board, mark.toward)) return stale(mark.was?.at ?? mark.fromAt)
+    const span = gapSpan(board, mark.from, mark.toward)
+    const [fromAt, to] = [toBoard(span.from), toBoard(span.to)]
+    const moved = far(fromAt, mark.fromAt) || far(to, mark.to)
+    const next = moved ? { ...mark, anchor: 'moved' as const, fromAt, to } : { ...mark, anchor: 'ok' as const }
+    return found({ ...next, label: markLabel(next) })
+  }
   if (mark.kind === 'arrow') {
     if (mark.from && !hasTarget(board, mark.from)) return stale(mark.was?.at ?? mark.fromAt)
-    // The person's arrow starts at its item and follows it; where it points stays. Claude's spans a measured gap.
+    // An arrow starts at its item: the person's follows it, and where it points stays.
     const centre = mark.from && mark.author === 'user' ? centreOf(board, mark.from)! : mark.fromAt
     const moved = far(centre, mark.fromAt)
     return found({ ...mark, anchor: moved ? 'moved' : 'ok', fromAt: moved ? centre : mark.fromAt })

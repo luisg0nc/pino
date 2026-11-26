@@ -251,7 +251,10 @@ export function registerReadTools(server: McpServer, deps: ToolDeps, onProject: 
       const from = input.from === undefined ? before : drawn.find((e) => e.number === input.from)
       if (!from) return refused(input.from === undefined ? `There is only h${to.number}: nothing to compare it with.` : `There is no build h${input.from}.`)
       let changes: { circuit: string[]; layout: string[] }
-      if (from.number === before?.number) {
+      if (from.hash === to.hash) {
+        // One board built twice: what the later build says changed is since an older one (the engine's history).
+        changes = { circuit: [], layout: [] }
+      } else if (from.number === before?.number) {
         // A build keeps what changed since the one before it.
         const model = await deps.model(project)
         changes = model && model.result.hash === to.hash ? model.result.changes : (await deps.buildResult(project, to.hash!)).changes

@@ -84,6 +84,8 @@ const staleWords = (m: Mark): string => / · stale: (.+?), it was at \(/.exec(m.
 
 interface Turn {
   startedAt: number
+  /** The hash of the board there was when the turn began. */
+  board: string | null
   holds: number
   held: Set<string>
 }
@@ -91,6 +93,8 @@ interface Turn {
 export class PinoDomain implements SessionDomain {
   private readonly turns = new Map<string, Turn>()
   private readonly lookedAt = new Map<string, number>()
+  /** The hash of the newest build when Claude last looked, by project. */
+  private readonly lookedHash = new Map<string, string>()
   private readonly now: () => number
 
   constructor(private readonly deps: DomainDeps) {
@@ -100,11 +104,13 @@ export class PinoDomain implements SessionDomain {
   /** Claude saw the board (`look`) or its checks (`check`) just now. */
   looked(projectId: string): void {
     this.lookedAt.set(projectId, this.now())
+    const hash = this.deps.builds.state(projectId)?.latest?.hash
+    if (hash) this.lookedHash.set(projectId, hash)
   }
 
   async promptContext(project: ProjectInfo, _prompt: string): Promise<PromptContext> {
-    this.turns.set(project.id, { startedAt: this.now(), holds: 0, held: new Set() })
     const state = this.deps.builds.state(project.id)
+    this.turns.set(project.id, { startedAt: this.now(), board: state?.lastGood?.hash ?? null, holds: 0, held: new Set() })
     const lines: string[] = []
     if (state?.engine.state === 'failed') lines.push(`The engine is not running: ${state.engine.reason.slice(state.engine.reason.indexOf(': ') + 2)}.`)
     else if (state?.latest) lines.push(verdictText(state.latest, state, this.routedOn(project.id, state.latest)))
@@ -161,8 +167,10 @@ export class PinoDomain implements SessionDomain {
     const latest = state.latest
     if (!latest) return null
     if (latest.verdict === 'failed') return hold('failed', `${failedLine(latest, state)} Fix board.py, or say it is still broken.`)
-    const seen = (this.lookedAt.get(project.id) ?? -Infinity) >= (this.deps.builds.endedAt(project.id) ?? Infinity)
-    const changed = latest.changes.circuit.length + latest.changes.layout.length > 0
+    // The engine numbers a build it has cached anew, and its `changes` are since the last build of another hash: the
+    // hash says whether this is a board Claude has seen, or the one the turn began with.
+    const seen = (this.lookedAt.get(project.id) ?? -Infinity) >= (this.deps.builds.endedAt(project.id) ?? Infinity) || this.lookedHash.get(project.id) === latest.hash
+    const changed = latest.hash !== turn.board && latest.changes.circuit.length + latest.changes.layout.length > 0
     if (seen || !changed) return null
     return hold('unlooked', `h${latest.number} was built in this turn and you have not looked at it. Call ${this.deps.toolName('look')} or ${this.deps.toolName('check')} before finishing.`)
   }

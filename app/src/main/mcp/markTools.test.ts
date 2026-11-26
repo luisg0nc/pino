@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { MOST_MARKS } from '../../shared/marks'
+import { MAX_NOTE, MOST_MARKS } from '../../shared/marks'
 import type { ProjectInfo } from '../../shared/project'
 import { tempProject } from '../../test/fixtures'
 import { toolsOver } from '../../test/mcp'
@@ -42,7 +42,7 @@ describe('point', () => {
     const measured = /: (\d+\.\d\d) mm/.exec(await t.call('measure', { what: 'gap', a: 'C3', b: 'U2' }))![1]
     expect(await t.call('point', { targets: [{ gap: ['C3', 'U2'] }] })).toBe(`Pointed: M1 gap ${measured} mm. They are orange in the view.`)
     const [mark] = await t.store.list(t.project)
-    expect(mark).toMatchObject({ kind: 'arrow', author: 'agent', from: { kind: 'part', ref: 'C3' }, label: `gap ${measured} mm` })
+    expect(mark).toMatchObject({ kind: 'arrow', author: 'agent', from: { kind: 'part', ref: 'C3' }, toward: { kind: 'part', ref: 'U2' }, label: `gap ${measured} mm` })
   })
 
   it('on the sheet stands where the sheet draws the thing, and takes no gap', async () => {
@@ -51,6 +51,13 @@ describe('point', () => {
     const symbol = model.sheet!.symbols.find((s) => s.ref === 'U2')!
     expect((await t.store.list(t.project))[0]).toMatchObject({ kind: 'point', space: 'sheet', at: { x: (symbol.x0 + symbol.x1) / 2, y: (symbol.y0 + symbol.y1) / 2 } })
     expect(await t.call('point', { targets: [{ gap: ['C3', 'U2'] }], space: 'sheet' })).toBe('A gap is measured on the board: leave space out.')
+  })
+
+  it('says what is wrong with a note that is too long, and makes nothing', async () => {
+    const t = await tools()
+    const note = 'x'.repeat(MAX_NOTE + 1)
+    expect(await t.call('point', { targets: ['U2'], note })).toBe(`A note is ${MAX_NOTE} characters at most: this one is ${MAX_NOTE + 1}.`)
+    expect(await t.store.list(t.project)).toEqual([])
   })
 
   it('takes one to eight targets, and never more marks than pino keeps', async () => {

@@ -68,7 +68,10 @@ export function sanitiseMark(value: unknown): Mark | null {
     const from = v.from === null ? null : targetOfValue(v.from)
     const fromAt = pointOf(v.fromAt)
     const to = pointOf(v.to)
-    return fromAt && to && (v.from === null || from) ? { ...base, kind: 'arrow', from, fromAt, to } : null
+    // Only Claude's arrow spans a gap, and then between two things.
+    const toward = v.toward === undefined ? undefined : targetOfValue(v.toward)
+    if (toward === null || (toward && (!from || base.author !== 'agent'))) return null
+    return fromAt && to && (v.from === null || from) ? { ...base, kind: 'arrow', from, fromAt, to, ...(toward ? { toward } : {}) } : null
   }
   if (v.kind === 'stroke') {
     const points = pointsOf(v.points)

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { toBoard } from '../../shared/board/coords'
+import { gapSpan, measure } from '../../shared/board/measure'
 import { markPayload } from '../../shared/marks'
 import { arrow, modelOf, point, region, stroke, tiny, tinyWith } from '../../test/marks'
 import { reanchor } from './reanchor'
@@ -64,6 +66,39 @@ describe('finding marks again after a build', () => {
     const free = reanchor(arrow({ from: null }), modelOf(moved))
     expect(free.anchor).toBe('ok')
     expect(reanchor(arrow({ from: { kind: 'part', ref: 'R9' } }), modelOf(tiny)).anchor).toBe('stale')
+  })
+
+  describe("Claude's arrow across a gap", () => {
+    const [r1, u1] = [{ kind: 'part', ref: 'R1' }, { kind: 'part', ref: 'U1' }] as const
+    const across = (board: typeof tiny) => {
+      const span = gapSpan(board, r1, u1)
+      return { fromAt: toBoard(span.from), to: toBoard(span.to), mm: measure(board, { what: 'gap', a: r1, b: u1 }).value.toFixed(2) }
+    }
+    const made = () => {
+      const { fromAt, to, mm } = across(tiny)
+      const mark = arrow({ author: 'agent', from: r1, toward: u1, fromAt, to, label: `gap ${mm} mm` })
+      return { ...mark, payload: markPayload(mark, tiny, null) }
+    }
+
+    it('says both things and the gap between them in its line', () => {
+      expect(made().payload).toMatch(new RegExp(`^gap · part R1 to part U1 · ${across(tiny).mm} mm · from \\(`))
+      expect(reanchor(made(), modelOf(tiny))).toMatchObject({ anchor: 'ok', label: made().label, payload: made().payload })
+    })
+
+    it('is measured again after a build, and says what the gap is now', () => {
+      const now = across(moved)
+      expect(now.mm).not.toBe(across(tiny).mm)
+      const m = reanchor(made(), modelOf(moved))
+      expect(m).toMatchObject({ anchor: 'moved', fromAt: now.fromAt, to: now.to, label: `gap ${now.mm} mm` })
+      expect(m.payload).toContain(`part R1 to part U1 · ${now.mm} mm`)
+    })
+
+    it('is stale when either end is gone, and names the one that is', () => {
+      const without = { ...tiny, footprints: tiny.footprints.filter((f) => f.ref !== 'U1') }
+      const m = reanchor(made(), modelOf(without))
+      expect(m.anchor).toBe('stale')
+      expect(m.payload).toContain('stale: part U1 is gone')
+    })
   })
 
   it('a stroke redoes what it crosses after a part moved under it', () => {

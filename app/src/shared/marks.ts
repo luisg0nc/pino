@@ -6,7 +6,7 @@ import type { Board } from './board/board'
 import { at, mm, toKicad } from './board/coords'
 import { inPoly, type Pt } from './board/geom'
 import { naturalCompare } from './board/nets'
-import { crossings, describeTarget, layerWords, shortLabel, type Target } from './board/refs'
+import { crossings, describeTarget, hasTarget, layerWords, shortLabel, type Target } from './board/refs'
 import type { Circuit } from './circuit'
 
 export type MarkStatus = 'draft' | 'sent' | 'resolved'
@@ -46,6 +46,8 @@ export interface ArrowMark extends MarkBase {
   from: Target | null
   fromAt: Pt
   to: Pt
+  /** Claude's arrow across a gap: the other thing it measured to. The gap is taken again after every build. */
+  toward?: Target
 }
 
 export interface StrokeMark extends MarkBase {
@@ -117,8 +119,9 @@ function direction(from: Pt, to: Pt): string {
 const targetWords = (board: Board, t: Target): string => (t.kind === 'part' || t.kind === 'pad' || t.kind === 'net' ? `${t.kind} ${shortLabel(board, t)}` : shortLabel(board, t))
 
 /** What is gone, for a stale mark. */
-function gone(mark: Mark): string {
-  const target = mark.kind === 'point' ? mark.target : mark.kind === 'arrow' ? mark.from : null
+function gone(mark: Mark, board: Board): string {
+  // Of a gap's two ends, the one that is no longer there.
+  const target = mark.kind === 'point' ? mark.target : mark.kind === 'arrow' ? (mark.toward && mark.from && hasTarget(board, mark.from) ? mark.toward : mark.from) : null
   if (!target) return 'its target is gone'
   if (target.kind === 'part') return `part ${target.ref} is gone`
   if (target.kind === 'pad') return `pad ${target.ref}.${target.number} is gone`
@@ -134,8 +137,11 @@ function pathWords(points: readonly Pt[]): string {
 
 /** The exact line Claude gets for a mark, from the board as it is now. */
 export function markPayload(mark: Mark, board: Board, circuit: Circuit | null): string {
-  if (mark.anchor === 'stale' && mark.was) return `${mark.was.text} · stale: ${gone(mark)}, it was at ${at(mark.was.at)} mm`
+  if (mark.anchor === 'stale' && mark.was) return `${mark.was.text} · stale: ${gone(mark, board)}, it was at ${at(mark.was.at)} mm`
   if (mark.kind === 'point') return describeTarget(board, circuit, mark.target)
+  if (mark.kind === 'arrow' && mark.from && mark.toward) {
+    return `gap · ${targetWords(board, mark.from)} to ${targetWords(board, mark.toward)} · ${mm(pathLength([mark.fromAt, mark.to]))} mm · from ${at(mark.fromAt)} to ${at(mark.to)} mm`
+  }
   if (mark.kind === 'arrow') {
     const from = mark.from ? `${targetWords(board, mark.from)} ` : ''
     return `arrow · from ${from}${at(mark.fromAt)} to ${at(mark.to)} mm · ${direction(mark.fromAt, mark.to)}`
