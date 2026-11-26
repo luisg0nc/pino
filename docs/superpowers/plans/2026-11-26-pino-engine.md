@@ -1482,7 +1482,7 @@ git commit -m "kernel: the fast build with a versioned result, cache, history an
     - a line that is not JSON, or an unknown `op` -> `{"id": <id or null>, "ok": false, "error": "<plain words>"}` and the loop goes on.
     - board.py still runs in a fresh child per build; logs go to stderr.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def run_cli(*args, **kw): return subprocess.run([sys.executable, "-m", "pino_kernel.cli", *args], capture_output=True, text=True, **kw)
@@ -1508,23 +1508,23 @@ def test_serve_answers_in_order_and_survives_bad_lines(make_project, fixture_lib
 def test_version(fixture_libs): assert json.loads(run_cli("version").stdout)["schema"] == "pino.build/1"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_cli.py -v`
 Expected: FAIL with `No module named pino_kernel.cli`
 
-- [ ] **Step 3: Write the CLI, the README and the CI jobs**
+- [x] **Step 3: Write the CLI, the README and the CI jobs**
 
 - `cli.py` with `argparse`; `serve` reads `sys.stdin` line by line and writes through one `sys.stdout.write(...); flush()`.
 - `kernel/README.md`: what the engine does, how to run (`uv run --directory kernel pino-kernel build <dir>`), the serve protocol above, library discovery and the `PINO_KICAD_*` variables, `PINO_KICAD_CLI`, the build folder layout, the result schema file, the pcbnew list ("pcbnew: none. Zone fill uses kicad-cli. Nothing to replace in KiCad 11."), the pcb-kit notice pointer. Run the humanizer skill on it.
 - CI: job `kernel` (ubuntu-latest, `astral-sh/setup-uv`, `uv run --directory kernel pytest -m "not kicad_cli and not kicad_libs"`) and job `kernel-kicad` in container `kicad/kicad:10.0.6-full` running the whole suite; both on the shell stage's `changes` filter. `app/src/ci.test.ts`: the case "no kernel job yet" now expects both jobs.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_cli.py -v && pnpm -C app test -- ci.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/cli.py kernel/README.md kernel/tests/test_cli.py .github/workflows/ci.yml app/src/ci.test.ts
