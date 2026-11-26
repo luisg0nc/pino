@@ -135,22 +135,47 @@ def board_with_power_class():
 def test_net_class_in_kicad_pro(fixture_libs):
     pro = json.loads(write(board_with_power_class()).kicad_pro)
     assert {"netclass": "power", "pattern": "VBUS"} in pro["net_settings"]["netclass_patterns"]
-    assert pro["board"]["design_settings"]["rules"]["min_clearance"] == 0.15
+    assert pro["board"]["design_settings"]["rules"]["min_clearance"] == 0.10
     power = next(c for c in pro["net_settings"]["classes"] if c["name"] == "power")
     assert (power["track_width"], power["clearance"]) == (0.5, 0.15) and pro["meta"]["filename"] == "board.kicad_pro"
 
 
 def parse_rules(text):
+    """{rule name without "pino: ": (constraint, min, condition)}"""
     root = parse("(rules " + text + ")")
-    return {str(find(r, "constraint")[1]): str(find(find(r, "constraint"), "min")[1]) for r in find_all(root, "rule")}
+    out = {}
+    for r in find_all(root, "rule"):
+        c, cond = find(r, "constraint"), find(r, "condition")
+        out[str(r[1]).removeprefix("pino: ")] = (str(c[1]), str(find(c, "min")[1]), str(cond[1]) if cond else None)
+    return out
 
 
 def test_dru_carries_the_fab_limits():
     two, four = parse_rules(kicad_dru(fab.jlc_standard_2layer)), parse_rules(kicad_dru(fab.jlc_standard_4layer))
-    assert two["track_width"] == "0.15mm" and four["track_width"] == "0.1mm"
-    assert set(two) == {"track_width", "clearance", "hole_size", "via_diameter", "annular_width", "hole_to_hole",
-                        "edge_clearance", "silk_clearance", "text_height"}
-    assert two["edge_clearance"] == "0.3mm" and two["silk_clearance"] == "0mm"
+    assert two["track_width"][1] == "0.1mm" and four["track_width"][1] == "0.09mm"
+    assert set(two) == {"track_width", "clearance", "pad_to_pad", "hole_size", "via_diameter", "via annular_width",
+                        "pth annular_width", "via hole_to_hole", "pad hole_to_hole", "via hole_clearance",
+                        "pth hole_clearance", "edge_clearance", "silk_clearance", "silk_to_pad", "text_height"}
+    assert two["edge_clearance"][1] == "0.2mm" and two["silk_clearance"][1] == "0mm"
+    assert two["pad_to_pad"] == ("clearance", "0.15mm", "A.Type == 'Pad' && B.Type == 'Pad'")
+
+
+def test_dru_splits_annular_ring_by_vias_and_pads():
+    two = parse_rules(kicad_dru(fab.jlc_standard_2layer))
+    pth = "A.Type == 'Pad' && A.Pad_Type == 'Through-hole'"
+    assert two["via annular_width"] == ("annular_width", "0.125mm", "A.Type == 'Via'")
+    assert two["pth annular_width"] == ("annular_width", "0.18mm", pth)
+    assert two["via hole_to_hole"] == ("hole_to_hole", "0.2mm", "A.Type == 'Via'")
+    assert two["pad hole_to_hole"] == ("hole_to_hole", "0.45mm", "A.Type == 'Pad'")
+    assert two["via hole_clearance"] == ("hole_clearance", "0.2mm", "A.Type == 'Via'")
+    assert two["pth hole_clearance"] == ("hole_clearance", "0.28mm", pth)
+    assert parse_rules(kicad_dru(fab.jlc_standard_4layer))["pth annular_width"][1] == "0.15mm"
+
+
+def test_pro_rule_values_follow_the_profile(fixture_libs):
+    rules = json.loads(write(small_board()).kicad_pro)["board"]["design_settings"]["rules"]
+    assert rules["min_hole_clearance"] == 0.2 and rules["min_copper_edge_clearance"] == 0.2
+    assert (rules["min_via_annular_width"], rules["min_hole_to_hole"], rules["min_through_hole_diameter"]) == (0.125, 0.2, 0.2)
 
 
 def board_with_module(layers):
@@ -294,3 +319,23 @@ def test_symbol_fields_go_onto_the_footprint(fixture_libs):
     c.part("R1").datasheet, c.part("R1").description, c.part("R1").lcsc = "https://example.invalid/r.pdf", "Resistor", "C1234"
     props = {p[1]: p[2] for p in find_all(footprint_named(write(c), "R1"), "property")}
     assert (props["Datasheet"], props["Description"], props["LCSC"]) == ("https://example.invalid/r.pdf", "Resistor", "C1234")
+
+
+def drc_with_vias(kicad, tmp_path, vias):
+    """The 2-layer real board with `vias` (x, y, diameter, drill) on net IN, its DRC report."""
+    from pino_kernel.circuit import FixedVia
+    c = real_circuit(2, zone=False, keepout=False)
+    c.fixed_vias = [FixedVia("IN", x, y, d, drill) for x, y, d, drill in vias]
+    return drc_json(kicad, write_real(tmp_path, c, REAL_POSES))
+
+
+@pytest.mark.kicad_cli
+@pytest.mark.kicad_libs
+def test_kicad_reads_every_rule(kicad, tmp_path):
+    # a 0.5 mm via over a 0.3 mm hole has a 0.1 mm ring; two vias 0.45 mm apart leave 0.15 mm between their holes
+    report = drc_with_vias(kicad, tmp_path, [(-14, -6, 0.5, 0.3), (14, -6, 0.6, 0.3), (14.45, -6, 0.6, 0.3)])
+    found = {(v["type"], v["description"].split("(")[0].strip()) for v in report["violations"]}
+    text = json.dumps(report)
+    assert "pino: via annular_width" in text, found
+    assert "pino: via hole_to_hole" in text, found
+    assert "annular_width" in {t for t, _ in found} and "hole_to_hole" in {t for t, _ in found}

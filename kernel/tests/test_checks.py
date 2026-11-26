@@ -1,3 +1,4 @@
+from dataclasses import replace
 import json
 
 import pytest
@@ -123,9 +124,11 @@ def test_fit(fixture_libs, fp_lib):
              placed(fp_lib, "R3", x=7, y=-7),                   # in the keep-out
              placed(fp_lib, "R4", x=-12, y=7),                  # on the hole
              placed(fp_lib, "R5", x=0, y=0)]                    # fine
-    found = fit_findings(c, parts, fab.jlc_standard_2layer)
+    # this footprint's courtyard leaves at least 0.275 mm round its pads, so a 0.3 mm edge rule shows the pad check
+    found = fit_findings(c, parts, replace(fab.jlc_standard_2layer, copper_to_edge=0.3))
     assert sorted((f.code, f.refs) for f in found) == [("in_keepout", ("R3",)), ("on_hole", ("R4",)),
                                                        ("outside_outline", ("R1",)), ("pad_near_edge", ("R2",))]
+    assert "pad_near_edge" not in [f.code for f in fit_findings(c, parts, fab.jlc_standard_2layer)]   # 0.29 >= 0.2
     assert all(f.severity == "error" and f.source == "fit" and f.at.space == "board" for f in found)
 
 

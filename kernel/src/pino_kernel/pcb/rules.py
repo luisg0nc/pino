@@ -50,7 +50,8 @@ def kicad_pro(circuit: Circuit, fab: FabProfile) -> str:
         "min_clearance": fab.min_clearance, "min_track_width": fab.min_track,
         "min_via_diameter": fab.min_via_diameter, "min_via_annular_width": fab.min_annular,
         "min_through_hole_diameter": fab.min_hole, "min_hole_to_hole": fab.hole_to_hole,
-        "min_copper_edge_clearance": fab.copper_to_edge, "min_hole_clearance": 0.25, "min_silk_clearance": 0.0,
+        "min_copper_edge_clearance": fab.copper_to_edge, "min_hole_clearance": fab.via_hole_to_track,
+        "min_silk_clearance": 0.0,
         "min_text_height": fab.silk_min_text_height, "min_text_thickness": fab.silk_min_width * 0.5,
         "max_error": 0.005, "allow_blind_buried_vias": False, "allow_microvias": False,
     }
@@ -70,22 +71,42 @@ def kicad_pro(circuit: Circuit, fab: FabProfile) -> str:
     return json.dumps(pro, indent=2, sort_keys=True) + "\n"
 
 
+_VIA = "A.Type == 'Via'"
+_PAD = "A.Type == 'Pad'"
+_PTH = "A.Type == 'Pad' && A.Pad_Type == 'Through-hole'"
+_SILK_TEXT = "A.Layer == 'F.SilkS' || A.Layer == 'B.SilkS'"
+# silk to silk only: silk printed over copper or a zone is fine for the fab
+_SILK_SILK = "(A.Layer == 'F.SilkS' && B.Layer == 'F.SilkS') || (A.Layer == 'B.SilkS' && B.Layer == 'B.SilkS')"
+_SILK_PAD = "A.Type == 'Pad' && (B.Layer == 'F.SilkS' || B.Layer == 'B.SilkS')"
+
+
+def dru_rules(fab: FabProfile) -> list[tuple[str, str, float, str | None]]:
+    """(rule name, constraint, min mm, condition). Where KiCad's constraint is shared by vias and pads and JLC
+    gives them different limits, there is one rule for each. A later rule wins where two match."""
+    return [
+        ("track_width", "track_width", fab.min_track, None),
+        ("clearance", "clearance", fab.min_clearance, None),
+        ("pad_to_pad", "clearance", fab.pad_to_pad, "A.Type == 'Pad' && B.Type == 'Pad'"),
+        ("hole_size", "hole_size", fab.min_hole, None),
+        ("via_diameter", "via_diameter", fab.min_via_diameter, None),
+        ("via annular_width", "annular_width", fab.min_annular, _VIA),
+        ("pth annular_width", "annular_width", fab.min_pth_annular, _PTH),
+        ("via hole_to_hole", "hole_to_hole", fab.hole_to_hole, _VIA),
+        ("pad hole_to_hole", "hole_to_hole", fab.pad_hole_to_hole, _PAD),
+        ("via hole_clearance", "hole_clearance", fab.via_hole_to_track, _VIA),
+        ("pth hole_clearance", "hole_clearance", fab.pth_to_track, _PTH),
+        ("edge_clearance", "edge_clearance", fab.copper_to_edge, None),
+        ("silk_clearance", "silk_clearance", 0.0, _SILK_SILK),
+        ("silk_to_pad", "silk_clearance", fab.silk_to_pad, _SILK_PAD),
+        ("text_height", "text_height", fab.silk_min_text_height, _SILK_TEXT),
+    ]
+
+
 def kicad_dru(fab: FabProfile) -> str:
     """One rule per fab limit. KiCad drops every custom rule when one token is wrong, so DRC must read this
     file after every change of it (the kicad tests prove it is read)."""
-    limits = [
-        ("track_width", fab.min_track), ("clearance", fab.min_clearance), ("hole_size", fab.min_hole),
-        ("via_diameter", fab.min_via_diameter), ("annular_width", fab.min_annular),
-        ("hole_to_hole", fab.hole_to_hole), ("edge_clearance", fab.copper_to_edge), ("silk_clearance", 0.0),
-        ("text_height", fab.silk_min_text_height),
-    ]
-    conditions = {
-        "text_height": "A.Layer == 'F.SilkS' || A.Layer == 'B.SilkS'",
-        # silk to silk only: silk printed over copper or a zone is fine for the fab
-        "silk_clearance": "(A.Layer == 'F.SilkS' && B.Layer == 'F.SilkS') || (A.Layer == 'B.SilkS' && B.Layer == 'B.SilkS')",
-    }
     lines = ["(version 1)"]
-    for name, value in limits:
-        cond = f'\n\t(condition "{conditions[name]}")' if name in conditions else ""
-        lines.append(f'(rule "pino: {name}"\n\t(constraint {name} (min {num(value)}mm)){cond})')
+    for name, constraint, value, condition in dru_rules(fab):
+        cond = f'\n\t(condition "{condition}")' if condition else ""
+        lines.append(f'(rule "pino: {name}"\n\t(constraint {constraint} (min {num(value)}mm)){cond})')
     return "\n".join(lines) + "\n"

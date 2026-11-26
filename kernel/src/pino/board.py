@@ -29,6 +29,8 @@ from pino_kernel.symbols import Symbol, SymbolLibrary, SymbolNotFound, Unsupport
 
 ROLES = ("path", "shunt", "tap", "across")
 SIDES = ("top", "bottom", "left", "right")
+# A net class's own values when board.py leaves them out: comfortable ones, not the least the fab can build.
+CLASS_CLEARANCE, CLASS_VIA_DIAMETER, CLASS_VIA_DRILL = 0.15, 0.6, 0.3
 FORBID = ("tracks", "vias", "pads", "copperpour", "footprints")
 REF_RE = re.compile(r"^[A-Z][A-Z_]*[0-9]+$")
 NET_RE = re.compile(r"^[A-Za-z0-9_+.\-]+$")
@@ -452,9 +454,10 @@ class Board:
         if any(c.name == name for c in self._net_classes):
             raise _fail(f"net class {name} declared twice", where)
         self._net_classes.append(NetClassSpec(
-            str(name), names, float(width), float(f.min_clearance if clearance is None else clearance),
-            float(f.min_via_diameter if via_diameter is None else via_diameter),
-            float(f.min_via_drill if via_drill is None else via_drill), where[1]))
+            str(name), names, float(width),
+            float(max(CLASS_CLEARANCE, f.min_clearance) if clearance is None else clearance),
+            float(max(CLASS_VIA_DIAMETER, f.min_via_diameter) if via_diameter is None else via_diameter),
+            float(max(CLASS_VIA_DRILL, f.min_via_drill) if via_drill is None else via_drill), where[1]))
 
     def _expect(self, kind, a, b, through) -> None:
         where = _caller()
