@@ -95,7 +95,7 @@ describe('the words beside what is selected', () => {
   it('says a part, its footprint and what its pins carry', () => {
     const words = sheetWords(board, circuit, { kind: 'part', ref: 'U2' })
     expect(words.head).toBe('U2 AP2112K-3.3')
-    expect(words.lines).toEqual(['SOT-23-5', '5 pins, 4 used · VBUS, GND, +3V3'])
+    expect(words.lines).toEqual(['SOT-23-5 · LCSC C51118', '5 pins, 4 used · VBUS, GND, +3V3'])
   })
 
   it('says a pin and its net, and a net and its pins', () => {

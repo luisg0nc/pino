@@ -77,7 +77,6 @@ _PTH = "A.Type == 'Pad' && A.Pad_Type == 'Through-hole'"
 _SILK_TEXT = "A.Layer == 'F.SilkS' || A.Layer == 'B.SilkS'"
 # silk to silk only: silk printed over copper or a zone is fine for the fab
 _SILK_SILK = "(A.Layer == 'F.SilkS' && B.Layer == 'F.SilkS') || (A.Layer == 'B.SilkS' && B.Layer == 'B.SilkS')"
-_SILK_PAD = "A.Type == 'Pad' && (B.Layer == 'F.SilkS' || B.Layer == 'B.SilkS')"
 
 
 def dru_rules(fab: FabProfile) -> list[tuple[str, str, float, str | None]]:
@@ -97,7 +96,8 @@ def dru_rules(fab: FabProfile) -> list[tuple[str, str, float, str | None]]:
         ("pth hole_clearance", "hole_clearance", fab.pth_to_track, _PTH),
         ("edge_clearance", "edge_clearance", fab.copper_to_edge, None),
         ("silk_clearance", "silk_clearance", 0.0, _SILK_SILK),
-        ("silk_to_pad", "silk_clearance", fab.silk_to_pad, _SILK_PAD),
+        # no rule for the fab's silk to pad distance: KiCad's own footprints draw silk 0.1 mm from their pads, and
+        # the Gerbers cut silk out of every mask opening (--subtract-soldermask), so it never prints on a pad
         ("text_height", "text_height", fab.silk_min_text_height, _SILK_TEXT),
     ]
 

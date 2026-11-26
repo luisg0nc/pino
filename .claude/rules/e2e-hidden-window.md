@@ -23,7 +23,8 @@ The person is working on this desktop. No test, script or check may put a window
 - Under `PINO_TEST=1` Electron's own profile (`userData`, `sessionData`, `crashDumps`) is a folder of the run,
   `<tmp>/pino-test-<pid>-…` (`src/main/testProfile.ts`), set before `ready` and removed once the process has gone.
   `launch` also gives the run a `HOME` and XDG folders of its own in the temporary folder, and a config file of its
-  own, so nothing of a test is written under the person's home. A check that launches Electron without `PINO_TEST`
+  own, so nothing of a test is written under the person's home. It sets `PINO_PARTS_OFFLINE=1`, so the real engine
+  asks jlcsearch nothing. A check that launches Electron without `PINO_TEST`
   must give it a `--user-data-dir` of its own.
 - A run never reaches the real `claude`: with `agent` the command is the stand-in, without it a path that is not
   there.

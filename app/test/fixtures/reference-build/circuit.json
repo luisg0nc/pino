@@ -68,7 +68,7 @@
     ]
    ],
    "kind": "path",
-   "line": 73,
+   "line": 81,
    "through": [
     "F1"
    ]
@@ -91,7 +91,7 @@
     ]
    ],
    "kind": "path",
-   "line": 74,
+   "line": 82,
    "through": []
   },
   {
@@ -112,7 +112,7 @@
     ]
    ],
    "kind": "path",
-   "line": 75,
+   "line": 83,
    "through": []
   },
   {
@@ -129,7 +129,7 @@
     ]
    ],
    "kind": "path",
-   "line": 76,
+   "line": 84,
    "through": []
   },
   {
@@ -154,14 +154,15 @@
     ]
    ],
    "kind": "apart",
-   "line": 77,
+   "line": 85,
    "through": []
   }
  ],
  "fab": "jlc-standard-2layer",
+ "fixed_vias": [],
  "groups": [
   {
-   "line": 68,
+   "line": 76,
    "name": "leds",
    "refs": [
     "D1",
@@ -177,7 +178,7 @@
    "at": null,
    "back": false,
    "edge": "top",
-   "line": 64,
+   "line": 72,
    "near": null,
    "rot": null,
    "side": null,
@@ -188,7 +189,7 @@
    "at": null,
    "back": false,
    "edge": "bottom",
-   "line": 65,
+   "line": 73,
    "near": null,
    "rot": null,
    "side": null,
@@ -199,7 +200,7 @@
    "at": null,
    "back": false,
    "edge": null,
-   "line": 66,
+   "line": 74,
    "near": "J1",
    "rot": null,
    "side": "top",
@@ -210,7 +211,7 @@
    "at": null,
    "back": false,
    "edge": "left",
-   "line": 67,
+   "line": 75,
    "near": null,
    "rot": null,
    "side": null,
@@ -221,7 +222,7 @@
    "at": null,
    "back": false,
    "edge": null,
-   "line": 69,
+   "line": 77,
    "near": "U1",
    "rot": null,
    "side": "right",
@@ -229,6 +230,7 @@
   }
  ],
  "keepouts": [],
+ "kept_routes": [],
  "layers": 2,
  "name": "pino-reference",
  "nc_rest": {
@@ -266,7 +268,7 @@
  "net_classes": [
   {
    "clearance": 0.15,
-   "line": 72,
+   "line": 80,
    "name": "power",
    "nets": [
     "VBUS",
@@ -281,7 +283,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 45,
+   "line": 52,
    "name": "VBUS_IN",
    "pins": [
     [
@@ -314,7 +316,7 @@
   {
    "external": true,
    "kind": "supply",
-   "line": 46,
+   "line": 53,
    "name": "VBUS",
    "pins": [
     [
@@ -347,7 +349,7 @@
   {
    "external": false,
    "kind": "supply",
-   "line": 47,
+   "line": 54,
    "name": "+3V3",
    "pins": [
     [
@@ -388,7 +390,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 48,
+   "line": 55,
    "name": "CC1",
    "pins": [
     [
@@ -405,7 +407,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 49,
+   "line": 56,
    "name": "CC2",
    "pins": [
     [
@@ -422,7 +424,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 50,
+   "line": 57,
    "name": "SHIELD",
    "pins": [
     [
@@ -443,8 +445,8 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 51,
-   "name": "USB_DN",
+   "line": 58,
+   "name": "USB_D-",
    "pins": [
     [
      "J1",
@@ -464,8 +466,8 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 52,
-   "name": "USB_DP",
+   "line": 59,
+   "name": "USB_D+",
    "pins": [
     [
      "J1",
@@ -485,7 +487,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 53,
+   "line": 61,
    "name": "EN",
    "pins": [
     [
@@ -506,7 +508,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 54,
+   "line": 62,
    "name": "BOOT",
    "pins": [
     [
@@ -527,7 +529,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 55,
+   "line": 63,
    "name": "LED",
    "pins": [
     [
@@ -544,7 +546,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 56,
+   "line": 64,
    "name": "LED_A",
    "pins": [
     [
@@ -561,7 +563,7 @@
   {
    "external": false,
    "kind": "signal",
-   "line": 57,
+   "line": 65,
    "name": "PWR_LED",
    "pins": [
     [
@@ -578,7 +580,7 @@
   {
    "external": true,
    "kind": "gnd",
-   "line": 58,
+   "line": 66,
    "name": "GND",
    "pins": [
     [
@@ -1001,6 +1003,16 @@
   "source": "outline.json",
   "width": 56
  },
+ "pairs": [
+  {
+   "gap": null,
+   "line": 60,
+   "name": "USB_D",
+   "negative": "USB_D-",
+   "positive": "USB_D+",
+   "width": null
+  }
+ ],
  "parts": [
   {
    "block": "usb",
@@ -1008,9 +1020,10 @@
    "description": "USB 2.0-only 16P Type-C Receptacle connector",
    "dnp": false,
    "footprint": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+   "hand_fit": false,
    "key": "J1",
-   "lcsc": "",
-   "line": 17,
+   "lcsc": "C165948",
+   "line": 18,
    "pins": [
     {
      "etype": "passive",
@@ -1100,8 +1113,11 @@
    ],
    "ref": "J1",
    "role": "path",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Connector:USB_C_Receptacle_USB2.0_16P",
-   "value": "USB-C"
+   "value": "USB-C",
+   "why": "the USB-C receptacle this footprint is drawn for, the HRO TYPE-C-31-M-12"
   },
   {
    "block": "usb",
@@ -1109,9 +1125,10 @@
    "description": "Resettable fuse, polymeric positive temperature coefficient, small symbol",
    "dnp": false,
    "footprint": "Fuse:Fuse_0805_2012Metric",
+   "hand_fit": false,
    "key": "F1",
-   "lcsc": "",
-   "line": 19,
+   "lcsc": "C910822",
+   "line": 21,
    "pins": [
     {
      "etype": "passive",
@@ -1126,8 +1143,11 @@
    ],
    "ref": "F1",
    "role": "path",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:Polyfuse_Small",
-   "value": "500mA"
+   "value": "500mA",
+   "why": "an 0805 resettable fuse holding 500 mA at 24 V; jlcsearch listed no basic one"
   },
   {
    "block": "usb",
@@ -1135,85 +1155,8 @@
    "description": "Resistor",
    "dnp": true,
    "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
    "key": "R9",
-   "lcsc": "",
-   "line": 20,
-   "pins": [
-    {
-     "etype": "passive",
-     "name": "",
-     "number": "1"
-    },
-    {
-     "etype": "passive",
-     "name": "",
-     "number": "2"
-    }
-   ],
-   "ref": "R9",
-   "role": "across",
-   "symbol": "Device:R",
-   "value": "0R DNP"
-  },
-  {
-   "block": "usb",
-   "datasheet": "",
-   "description": "Unpolarized capacitor",
-   "dnp": false,
-   "footprint": "Capacitor_SMD:C_0805_2012Metric",
-   "key": "C1",
-   "lcsc": "",
-   "line": 21,
-   "pins": [
-    {
-     "etype": "passive",
-     "name": "",
-     "number": "1"
-    },
-    {
-     "etype": "passive",
-     "name": "",
-     "number": "2"
-    }
-   ],
-   "ref": "C1",
-   "role": "shunt",
-   "symbol": "Device:C",
-   "value": "10uF"
-  },
-  {
-   "block": "usb",
-   "datasheet": "",
-   "description": "Resistor",
-   "dnp": false,
-   "footprint": "Resistor_SMD:R_0402_1005Metric",
-   "key": "R1",
-   "lcsc": "",
-   "line": 22,
-   "pins": [
-    {
-     "etype": "passive",
-     "name": "",
-     "number": "1"
-    },
-    {
-     "etype": "passive",
-     "name": "",
-     "number": "2"
-    }
-   ],
-   "ref": "R1",
-   "role": "shunt",
-   "symbol": "Device:R",
-   "value": "5.1k"
-  },
-  {
-   "block": "usb",
-   "datasheet": "",
-   "description": "Resistor",
-   "dnp": false,
-   "footprint": "Resistor_SMD:R_0402_1005Metric",
-   "key": "R2",
    "lcsc": "",
    "line": 23,
    "pins": [
@@ -1228,10 +1171,43 @@
      "number": "2"
     }
    ],
-   "ref": "R2",
-   "role": "shunt",
+   "ref": "R9",
+   "role": "across",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:R",
-   "value": "5.1k"
+   "value": "0R DNP",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Unpolarized capacitor",
+   "dnp": false,
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "hand_fit": false,
+   "key": "C1",
+   "lcsc": "C15850",
+   "line": 24,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "C1",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:C",
+   "value": "10uF",
+   "why": ""
   },
   {
    "block": "usb",
@@ -1239,9 +1215,70 @@
    "description": "Resistor",
    "dnp": false,
    "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R1",
+   "lcsc": "C25905",
+   "line": 25,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R1",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "5.1k",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
+   "key": "R2",
+   "lcsc": "C25905",
+   "line": 26,
+   "pins": [
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "1"
+    },
+    {
+     "etype": "passive",
+     "name": "",
+     "number": "2"
+    }
+   ],
+   "ref": "R2",
+   "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
+   "symbol": "Device:R",
+   "value": "5.1k",
+   "why": ""
+  },
+  {
+   "block": "usb",
+   "datasheet": "",
+   "description": "Resistor",
+   "dnp": false,
+   "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
    "key": "R3",
-   "lcsc": "",
-   "line": 24,
+   "lcsc": "C26083",
+   "line": 27,
    "pins": [
     {
      "etype": "passive",
@@ -1256,8 +1293,11 @@
    ],
    "ref": "R3",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:R",
-   "value": "1M"
+   "value": "1M",
+   "why": ""
   },
   {
    "block": "usb",
@@ -1265,9 +1305,10 @@
    "description": "Unpolarized capacitor",
    "dnp": false,
    "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
    "key": "C2",
-   "lcsc": "",
-   "line": 25,
+   "lcsc": "C1538",
+   "line": 28,
    "pins": [
     {
      "etype": "passive",
@@ -1282,8 +1323,11 @@
    ],
    "ref": "C2",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:C",
-   "value": "4.7nF"
+   "value": "4.7nF",
+   "why": ""
   },
   {
    "block": "reg",
@@ -1291,9 +1335,10 @@
    "description": "Unpolarized capacitor",
    "dnp": false,
    "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
    "key": "C3",
-   "lcsc": "",
-   "line": 28,
+   "lcsc": "C52923",
+   "line": 31,
    "pins": [
     {
      "etype": "passive",
@@ -1308,8 +1353,11 @@
    ],
    "ref": "C3",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:C",
-   "value": "1uF"
+   "value": "1uF",
+   "why": ""
   },
   {
    "block": "reg",
@@ -1317,9 +1365,10 @@
    "description": "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5",
    "dnp": false,
    "footprint": "Package_TO_SOT_SMD:SOT-23-5",
+   "hand_fit": false,
    "key": "U2",
-   "lcsc": "",
-   "line": 29,
+   "lcsc": "C51118",
+   "line": 32,
    "pins": [
     {
      "etype": "power_in",
@@ -1349,8 +1398,11 @@
    ],
    "ref": "U2",
    "role": "path",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Regulator_Linear:AP2112K-3.3",
-   "value": "AP2112K-3.3"
+   "value": "AP2112K-3.3",
+   "why": "the AP2112K-3.3 the design uses: 600 mA from a SOT-23-5"
   },
   {
    "block": "reg",
@@ -1358,9 +1410,10 @@
    "description": "Unpolarized capacitor",
    "dnp": false,
    "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
    "key": "C4",
-   "lcsc": "",
-   "line": 30,
+   "lcsc": "C52923",
+   "line": 34,
    "pins": [
     {
      "etype": "passive",
@@ -1375,8 +1428,11 @@
    ],
    "ref": "C4",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:C",
-   "value": "1uF"
+   "value": "1uF",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1384,9 +1440,10 @@
    "description": "RF Module, ESP32-C6 SoC, Wi-Fi 802.11b/g/n/ax, Bluetooth, BLE, Zigbee, Thread, 32-bit, 3.3V, SMD, onboard antenna",
    "dnp": false,
    "footprint": "RF_Module:ESP32-C6-MINI-1",
+   "hand_fit": false,
    "key": "U1",
-   "lcsc": "",
-   "line": 33,
+   "lcsc": "C5736265",
+   "line": 37,
    "pins": [
     {
      "etype": "power_in",
@@ -1656,8 +1713,11 @@
    ],
    "ref": "U1",
    "role": "path",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "RF_Module:ESP32-C6-MINI-1",
-   "value": "ESP32-C6-MINI-1"
+   "value": "ESP32-C6-MINI-1",
+   "why": "the ESP32-C6 module itself, with 4 MB of flash"
   },
   {
    "block": "mcu",
@@ -1665,9 +1725,10 @@
    "description": "Unpolarized capacitor",
    "dnp": false,
    "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
    "key": "C5",
-   "lcsc": "",
-   "line": 34,
+   "lcsc": "C1525",
+   "line": 39,
    "pins": [
     {
      "etype": "passive",
@@ -1682,8 +1743,11 @@
    ],
    "ref": "C5",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:C",
-   "value": "100nF"
+   "value": "100nF",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1691,9 +1755,10 @@
    "description": "Unpolarized capacitor",
    "dnp": false,
    "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "hand_fit": false,
    "key": "C6",
-   "lcsc": "",
-   "line": 35,
+   "lcsc": "C15850",
+   "line": 40,
    "pins": [
     {
      "etype": "passive",
@@ -1708,8 +1773,11 @@
    ],
    "ref": "C6",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:C",
-   "value": "10uF"
+   "value": "10uF",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1717,9 +1785,10 @@
    "description": "Resistor",
    "dnp": false,
    "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
    "key": "R4",
-   "lcsc": "",
-   "line": 36,
+   "lcsc": "C25744",
+   "line": 41,
    "pins": [
     {
      "etype": "passive",
@@ -1734,8 +1803,11 @@
    ],
    "ref": "R4",
    "role": "tap",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:R",
-   "value": "10k"
+   "value": "10k",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1743,9 +1815,10 @@
    "description": "Unpolarized capacitor",
    "dnp": false,
    "footprint": "Capacitor_SMD:C_0402_1005Metric",
+   "hand_fit": false,
    "key": "C7",
-   "lcsc": "",
-   "line": 37,
+   "lcsc": "C52923",
+   "line": 42,
    "pins": [
     {
      "etype": "passive",
@@ -1760,8 +1833,11 @@
    ],
    "ref": "C7",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:C",
-   "value": "1uF"
+   "value": "1uF",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1769,9 +1845,10 @@
    "description": "Resistor",
    "dnp": false,
    "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
    "key": "R5",
-   "lcsc": "",
-   "line": 38,
+   "lcsc": "C25744",
+   "line": 43,
    "pins": [
     {
      "etype": "passive",
@@ -1786,8 +1863,11 @@
    ],
    "ref": "R5",
    "role": "tap",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:R",
-   "value": "10k"
+   "value": "10k",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1795,9 +1875,10 @@
    "description": "Push button switch, generic, two pins",
    "dnp": false,
    "footprint": "Button_Switch_SMD:SW_SPST_TL3342",
+   "hand_fit": false,
    "key": "SW1",
-   "lcsc": "",
-   "line": 39,
+   "lcsc": "C2886894",
+   "line": 44,
    "pins": [
     {
      "etype": "passive",
@@ -1812,8 +1893,11 @@
    ],
    "ref": "SW1",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Switch:SW_Push",
-   "value": "BOOT"
+   "value": "BOOT",
+   "why": "the TL3342 button this footprint is drawn for"
   },
   {
    "block": "mcu",
@@ -1821,9 +1905,10 @@
    "description": "Resistor",
    "dnp": false,
    "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
    "key": "R6",
-   "lcsc": "",
-   "line": 40,
+   "lcsc": "C11702",
+   "line": 46,
    "pins": [
     {
      "etype": "passive",
@@ -1838,8 +1923,11 @@
    ],
    "ref": "R6",
    "role": "path",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:R",
-   "value": "1k"
+   "value": "1k",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1847,9 +1935,10 @@
    "description": "Light emitting diode",
    "dnp": false,
    "footprint": "LED_SMD:LED_0603_1608Metric",
+   "hand_fit": false,
    "key": "D1",
-   "lcsc": "",
-   "line": 41,
+   "lcsc": "C72043",
+   "line": 47,
    "pins": [
     {
      "etype": "passive",
@@ -1864,8 +1953,11 @@
    ],
    "ref": "D1",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:LED",
-   "value": "green"
+   "value": "green",
+   "why": "a green 0603 LED; jlcsearch listed no basic one"
   },
   {
    "block": "mcu",
@@ -1873,9 +1965,10 @@
    "description": "Resistor",
    "dnp": false,
    "footprint": "Resistor_SMD:R_0402_1005Metric",
+   "hand_fit": false,
    "key": "R7",
-   "lcsc": "",
-   "line": 42,
+   "lcsc": "C11702",
+   "line": 49,
    "pins": [
     {
      "etype": "passive",
@@ -1890,8 +1983,11 @@
    ],
    "ref": "R7",
    "role": "tap",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:R",
-   "value": "1k"
+   "value": "1k",
+   "why": ""
   },
   {
    "block": "mcu",
@@ -1899,9 +1995,10 @@
    "description": "Light emitting diode",
    "dnp": false,
    "footprint": "LED_SMD:LED_0603_1608Metric",
+   "hand_fit": false,
    "key": "power-led",
-   "lcsc": "",
-   "line": 43,
+   "lcsc": "C2286",
+   "line": 50,
    "pins": [
     {
      "etype": "passive",
@@ -1916,16 +2013,20 @@
    ],
    "ref": "D2",
    "role": "shunt",
+   "rotation": null,
+   "source": "kicad",
    "symbol": "Device:LED",
-   "value": "red"
+   "value": "red",
+   "why": ""
   }
  ],
+ "route_hints": [],
  "schema": "pino.circuit/1",
  "source_file": "board.py",
  "zones": [
   {
    "layer": "B.Cu",
-   "line": 71,
+   "line": 79,
    "net": "GND",
    "polygon": null
   }

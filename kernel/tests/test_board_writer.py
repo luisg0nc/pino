@@ -155,7 +155,7 @@ def test_dru_carries_the_fab_limits():
     assert two["track_width"][1] == "0.1mm" and four["track_width"][1] == "0.09mm"
     assert set(two) == {"track_width", "clearance", "pad_to_pad", "hole_size", "via_diameter", "via annular_width",
                         "pth annular_width", "via hole_to_hole", "pad hole_to_hole", "via hole_clearance",
-                        "pth hole_clearance", "edge_clearance", "silk_clearance", "silk_to_pad", "text_height"}
+                        "pth hole_clearance", "edge_clearance", "silk_clearance", "text_height"}
     assert two["edge_clearance"][1] == "0.2mm" and two["silk_clearance"][1] == "0mm"
     assert two["pad_to_pad"] == ("clearance", "0.15mm", "A.Type == 'Pad' && B.Type == 'Pad'")
 
@@ -386,3 +386,14 @@ def test_kicad_keeps_the_origin_and_the_hand_fit_flag_on_save(kicad, tmp_path):
     assert "(aux_axis_origin 100 100)" in filled.read_text()
     fp = footprint_named_text(filled, "R1")
     assert [str(a) for a in find(fp, "attr")[1:]] == ["smd", "exclude_from_pos_files"]
+
+
+@pytest.mark.kicad_cli
+@pytest.mark.kicad_libs
+def test_kicads_own_footprints_pass_the_silkscreen_rules(kicad, tmp_path):
+    # KiCad draws silk 0.1 mm from pads, closer than JLC's 0.15 mm; the Gerbers cut silk out of every mask opening,
+    # so no rule of pino's may turn each standard footprint into a warning
+    parts = {"R1": ("Resistor_SMD:R_0402_1005Metric", ["1", "2"])}
+    c = real_circuit(2, parts=parts, nets={}, holes=False, keepout=False, zone=False, dnp=())
+    report = drc_json(kicad, write_real(tmp_path, c, {"R1": (0, 0, 0, False)}))
+    assert [v["description"] for v in report["violations"] if "silk" in v["type"]] == []

@@ -66,6 +66,8 @@ export async function launch(opts: { project?: string; agent?: boolean; env?: Re
     XDG_DATA_HOME: join(home, '.local', 'share'),
     XDG_CACHE_HOME: join(home, '.cache'),
     PINO_TEST: '1',
+    // The real engine, when a spec asks for it, looks no part up: tests never use the network.
+    PINO_PARTS_OFFLINE: '1',
     PINO_CONFIG: config,
     PINO_AGENT_CMD: opts.agent ? `node ${FAKE_AGENT}` : NO_AGENT,
     ...(opts.kernel === 'real' ? {} : { PINO_KERNEL_CMD: `node ${FAKE_KERNEL}` }),

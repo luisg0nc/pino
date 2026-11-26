@@ -171,6 +171,8 @@ async function build(project) {
   }
 
   const result = reference()
+  // The fixture is the real engine's, which routes: an engine of protocol 1 says nothing of routing.
+  if (SERVE < 2) delete result.routing
   const previous = memory.builds.at(-1)
   result.number = number
   result.hash = hash

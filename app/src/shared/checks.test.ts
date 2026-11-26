@@ -72,8 +72,8 @@ describe("the card's checks", () => {
   })
 
   it('counts the checks that ran, and those with a word against them', () => {
-    expect(checksSummary(checkRows(ref))).toBe('10, 2 warn')
-    expect(checksSummary(checkRows(withFinding(ref, finding('erc', 'e', 'error'))))).toBe('10, 1 fail, 2 warn')
+    expect(checksSummary(checkRows(ref))).toBe('10, 3 warn')
+    expect(checksSummary(checkRows(withFinding(ref, finding('erc', 'e', 'error'))))).toBe('10, 1 fail, 3 warn')
   })
 })
 

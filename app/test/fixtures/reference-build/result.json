@@ -1,13 +1,13 @@
 {
  "artifacts": {
-  "board": ".pino/build/31ea11f6a0ae/board.kicad_pcb",
-  "filled": ".pino/build/31ea11f6a0ae/filled/board.kicad_pcb",
-  "schematic_svg": ".pino/build/31ea11f6a0ae/schematic.svg",
-  "sheet": ".pino/build/31ea11f6a0ae/sheet.json",
-  "circuit": ".pino/build/31ea11f6a0ae/circuit.json",
-  "placement": ".pino/build/31ea11f6a0ae/placement.json",
-  "drc": ".pino/build/31ea11f6a0ae/drc.json",
-  "glb": ".pino/build/31ea11f6a0ae/board.glb"
+  "board": ".pino/build/24b2945d4bc2/board.kicad_pcb",
+  "filled": ".pino/build/24b2945d4bc2/filled/board.kicad_pcb",
+  "schematic_svg": ".pino/build/24b2945d4bc2/schematic.svg",
+  "sheet": ".pino/build/24b2945d4bc2/sheet.json",
+  "circuit": ".pino/build/24b2945d4bc2/circuit.json",
+  "placement": ".pino/build/24b2945d4bc2/placement.json",
+  "drc": ".pino/build/24b2945d4bc2/drc.json",
+  "glb": ".pino/build/24b2945d4bc2/board.glb"
  },
  "cached": false,
  "changes": {
@@ -19,11 +19,11 @@
  "counts": {
   "crossings": 4,
   "errors": 0,
-  "infos": 2,
+  "infos": 8,
   "nets": 14,
   "parts": 22,
   "unrouted": 80,
-  "warnings": 31
+  "warnings": 46
  },
  "findings": [
   {
@@ -87,7 +87,7 @@
    "at": {
     "space": "board",
     "x": -8.56,
-    "y": 19.25
+    "y": 19.3
    },
    "code": "silk_over_copper",
    "message": "Silkscreen clipped by solder mask: Reference field of C5; Pad 1 [+3V3] of C6 on F.Cu",
@@ -102,7 +102,7 @@
    "at": {
     "space": "board",
     "x": -8.56,
-    "y": 15.75
+    "y": 15.8
    },
    "code": "silk_over_copper",
    "message": "Silkscreen clipped by solder mask: Reference field of C7; Pad 1 [+3V3] of R4 on F.Cu",
@@ -207,7 +207,7 @@
    "at": {
     "space": "board",
     "x": -8.9,
-    "y": 17.92
+    "y": 17.97
    },
    "code": "silk_over_copper",
    "message": "Silkscreen clipped by solder mask: Reference field of R4; Pad 1 [+3V3] of C6 on F.Cu",
@@ -267,7 +267,7 @@
    "at": {
     "space": "board",
     "x": -8.56,
-    "y": 19.25
+    "y": 19.3
    },
    "code": "silk_overlap",
    "message": "Silkscreen clearance: Reference field of C5; Reference field of R4",
@@ -282,7 +282,7 @@
    "at": {
     "space": "board",
     "x": -8.56,
-    "y": 19.25
+    "y": 19.3
    },
    "code": "silk_overlap",
    "message": "Silkscreen clearance: Reference field of C5; Segment of C6 on F.Silkscreen",
@@ -421,7 +421,7 @@
     "layer": "F.Silkscreen",
     "space": "board",
     "x": -9.0536,
-    "y": 16.37
+    "y": 16.42
    },
    "code": "silk_overlap",
    "message": "Silkscreen clearance: Segment of R4 on F.Silkscreen; Reference field of C7",
@@ -484,8 +484,239 @@
   },
   {
    "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 23.6,
+    "y": 11.6
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C11702 not known: last checked 2026-11-10 (R6, R7) (board.py:46)",
+   "refs": [
+    "R6",
+    "R7"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -7.4,
+    "y": 19.3
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C1525 not known: last checked 2026-11-10 (C5) (board.py:39)",
+   "refs": [
+    "C5"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -6.8,
+    "y": -14.25
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C1538 not known: last checked 2026-11-10 (C2) (board.py:28)",
+   "refs": [
+    "C2"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -4.95,
+    "y": -0.75
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C15850 not known: last checked 2026-11-03 (C1, C6) (board.py:24)",
+   "refs": [
+    "C1",
+    "C6"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 0,
+    "y": -17.85
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C165948 not known: last checked 2026-11-03 (J1) (board.py:18)",
+   "refs": [
+    "J1"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 13.4,
+    "y": 11.6
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C2286 not known: last checked 2026-11-04 (D2) (board.py:50)",
+   "refs": [
+    "D2"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -8.9,
+    "y": 16.8
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C25744 not known: last checked 2026-11-03 (R4, R5) (board.py:41)",
+   "refs": [
+    "R4",
+    "R5"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -0.25,
+    "y": -11.8
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C25905 not known: last checked 2026-11-03 (R1, R2) (board.py:25)",
+   "refs": [
+    "R1",
+    "R2"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -5.8,
+    "y": -14.2
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C26083 not known: last checked 2026-11-03 (R3) (board.py:27)",
+   "refs": [
+    "R3"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -25,
+    "y": 11.75
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C2886894 not known: last checked 2026-11-12 (SW1) (board.py:44)",
+   "refs": [
+    "SW1"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -1,
+    "y": -0.55
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C51118 not known: last checked 2026-11-03 (U2) (board.py:32)",
+   "refs": [
+    "U2"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -3.45,
+    "y": -1.2
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C52923 not known: last checked 2026-11-03 (C3, C4, C7) (board.py:31)",
+   "refs": [
+    "C3",
+    "C4",
+    "C7"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 0,
+    "y": 16.4
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C5736265 not known: last checked 2026-11-10 (U1) (board.py:37)",
+   "refs": [
+    "U1"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 24.6,
+    "y": 15.25
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C72043 not known: last checked 2026-11-02 (D1) (board.py:47)",
+   "refs": [
+    "D1"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -2.45,
+    "y": -10.85
+   },
+   "code": "part_stock_unknown",
+   "message": "stock of C910822 not known: last checked 2026-11-15 (F1) (board.py:21)",
+   "refs": [
+    "F1"
+   ],
+   "severity": "warning",
+   "source": "parts"
+  },
+  {
+   "at": {
     "file": "board.py",
-    "line": 33,
+    "line": 37,
     "space": "source"
    },
    "code": "nc_rest",
@@ -499,7 +730,7 @@
   {
    "at": {
     "file": "board.py",
-    "line": 29,
+    "line": 32,
     "space": "source"
    },
    "code": "nc_rest",
@@ -509,17 +740,122 @@
    ],
    "severity": "info",
    "source": "board.py"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 24.6,
+    "y": 15.25
+   },
+   "code": "part_extended",
+   "message": "D1 extended: a green 0603 LED; jlcsearch listed no basic one (board.py:47)",
+   "refs": [
+    "D1"
+   ],
+   "severity": "info",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -2.45,
+    "y": -10.85
+   },
+   "code": "part_extended",
+   "message": "F1 extended: an 0805 resettable fuse holding 500 mA at 24 V; jlcsearch listed no basic one (board.py:21)",
+   "refs": [
+    "F1"
+   ],
+   "severity": "info",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 0,
+    "y": -17.85
+   },
+   "code": "part_extended",
+   "message": "J1 extended: the USB-C receptacle this footprint is drawn for, the HRO TYPE-C-31-M-12 (board.py:18)",
+   "refs": [
+    "J1"
+   ],
+   "severity": "info",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -25,
+    "y": 11.75
+   },
+   "code": "part_extended",
+   "message": "SW1 extended: the TL3342 button this footprint is drawn for (board.py:44)",
+   "refs": [
+    "SW1"
+   ],
+   "severity": "info",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": 0,
+    "y": 16.4
+   },
+   "code": "part_extended",
+   "message": "U1 extended: the ESP32-C6 module itself, with 4 MB of flash (board.py:37)",
+   "refs": [
+    "U1"
+   ],
+   "severity": "info",
+   "source": "parts"
+  },
+  {
+   "at": {
+    "layer": "F.Cu",
+    "space": "board",
+    "x": -1,
+    "y": -0.55
+   },
+   "code": "part_extended",
+   "message": "U2 extended: the AP2112K-3.3 the design uses: 600 mA from a SOT-23-5 (board.py:32)",
+   "refs": [
+    "U2"
+   ],
+   "severity": "info",
+   "source": "parts"
   }
  ],
- "hash": "31ea11f6a0ae",
- "headline": "On h1: 0 errors, 31 warnings, 80 unrouted",
- "kernel_version": "0.1.0",
+ "hash": "24b2945d4bc2",
+ "headline": "On h1: 0 errors, 46 warnings, 80 unrouted",
+ "kernel_version": "0.3.0",
  "kicad_cli": "10.0.6",
  "number": 1,
  "placement": {
   "crossings": 4,
-  "length_mm": 205.27,
-  "score": 81.054
+  "length_mm": 205.89,
+  "score": 81.178
+ },
+ "routing": {
+  "complete": null,
+  "copper_errors": null,
+  "drc_errors": null,
+  "key": "bd9204cd8c3f",
+  "number": null,
+  "route": null,
+  "route_key": null,
+  "router_seconds": null,
+  "router_share": null,
+  "stale_because": [],
+  "state": "none",
+  "unrouted": null,
+  "verdict": null
  },
  "schema": "pino.build/1",
  "timings": [
@@ -528,15 +864,19 @@
    "step": "libraries"
   },
   {
-   "seconds": 0.502,
+   "seconds": 0.01,
+   "step": "fetch parts"
+  },
+  {
+   "seconds": 0.493,
    "step": "run board.py"
   },
   {
-   "seconds": 0.433,
+   "seconds": 0.423,
    "step": "hash"
   },
   {
-   "seconds": 3.15,
+   "seconds": 3.144,
    "step": "place"
   },
   {
@@ -544,27 +884,27 @@
    "step": "write schematic"
   },
   {
-   "seconds": 0.017,
+   "seconds": 0.018,
    "step": "write board"
   },
   {
-   "seconds": 0.796,
+   "seconds": 0.801,
    "step": "erc"
   },
   {
-   "seconds": 0.47,
+   "seconds": 0.474,
    "step": "netlist"
   },
   {
-   "seconds": 0.462,
+   "seconds": 0.472,
    "step": "schematic svg"
   },
   {
-   "seconds": 0.602,
+   "seconds": 0.603,
    "step": "drc"
   },
   {
-   "seconds": 0.622,
+   "seconds": 0.626,
    "step": "svg"
   },
   {
@@ -572,12 +912,20 @@
    "step": "glb"
   },
   {
-   "seconds": 0.094,
+   "seconds": 0.097,
    "step": "checks"
+  },
+  {
+   "seconds": 0.001,
+   "step": "parts"
   },
   {
    "seconds": 0,
    "step": "diff"
+  },
+  {
+   "seconds": 0.083,
+   "step": "routing"
   }
  ],
  "truncated": 0,

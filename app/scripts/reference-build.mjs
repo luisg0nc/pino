@@ -1,6 +1,8 @@
 // Makes app/test/fixtures/reference-build/: the reference board (kernel/tests/fixtures/reference) built once with
-// the real engine, so the app's tests read what the engine really writes. Needs uv and kicad-cli.
-// Run it from anywhere: node app/scripts/reference-build.mjs. It writes into that folder and nowhere else.
+// the real engine, so the app's tests read what the engine really writes; and app/test/fixtures/fab-profiles.json,
+// the engine's own fab profiles. Needs uv and kicad-cli. Parts answer from the kernel's recorded jlcsearch fixtures,
+// with a parts cache of the run's own, so nothing is asked over the network and the user's cache is not read.
+// Run it from anywhere: node app/scripts/reference-build.mjs. It writes those two and nothing else.
 
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -30,6 +32,10 @@ delete env.WAYLAND_DISPLAY
 
 const work = mkdtempSync(join(tmpdir(), 'pino-reference-'))
 try {
+  env.PINO_CACHE_DIR = join(work, 'cache')
+  env.PINO_PARTS_RECORDED = join(kernel, 'tests', 'fixtures', 'parts', 'jlcsearch')
+  const profiles = execFileSync('uv', ['run', '--directory', kernel, 'python', '-c', 'import json; from pino_kernel.fab import PROFILES; print(json.dumps([p.to_json() for p in PROFILES.values()], indent=1))'], { env, encoding: 'utf8' })
+  writeFileSync(join(app, 'test', 'fixtures', 'fab-profiles.json'), profiles)
   const project = join(work, 'reference')
   cpSync(join(kernel, 'tests', 'fixtures', 'reference'), project, { recursive: true })
   const stdout = execFileSync('uv', ['run', '--directory', kernel, 'pino-kernel', 'build', project, '--no-cache'], { env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })

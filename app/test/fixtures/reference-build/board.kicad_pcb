@@ -92,6 +92,7 @@
 		)
 		(capping no)
 		(filling no)
+		(aux_axis_origin 100 100)
 		(pcbplotparams
 			(layerselection 0x00000000_00000000_55555555_5755f5ff)
 			(plot_on_all_layers_selection 0x00000000_00000000_00000000_00000000)
@@ -327,7 +328,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C165948"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -554,7 +555,7 @@
 			(size 0.3 1.45)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "USB_DP")
+			(net "USB_D+")
 			(uuid "38b5c7d4-c048-5bbe-a4a6-d0d2518fdab5")
 		)
 		(pad "A7" smd roundrect
@@ -562,7 +563,7 @@
 			(size 0.3 1.45)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "USB_DN")
+			(net "USB_D-")
 			(uuid "26be549c-59d6-5fa1-84bb-5a845787664f")
 		)
 		(pad "A8" smd roundrect
@@ -618,7 +619,7 @@
 			(size 0.3 1.45)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "USB_DP")
+			(net "USB_D+")
 			(uuid "0b94aa49-2ee6-5adb-ba67-7ef328a27327")
 		)
 		(pad "B7" smd roundrect
@@ -626,7 +627,7 @@
 			(size 0.3 1.45)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "USB_DN")
+			(net "USB_D-")
 			(uuid "4e23743d-9b5c-59d0-a39b-b18af99cc65d")
 		)
 		(pad "B8" smd roundrect
@@ -926,7 +927,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C52923"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1040,7 +1041,7 @@
 	(footprint "Capacitor_SMD:C_0805_2012Metric"
 		(layer "F.Cu")
 		(uuid "31885a13-c943-5530-b1cd-4c862323a98e")
-		(at 91.1 80.3 90)
+		(at 91.1 80.25 90)
 		(descr "Capacitor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf, https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing)")
 		(tags "capacitor")
 		(property "Reference" "C6"
@@ -1087,7 +1088,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C15850"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1201,7 +1202,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "31f7ee12-805e-509d-8b3e-af95e665fbe0")
-		(at 123.6 88.45 90)
+		(at 123.6 88.4 90)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R6"
@@ -1248,7 +1249,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C11702"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1409,7 +1410,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C26083"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1731,7 +1732,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C25905"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1892,7 +1893,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C52923"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2053,7 +2054,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C25905"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2214,7 +2215,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C25744"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2328,7 +2329,7 @@
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "956e7637-0c5d-5cfa-8ab6-902e9c4e3f21")
-		(at 92.6 80.75 90)
+		(at 92.6 80.7 90)
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "capacitor")
 		(property "Reference" "C5"
@@ -2375,7 +2376,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C1525"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2489,7 +2490,7 @@
 	(footprint "LED_SMD:LED_0603_1608Metric"
 		(layer "F.Cu")
 		(uuid "9dbdf575-985d-53d7-91a6-7bdac4d2dce0")
-		(at 124.6 84.8 180)
+		(at 124.6 84.75 180)
 		(descr "LED SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf)")
 		(tags "LED")
 		(property "Reference" "D1"
@@ -2536,7 +2537,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C72043"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -2746,7 +2747,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C910822"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2907,7 +2908,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C15850"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3021,7 +3022,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "a8998adb-4a2d-5b10-92b4-4ffd8b4e723d")
-		(at 91.1 83.25)
+		(at 91.1 83.2)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R4"
@@ -3068,7 +3069,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C25744"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3182,7 +3183,7 @@
 	(footprint "LED_SMD:LED_0603_1608Metric"
 		(layer "F.Cu")
 		(uuid "be6edbaf-7792-5942-81b5-07562e2be42f")
-		(at 112.9 88.45 90)
+		(at 113.4 88.4 90)
 		(descr "LED SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf)")
 		(tags "LED")
 		(property "Reference" "D2"
@@ -3229,7 +3230,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C2286"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3392,7 +3393,7 @@
 	(footprint "RF_Module:ESP32-C6-MINI-1"
 		(layer "F.Cu")
 		(uuid "cb32a2b6-dcef-53d9-a331-23d9980b0b0e")
-		(at 100 83.65)
+		(at 100 83.6)
 		(descr "2.4 GHz Wi-Fi, Bluetooth, Zigbee and Thread combo chip, external antenna, https://www.espressif.com/sites/default/files/documentation/esp32-c6-mini-1_mini-1u_datasheet_en.pdf")
 		(tags "2.4 GHz Wi-Fi Bluetooth Zigbee Thread external antenna espressif  16.6*13.2mm")
 		(property "Reference" "U1"
@@ -3419,7 +3420,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C5736265"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3804,14 +3805,14 @@
 			(at -0.8 4.9 90)
 			(size 0.8 0.4)
 			(layers "F.Cu" "F.Mask" "F.Paste")
-			(net "USB_DN")
+			(net "USB_D-")
 			(uuid "5b8a2d98-9525-51ad-8e54-8cdfea0960da")
 		)
 		(pad "18" smd rect
 			(at 0 4.9 90)
 			(size 0.8 0.4)
 			(layers "F.Cu" "F.Mask" "F.Paste")
-			(net "USB_DP")
+			(net "USB_D+")
 			(uuid "b17ae352-20ae-5fc4-9655-e1f850f213d4")
 		)
 		(pad "19" smd rect
@@ -4163,7 +4164,7 @@
 			)
 			(polygon
 				(pts
-					(xy 121.6 78.05) (xy 78.4 78.05) (xy 78.4 57.65) (xy 121.6 57.65)
+					(xy 121.6 78) (xy 78.4 78) (xy 78.4 57.6) (xy 121.6 57.6)
 				)
 			)
 		)
@@ -4208,7 +4209,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C2886894"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -4757,7 +4758,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "d3abec21-8db4-5202-9e1d-fe0240d5d295")
-		(at 111.65 86.3 -90)
+		(at 112.15 86.25 -90)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R7"
@@ -4804,7 +4805,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C11702"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -4965,7 +4966,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C51118"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5315,7 +5316,7 @@
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "dca4bbb1-419b-5fe7-9d20-b9eb0c689952")
-		(at 92.6 84.25 90)
+		(at 92.6 84.2 90)
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "capacitor")
 		(property "Reference" "C7"
@@ -5362,7 +5363,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C52923"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5523,7 +5524,7 @@
 				)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C1538"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)

@@ -66,5 +66,5 @@ it("keeps of the reference board's pour only its outline: no line crosses it", (
   const drawn = fills.flatMap((f) => outlineEdges(f.pts))
   // the long level edges left are the pour's own top and bottom; its slits ran across it between them
   const level = drawn.filter(([a, b]) => Math.abs(a.y - b.y) < 1e-4 && Math.abs(a.x - b.x) > 4).map(([a]) => a.y)
-  expect(level.sort((a, b) => a - b)).toEqual([78.3005, 121.6995])
+  expect(level.sort((a, b) => a - b)).toEqual([78.2005, 121.7995])
 })

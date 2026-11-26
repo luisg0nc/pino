@@ -36,6 +36,11 @@ describe('the specs', () => {
     expect(src).toContain("PINO_AGENT_CMD: opts.agent ? `node ${FAKE_AGENT}` : NO_AGENT")
   })
 
+  it('keeps the real engine off the network: parts are offline in every run', () => {
+    // The real engine looks parts up at jlcsearch while it builds the reference board: no spec may.
+    expect(read('e2e/launch.ts')).toContain("PINO_PARTS_OFFLINE: '1'")
+  })
+
   it("runs the engine's stand-in everywhere but in the one spec of the real engine", () => {
     expect(read('e2e/launch.ts')).toContain('PINO_KERNEL_CMD: `node ${FAKE_KERNEL}`')
     expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts')).toEqual(['e2e/real-kernel.spec.ts'])
