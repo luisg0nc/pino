@@ -163,7 +163,9 @@ function parsePad(n: Node, fp: Footprint, copper: string[], warnings: string[]):
 function netOf(n: Node): string {
   const k = kid(n, 'net');
   if (!k) return '';
-  return plain((k.length > 2 ? k[2] : k[1]) as string);
+  const name = plain((k.length > 2 ? k[2] : k[1]) as string);
+  // KiCad names a net of its own for each pin left open: such a pin is on no net.
+  return name.startsWith('unconnected-(') ? '' : name;
 }
 
 // The courtyard's lines as one closed polygon, when they chain into one: an L-shaped courtyard stays L-shaped.

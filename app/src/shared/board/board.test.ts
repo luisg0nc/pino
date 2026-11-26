@@ -66,3 +66,11 @@ describe('reading a board', () => {
     }
   })
 })
+
+it("takes KiCad's name for a pin left open as no net", () => {
+  const board = readBoard(tinyBoard().replace('(net "GND")', '(net "unconnected-(R1-Pad2)")'))
+  expect(board.footprints.find((f) => f.ref === 'R1')!.pads[1].net).toBe('')
+  expect(board.nets).toEqual(['A', 'GND'])
+  const reference = readBoard(read(fx('filled/board.kicad_pcb')))
+  expect(reference.nets.filter((n) => n.startsWith('unconnected-('))).toEqual([])
+})

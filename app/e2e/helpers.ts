@@ -83,3 +83,26 @@ export async function clickTarget(page: Page, target: Target): Promise<void> {
   const at = await screenOf(page, target)
   await page.mouse.click(at.x, at.y)
 }
+
+/** The wheel turned over a thing, to look at it closely. */
+export async function zoomOn(page: Page, target: Target, by: number): Promise<void> {
+  const at = await screenOf(page, target)
+  await page.mouse.move(at.x, at.y)
+  await page.mouse.wheel(0, -by)
+  await settled(page)
+}
+
+/** The mock's scene of marks on the reference board: a part, an arrow, a stroke, a region and a pad, with notes. */
+export async function markScene(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const id = window.__pinoTest!.state().project!.id
+    const { add } = window.pino.marks
+    // U2 stands at (-1.00, -0.55); the places below are round it, board millimetres.
+    await add(id, { kind: 'point', space: 'board', target: { kind: 'part', ref: 'U2' }, at: { x: 0, y: 0 }, note: 'U2, the regulator' })
+    await add(id, { kind: 'arrow', from: { kind: 'part', ref: 'C4' }, fromAt: { x: 0, y: 0 }, to: { x: 4.4, y: 0.4 }, note: 'move C4 here' })
+    await add(id, { kind: 'stroke', layer: 'F.Cu', points: [{ x: -2.6, y: -1 }, { x: -4.3, y: -1.9 }, { x: -4.6, y: -3.5 }, { x: -3.2, y: -4.7 }, { x: -1.2, y: -4.9 }, { x: 0.8, y: -4.1 }], crosses: { nets: [], parts: [] }, note: 'route VBUS this way' })
+    await add(id, { kind: 'region', layers: ['F.Cu', 'B.Cu'], intent: 'keep-clear', holds: [], points: [{ x: 2.2, y: -1.8 }, { x: 6.4, y: -1.8 }, { x: 6.4, y: -4.6 }, { x: 2.2, y: -4.6 }], note: 'keep this clear, a clip goes here' })
+    await add(id, { kind: 'point', space: 'board', target: { kind: 'pad', ref: 'U2', number: '5' }, at: { x: 0, y: 0 }, note: 'this is the 3V3 output' })
+  })
+  await expect.poll(() => page.evaluate(() => window.__pinoTest!.state().marks.length)).toBe(5)
+}

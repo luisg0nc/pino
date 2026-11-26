@@ -30,6 +30,10 @@
   cursor: grabbing;
 }
 
+.board-view:not([data-tool='select']) canvas.board {
+  cursor: crosshair;
+}
+
 /* ---- the layer control: the board's stack seen edge-on ---- */
 
 .stack {
@@ -161,7 +165,7 @@
 
 .scale {
   position: absolute;
-  z-index: 3;
+  z-index: 6;
   bottom: 12px;
   left: 14px;
   padding: 5px 9px 4px;

@@ -41,6 +41,11 @@ const ROWS = [
   row('board.fit', ['F'], 'Fit the whole drawing in the view', 'The views', 'view'),
   row('board.nets', ['N'], 'Board: net colours on or off', 'The views', 'view'),
   row('view.drop', ['Esc'], 'Put down the tool in hand, then what is selected', 'The views', 'view'),
+  row('mark.select', ['V'], 'Marks: put the tool down and select', 'The views', 'view'),
+  row('mark.point', ['P'], 'Marks: point at a part, pad or track', 'The views', 'view'),
+  row('mark.arrow', ['A'], 'Marks: an arrow, move this here', 'The views', 'view'),
+  row('mark.stroke', ['D'], 'Marks: a stroke, route this way', 'The views', 'view'),
+  row('mark.region', ['R'], 'Marks: a region, keep this clear', 'The views', 'view'),
 
   row('chat.send', ['Enter'], 'Chat: send the prompt', 'Session', 'composer'),
   row('chat.newline', ['Shift+Enter'], 'Chat: a new line in the prompt, not a send', 'Session', 'composer'),

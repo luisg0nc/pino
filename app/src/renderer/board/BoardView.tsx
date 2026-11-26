@@ -4,7 +4,8 @@ import { toKicad } from '../../shared/board/coords'
 import type { Board } from '../../shared/board/board'
 import type { Pt } from '../../shared/board/geom'
 import { hitTest, Index, nextHit, type Hit } from '../../shared/board/hit'
-import { centreOf, describeTarget, findTarget, shortLabel, targetOf, type Target } from '../../shared/board/refs'
+import { centreOf, describeTarget, findTarget, layerWords, shortLabel, targetOf, type Target } from '../../shared/board/refs'
+import type { NewMark } from '../../shared/marks'
 import { pressed, which } from '../../shared/keys'
 import { ratsFor } from '../../shared/view'
 import { actions, store, useStore } from '../state/store'
@@ -17,6 +18,11 @@ import { drawTarget, toBoardSpace } from './drawTarget'
 import { FindingPins } from './FindingPins'
 import { typingIn } from './keysHeard'
 import { LayerStack } from './LayerStack'
+import { ChipLayer } from './marks/ChipLayer'
+import { chipAnchor } from './marks/chips'
+import { drawArrow, drawMark, drawPen, drawRegion, outlineOfPart } from './marks/drawMarks'
+import { MarkReed } from './marks/MarkReed'
+import { liveReadout, newMarkFrom, strokeOf, TOOL_KEYS, type MarkTool } from './marks/tools'
 import { netColourFor } from './netColours'
 import { boardColours } from './style'
 import { once, sized, useDark, useSize } from './useCanvas'
@@ -31,6 +37,29 @@ const WASH_MS = 700
 const kept = new Map<string, View>()
 /** The board each project's view drew last, to say what a new build changed. */
 const lastDrawn = new Map<string, { key: string; board: Board }>()
+
+const BOARD_TOOLS: readonly MarkTool[] = ['select', 'point', 'arrow', 'stroke', 'region']
+
+const HINTS: Record<MarkTool, string> = {
+  select: 'Click a part, pad or track · drag pans · scroll zooms',
+  point: 'Click a part, pad or track to mark it · A arrow · D stroke · R region',
+  arrow: 'Drag from what should move to where it should go · Esc puts the tool down',
+  stroke: 'Drag along the way you want it routed · Esc puts the tool down',
+  region: 'Drag round the area · Esc puts the tool down'
+}
+
+/** A drag with a drawing tool under way: what lay under the press, and the pointer's path on the view. */
+interface Drawing {
+  hit?: Hit
+  screen: Pt[]
+}
+
+/** Asks main for a mark and takes it in hand; why it would not is said in the status line. */
+function make(mark: NewMark): void {
+  const id = store.getState().project?.id
+  if (!id) return
+  void window.pino.marks.add(id, mark).catch((e: Error) => actions.notice(e.message))
+}
 
 const NOTHING: ChangedSet = { parts: [], tracks: [], vias: [], zones: [] }
 
@@ -55,6 +84,12 @@ export function BoardView({ model }: { model: ViewModel }) {
   const look = useStore((s) => s.look)
   const selection = useStore((s) => s.selection)
   const hot = useStore((s) => s.hotFinding)
+  const tool = useStore((s) => s.tool)
+  const marks = useStore((s) => s.marks)
+  const heldMark = useStore((s) => s.heldMark)
+  const hotMark = useStore((s) => s.hotMark)
+  const [drawing, setDrawing] = useState<Drawing | null>(null)
+  const open = useMemo(() => marks.filter((m) => m.status !== 'resolved' || m.id === heldMark), [marks, heldMark])
   const [view, setView] = useState<View | null>(() => kept.get(model.projectId) ?? null)
   const [panning, setPanning] = useState(false)
   /** 0 to 1 while the wash over what changed fades. */
@@ -150,7 +185,23 @@ export function BoardView({ model }: { model: ViewModel }) {
         ctx.setLineDash([])
       }
     }
-  }, [view, size, selection, board, rats, look.ratsnest, washed, changed, dark])
+    for (const mark of open) drawMark(ctx, board, mark, colours, px)
+    // The mark in hand, or pointed at, is drawn once more over the others.
+    const lit = open.find((m) => m.id === (hotMark ?? heldMark))
+    if (lit) drawMark(ctx, board, lit, colours, 1.25 * px)
+    if (drawing && view) {
+      const path = strokeOf(drawing.screen, view)
+      const first = path[0]
+      const last = toModel(view, drawing.screen[drawing.screen.length - 1])
+      const pen = { colour: colours.userMark, paper: colours.paper, faint: false }
+      if (tool === 'stroke') drawPen(ctx, path, pen, px)
+      else if (tool === 'region' && path.length > 1) drawRegion(ctx, path, pen, px)
+      else if (tool === 'arrow') {
+        const made = newMarkFrom('arrow', { hit: drawing.hit, points: [first, last], layer: active, layers: board.copper }, board)
+        if (made?.kind === 'arrow') drawArrow(ctx, toKicad(made.fromAt), last, made.from?.kind === 'part' ? outlineOfPart(board, made.from.ref) : null, pen, px)
+      }
+    }
+  }, [view, size, selection, board, rats, look.ratsnest, washed, changed, dark, open, hotMark, heldMark, drawing, tool, active])
 
   // ---- the pointer
   const local = (e: { clientX: number; clientY: number }): Pt => {
@@ -158,10 +209,17 @@ export function BoardView({ model }: { model: ViewModel }) {
     return { x: e.clientX - box.left, y: e.clientY - box.top }
   }
 
+  const hitsAt = (screen: Pt, from: View): Hit[] => hitTest(index, toModel(from, screen), { visible: new Set(board.copper), active, tol: NEAR / from.scale })
+
   const click = (screen: Pt): void => {
     if (!view) return
     const at = toModel(view, screen)
-    const hits: Hit[] = hitTest(index, at, { visible: new Set(board.copper), active, tol: NEAR / view.scale })
+    const hits = hitsAt(screen, view)
+    if (tool === 'point') {
+      const made = newMarkFrom('point', { hit: hits[0], points: [at], layer: active, layers: board.copper }, board)
+      if (made) make(made)
+      return
+    }
     const again = lastClick.current && Math.hypot(lastClick.current.x - screen.x, lastClick.current.y - screen.y) <= DRAG_SLOP
     const held = again && store.getState().selection ? findTarget(board, store.getState().selection!.target) : null
     const hit = nextHit(hits, held)
@@ -174,12 +232,24 @@ export function BoardView({ model }: { model: ViewModel }) {
     actions.select({ tab: 'board', target, text: describeTarget(board, model.circuit, target), label: shortLabel(board, target) })
   }
 
+  const draws = tool === 'arrow' || tool === 'stroke' || tool === 'region'
+
   const onPointerDown = (e: ReactPointerEvent): void => {
-    if (e.button !== 0 || !view) return
+    // The middle button pans with any tool in hand.
+    if ((e.button !== 0 && e.button !== 1) || !view) return
     canvas.current!.setPointerCapture(e.pointerId)
+    if (draws && e.button === 0) {
+      setDrawing({ hit: hitsAt(local(e), view)[0], screen: [local(e)] })
+      return
+    }
     press.current = { ...local(e), view, dragged: false }
   }
   const onPointerMove = (e: ReactPointerEvent): void => {
+    if (drawing) {
+      const at = local(e)
+      setDrawing((d) => d && { ...d, screen: [...d.screen, at] })
+      return
+    }
     const from = press.current
     if (!from) return
     const at = local(e)
@@ -189,6 +259,15 @@ export function BoardView({ model }: { model: ViewModel }) {
     setView({ ...from.view, tx: from.view.tx + at.x - from.x, ty: from.view.ty + at.y - from.y })
   }
   const onPointerUp = (e: ReactPointerEvent): void => {
+    if (drawing && view) {
+      const screen = [...drawing.screen, local(e)]
+      setDrawing(null)
+      // The whole of the pointer's way: an arrow takes its two ends from it.
+      const path = screen.map((p) => toModel(view, p))
+      const made = newMarkFrom(tool, { hit: drawing.hit, points: tool === 'arrow' ? path : strokeOf(screen, view), layer: active, layers: board.copper }, board)
+      if (made) make(made)
+      return
+    }
     const from = press.current
     press.current = null
     setPanning(false)
@@ -213,11 +292,20 @@ export function BoardView({ model }: { model: ViewModel }) {
     const down = (e: KeyboardEvent) => {
       if (typingIn(e.target) || e.defaultPrevented) return
       const layer = which(e, 'board.layer')
-      if (layer >= 0 && board.copper[layer]) actions.setLook({ active: board.copper[layer] })
+      const picked = BOARD_TOOLS.find((t) => pressed(e, TOOL_KEYS[t]))
+      if (picked) actions.setTool(picked)
+      else if (layer >= 0 && board.copper[layer]) actions.setLook({ active: board.copper[layer] })
       else if (pressed(e, 'board.fit')) refit()
       else if (pressed(e, 'board.nets')) actions.setLook({ netColours: !store.getState().look.netColours })
-      else if (pressed(e, 'view.drop') && store.getState().selection) actions.select(null)
-      else return
+      else if (pressed(e, 'view.drop')) {
+        // Esc puts down what is in hand, the nearest first: a line being drawn, the tool, a mark, the selection.
+        const now = store.getState()
+        setDrawing(null)
+        if (now.tool !== 'select') actions.setTool('select')
+        else if (now.heldMark) actions.holdMark(null)
+        else if (now.selection) actions.select(null)
+        else return
+      } else return
       e.preventDefault()
     }
     window.addEventListener('keydown', down)
@@ -241,21 +329,38 @@ export function BoardView({ model }: { model: ViewModel }) {
           active,
           items: scene.batches.reduce((n, b) => n + b.items.length, 0),
           highlighted: [...changed.parts, ...changed.tracks, ...changed.vias],
-          marks: [] as string[],
+          marks: open.filter((m) => chipAnchor(m, board) !== null).map((m) => m.id),
           stale: model.stale.size
         })
       }),
-    [board, view, model, active, scene, changed]
+    [board, view, model, active, scene, changed, open]
   )
 
   const onBoard = view ? (p: { x: number; y: number }) => toScreen(view, toKicad(p)) : null
+  const pen = drawing && tool === 'stroke' && view && drawing.screen.length > 1 ? drawing.screen[drawing.screen.length - 1] : null
   const selected = selection && view ? centreOf(board, selection.target) : null
   const bar = view ? scaleBar(view.scale) : null
   const words = selection ? tagLines(selection.text) : null
   return (
-    <div ref={root} className="board-view" data-panning={panning || undefined}>
-      <canvas ref={canvas} className="board" aria-label="The board" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => ((press.current = null), setPanning(false))} />
+    <div ref={root} className="board-view" data-panning={panning || undefined} data-tool={tool}>
+      <canvas
+        ref={canvas}
+        className="board"
+        aria-label="The board"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => ((press.current = null), setDrawing(null), setPanning(false))}
+      />
       <canvas ref={over} className="over" aria-hidden="true" />
+      <MarkReed tools={BOARD_TOOLS} />
+      {view && <ChipLayer marks={open} place={(m) => { const at = chipAnchor(m, board); return at && toScreen(view, at) }} />}
+      {pen && view && (
+        <p className="pen" style={{ transform: `translate(${Math.round(pen.x + 18)}px, ${Math.round(pen.y - 12)}px)` }}>
+          {layerWords(active).replace(/^./, (c) => c.toUpperCase())}
+          <span className="pen-more">{liveReadout(strokeOf(drawing!.screen, view), board, active)}</span>
+        </p>
+      )}
       {onBoard && <FindingPins findings={model.result.findings} space="board" place={onBoard} />}
       {words && selected && onBoard && hot === null && (
         <Tag id="selection" subject={onBoard(selected)} prefer="right">
@@ -271,7 +376,7 @@ export function BoardView({ model }: { model: ViewModel }) {
         </div>
       )}
       <p className="hint" data-tag-avoid="">
-        Click a part, pad or track · drag pans · scroll zooms
+        {HINTS[tool]}
       </p>
     </div>
   )

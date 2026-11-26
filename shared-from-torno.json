@@ -109,7 +109,7 @@
     { "pino": "app/src/renderer/ui/Popover.tsx", "torno": "app/src/renderer/ui/Popover.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/popoverPlace.ts", "torno": "app/src/renderer/ui/popoverPlace.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/popoverPlace.test.ts", "torno": "app/src/renderer/ui/popoverPlace.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
-    { "pino": "app/src/renderer/ui/numbered.tsx", "torno": "app/src/renderer/ui/numbered.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "a build's name is h12" },
+    { "pino": "app/src/renderer/ui/numbered.tsx", "torno": "app/src/renderer/ui/numbered.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "a build's name is h12, and a board's refs (U2.1) and rails (+3V3) are set whole" },
     { "pino": "app/src/renderer/ui/numbered.test.ts", "torno": "app/src/renderer/ui/numbered.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "a case for pino's build names" },
     { "pino": "app/src/renderer/ui/typing.ts", "torno": "app/src/renderer/ui/typing.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/src/renderer/ui/chat/Diff.tsx", "torno": "app/src/renderer/ui/chat/Diff.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
@@ -172,6 +172,8 @@
     { "pino": "app/src/renderer/ui/strip/BuildsStrip.tsx", "torno": "app/src/renderer/ui/strip/BuildsStrip.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's builds: board thumbnails, show an older build; no compare, stars, brackets or folding" },
     { "pino": "app/src/renderer/ui/strip/strip.ts", "torno": "app/src/renderer/ui/strip/strip.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's build history and captions (routed, stale, errors, not kept) in place of torno's" },
     { "pino": "app/src/renderer/ui/strip/strip.test.ts", "torno": "app/src/renderer/ui/strip/strip.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the cases of pino's strip" },
-    { "pino": "app/src/renderer/styles/strip.css", "torno": "app/src/renderer/styles/strip.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's node, with a failed and a not-kept look; folding, brackets and stars cut" }
+    { "pino": "app/src/renderer/styles/strip.css", "torno": "app/src/renderer/styles/strip.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's node, with a failed and a not-kept look; folding, brackets and stars cut" },
+    { "pino": "app/src/renderer/styles/tools.css", "torno": "app/src/renderer/styles/tools.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the reed only: one group, the tool in hand in the person's violet with a raised name pill" },
+    { "pino": "app/src/renderer/styles/marks.css", "torno": "app/src/renderer/styles/marks.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the chips only, in pino's mock shapes, with pino's mark rows and the mark in hand" }
   ]
 }

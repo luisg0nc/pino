@@ -6,6 +6,8 @@ import { BoardBlock } from './route/BoardBlock'
 import { ChecksBlock } from './route/ChecksBlock'
 import { Head } from './route/Head'
 import { InHand } from './route/InHand'
+import { MarkInHand } from './route/MarkInHand'
+import { MarksBlock } from './route/MarksBlock'
 import { NetBlock } from './route/NetBlock'
 import { RoutingBlock } from './route/RoutingBlock'
 import { Section } from './route/Section'
@@ -20,6 +22,8 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
   const build = useStore((s) => s.build)
   const selection = useStore((s) => s.selection)
   const tab = useStore((s) => s.tab)
+  const marks = useStore((s) => s.marks)
+  const heldMark = useStore((s) => s.marks.find((m) => m.id === s.heldMark) ?? null)
   const { model } = useViewModel()
   const target = selection?.target
   const net =
@@ -33,7 +37,8 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
   return (
     <div className="route-card">
       <Head project={project} build={build} />
-      {selection && <InHand selection={selection} />}
+      {heldMark ? <MarkInHand key={heldMark.id} mark={heldMark} board={model?.board ?? null} /> : selection && <InHand selection={selection} />}
+      {marks.length > 0 && <MarksBlock marks={marks} />}
       {tab === 'schematic' && model?.circuit && <BlocksBlock circuit={model.circuit} />}
       {tab === 'schematic' && model && net && <NetBlock model={model} net={net} />}
       {model && build && tab !== 'schematic' && <RoutingBlock model={model} build={build} />}

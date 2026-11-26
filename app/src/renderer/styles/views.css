@@ -140,7 +140,7 @@
 
 .hint {
   position: absolute;
-  z-index: 3;
+  z-index: 6; /* over the pins and the chips, which move under it as the view is panned */
   bottom: 12px;
   left: 50%;
   padding: 4px 12px;

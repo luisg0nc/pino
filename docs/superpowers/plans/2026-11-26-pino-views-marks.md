@@ -900,6 +900,8 @@ git commit -m "Marks in main: M<n> ids, drafts and sent, one atomic file, re-anc
 
 ### Task 12: Pencil marks on the board and the sheet
 
+> As built: dragging an arrow from a pad starts it at the pad's part, since a part is what gets moved. A new region means "keep this clear" until changed. The reed fills only a marking tool in violet, never Select, as the mock does. The mock scene gets its track mark once routed copper exists (Task 16). KiCad's `unconnected-(...)` names count as no net, so a stroke no longer lists open pins as nets. `numbered()` sets refs and rails whole. The plan's track mark is not in the pencil shot yet.
+
 **Files:**
 - Create: `app/src/renderer/board/marks/tools.ts`, `drawMarks.ts`, `MarkReed.tsx`, `ChipLayer.tsx`, `app/src/renderer/ui/route/MarksBlock.tsx`, `app/src/renderer/ui/MarkChip.tsx`; copy torno's `styles/tools.css` (reed rules) and `styles/marks.css` (chip rules)
 - Modify: `app/src/renderer/board/BoardView.tsx`, `app/src/renderer/sheet/SheetView.tsx`, `app/src/renderer/ui/route/InHand.tsx`, `app/src/renderer/state/store.ts`, `app/src/shared/keys.ts`, `shared-from-torno.json`
@@ -917,7 +919,7 @@ git commit -m "Marks in main: M<n> ids, drafts and sent, one atomic file, re-anc
   - On the sheet, only `point` is offered (the reed shows Select and Point).
   - Test hook: `drawn().board.marks` lists the ids drawn; `drawn().sheet.marks` too.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('simplifies a hand stroke and keeps it on its layer', () => {
@@ -929,19 +931,19 @@ it('starts an arrow at the part under the press', () => {})
 it('reads a stroke's length and crossings live', () => { expect(liveReadout(path, tiny, 'F.Cu')).toBe('8.00 mm · crosses A, GND') })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/board/marks`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the tools, the drawing, the chips and the card rows; copy the reed and chip CSS**
+- [x] **Step 3: Write the tools, the drawing, the chips and the card rows; copy the reed and chip CSS**
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src shared-from-torno.json

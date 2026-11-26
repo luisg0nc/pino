@@ -1,0 +1,116 @@
+/* ---- The reed: the marking tools at the left of the view (board/marks/MarkReed.tsx); the one in hand grows its name and key. ---- */
+
+/* Centred on the left edge, 14px in. */
+.toolbox {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  z-index: 6;
+  transform: translateY(-50%);
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+}
+
+/* The group of tools: a slim pill on the view, with the float shadow. */
+.toolbox-group {
+  display: grid;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+}
+
+.toolbox-rule {
+  margin: 1px 6px;
+  border: 0;
+  border-top: var(--divider);
+}
+
+.tool-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+}
+
+.tool-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tool-button:hover {
+  background: var(--user-wash);
+}
+
+/* Select puts the marking tools down: it is shown as chosen, quietly. */
+.tool-button[aria-pressed='true'][data-tool='select'] {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* The tool in hand is filled with the person's own violet: what it draws will be theirs. */
+.tool-button[aria-pressed='true']:not([data-tool='select']) {
+  background: var(--user-mark);
+  color: var(--on-mark);
+}
+
+/* A button and the name that stands to its right. */
+.tool-tipped {
+  position: relative;
+  display: grid;
+}
+
+/* The name that grows out of the tool in hand: its name and its key. It takes no pointer: what is under it is the view's. */
+.reed-pill {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 10px);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 6px 0 12px;
+  border-radius: var(--radius-full);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  color: var(--ink);
+  font-size: var(--text-small);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: reed-grow 0.22s var(--ease);
+}
+
+@keyframes reed-grow {
+  from {
+    clip-path: inset(0 100% 0 0 round 14px);
+  }
+}
+
+.reed-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-inline);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reed-pill {
+    animation: none;
+  }
+}

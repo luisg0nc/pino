@@ -18,7 +18,7 @@ it('app.css is the list of the stylesheets by area and nothing else: every one o
   const there = readdirSync(__dirname).filter((name) => name.endsWith('.css') && name !== 'app.css' && name !== 'tokens.css')
   expect([...AREAS].sort()).toEqual(there.sort())
   // The shell first, in torno's order, then pino's own sheets.
-  expect(AREAS).toEqual(['layout', 'titlebar', 'session', 'chat', 'chat-prompt', 'chat-slip', 'chat-foot', 'controls', 'status', 'card', 'plate', 'welcome', 'route', 'views', 'board', 'sheet', 'three', 'compass', 'strip', 'leaders'].map((name) => `${name}.css`))
+  expect(AREAS).toEqual(['layout', 'titlebar', 'session', 'chat', 'chat-prompt', 'chat-slip', 'chat-foot', 'controls', 'status', 'card', 'plate', 'welcome', 'route', 'views', 'board', 'sheet', 'three', 'compass', 'strip', 'tools', 'marks', 'leaders'].map((name) => `${name}.css`))
 })
 
 /** Every rule of a stylesheet, flat: its selector (with the at-rules it is under) and its declarations. Comments are taken out first. */

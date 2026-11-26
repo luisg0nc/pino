@@ -23,3 +23,8 @@ describe('what a sentence has set in the face of numbers', () => {
 it("sets pino's build names whole, as h12", () => {
   expect(numberedPieces('Drawn from h7. h8 failed: board.py line 12')).toEqual(['Drawn from ', 'h7', '. ', 'h8', ' failed: board.py line ', '12', ''])
 })
+
+it("sets a board's references whole: a part, and a pad of it", () => {
+  expect(numberedPieces('move U2.1 and C4 here, past SW1')).toEqual(['move ', 'U2.1', ' and ', 'C4', ' here, past ', 'SW1', ''])
+  expect(numberedPieces('J1.A4 is VBUS')).toEqual(['', 'J1.A4', ' is VBUS'])
+})

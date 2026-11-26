@@ -5,6 +5,9 @@ import { pressed } from '../../shared/keys'
 import { sheetOf, type Sheet } from '../../shared/sheet'
 import type { View } from '../board/draw'
 import { FindingPins } from '../board/FindingPins'
+import { ChipLayer } from '../board/marks/ChipLayer'
+import { MarkReed } from '../board/marks/MarkReed'
+import { TOOL_KEYS, type MarkTool } from '../board/marks/tools'
 import { typingIn } from '../board/keysHeard'
 import { useSize } from '../board/useCanvas'
 import { DRAG_SLOP, fit, toModel, toScreen, zoomAt } from '../board/viewport'
@@ -13,9 +16,11 @@ import { registerView } from '../state/testHooks'
 import type { ViewModel } from '../state/viewModel'
 import { numbered } from '../ui/numbered'
 import { Tag } from '../ui/view/Tag'
-import { contentBox, inkSvg, netShapes, sheetPlace, sheetTargetAt, sheetWords } from './ink'
+import { contentBox, inkSvg, netShapes, sheetChipAt, sheetMarks, sheetPlace, sheetTargetAt, sheetWords } from './ink'
 
 const WHEEL = 1.0015
+/** On the sheet one can point: arrows, strokes and regions are the board's. */
+const SHEET_TOOLS: readonly MarkTool[] = ['select', 'point']
 const INSET = { l: 8, r: 8, t: 8, b: 8 }
 
 interface Drawing {
@@ -63,7 +68,7 @@ function changedSymbols(before: Drawing | undefined, next: Drawing, changes: rea
 const box = (s: Sheet['symbols'][number], pad: number) => ({ x: s.x0 - pad, y: s.y0 - pad, width: s.x1 - s.x0 + 2 * pad, height: s.y1 - s.y0 + 2 * pad, rx: 1.2 })
 
 /** A target drawn over the sheet, in sheet mm: `kind` says how (the selection, or what the pointer is over). */
-function Over({ sheet, target, kind }: { sheet: Sheet; target: Target; kind: 'selected' | 'hover' }) {
+function Over({ sheet, target, kind }: { sheet: Sheet; target: Target; kind: 'selected' | 'hover' | 'by-user' | 'by-agent' }) {
   if (target.kind === 'net') {
     const { wires, spots, pins } = netShapes(sheet, target.name)
     return (
@@ -92,6 +97,8 @@ export function SheetView({ model }: { model: ViewModel }) {
   const selection = useStore((s) => s.selection)
   const hot = useStore((s) => s.hotFinding)
   const hotBlock = useStore((s) => s.hotBlock)
+  const pointing = useStore((s) => s.tool === 'point')
+  const marks = useStore((s) => s.marks)
   const [drawing, setDrawing] = useState<Drawing | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const [view, setView] = useState<View | null>(() => kept.get(model.projectId) ?? null)
@@ -167,7 +174,17 @@ export function SheetView({ model }: { model: ViewModel }) {
     press.current = null
     setPanning(false)
     if (!from || from.dragged) return
-    const target = targetAt(local(e))
+    const screen = local(e)
+    const target = targetAt(screen)
+    if (pointing) {
+      const id = store.getState().project?.id
+      if (!target || !id || !sheet || !view) return
+      // A net is marked where it was pointed at; a part or a pin where it is.
+      const where = target.kind === 'net' ? toModel(view, screen) : sheetPlace(sheet, target)!
+      const at = { x: Math.round(where.x * 100) / 100, y: Math.round(where.y * 100) / 100 }
+      void window.pino.marks.add(id, { kind: 'point', space: 'sheet', target, at, note: '' }).catch((error: Error) => actions.notice(error.message))
+      return
+    }
     actions.select(target ? { tab: 'schematic', target, text: describeTarget(model.board, model.circuit, target), label: shortLabel(model.board, target) } : null)
   }
 
@@ -186,9 +203,16 @@ export function SheetView({ model }: { model: ViewModel }) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (typingIn(e.target) || e.defaultPrevented) return
-      if (pressed(e, 'board.fit')) refit()
-      else if (pressed(e, 'view.drop') && store.getState().selection) actions.select(null)
-      else return
+      const picked = SHEET_TOOLS.find((t) => pressed(e, TOOL_KEYS[t]))
+      if (picked) actions.setTool(picked)
+      else if (pressed(e, 'board.fit')) refit()
+      else if (pressed(e, 'view.drop')) {
+        const now = store.getState()
+        if (now.tool !== 'select') actions.setTool('select')
+        else if (now.heldMark) actions.holdMark(null)
+        else if (now.selection) actions.select(null)
+        else return
+      } else return
       e.preventDefault()
     }
     window.addEventListener('keydown', down)
@@ -221,13 +245,14 @@ export function SheetView({ model }: { model: ViewModel }) {
             selected: held?.kind === 'part' ? held.ref : held?.kind === 'pad' ? `${held.ref}.${held.number}` : null,
             net: held?.kind === 'net' ? held.name : null,
             highlighted: changed,
-            marks: [] as string[]
+            marks: sheet ? sheetMarks(sheet, store.getState().marks).map((m) => m.id) : []
           }
         }
       }),
     [sheet, view, drawing, changed]
   )
 
+  const drawnMarks = sheet ? sheetMarks(sheet, marks) : []
   const litBlock = hotBlock ?? (selection?.target.kind === 'part' || selection?.target.kind === 'pad' ? (model.circuit?.parts.find((p) => p.ref === (selection.target as { ref: string }).ref)?.block ?? null) : null)
   const symbolOf = (ref: string) => sheet?.symbols.find((s) => s.ref === ref)
   const held = selection?.target
@@ -259,12 +284,17 @@ export function SheetView({ model }: { model: ViewModel }) {
               const s = symbolOf(ref)
               return s && <rect key={`${drawing!.hash}-${ref}`} className="sheet-wash" {...box(s, 1.6)} />
             })}
+            {drawnMarks.map((m) => (
+              <Over key={m.id} sheet={sheet} target={m.target} kind={m.author === 'agent' ? 'by-agent' : 'by-user'} />
+            ))}
             {hover && <Over sheet={sheet} target={hover} kind="hover" />}
             {held && <Over sheet={sheet} target={held} kind="selected" />}
           </svg>
         )}
       </div>
+      <MarkReed tools={SHEET_TOOLS} />
       {onView && <FindingPins findings={model.result.findings} space="sheet" place={onView} />}
+      {onView && sheet && <ChipLayer marks={drawnMarks} place={(m) => { const at = m.kind === 'point' ? sheetChipAt(sheet, m) : null; return at && onView(at) }} />}
       {words && tagAt && onView && hot === null && (
         <Tag key={heldSymbol ? 'part' : 'point'} id="selection" subject={onView(tagAt)} prefer={heldSymbol ? 'below' : 'right'}>
           <p className="tag-head">{numbered(words.head)}</p>
@@ -281,7 +311,7 @@ export function SheetView({ model }: { model: ViewModel }) {
         </p>
       )}
       <p className="hint" data-tag-avoid="">
-        Click a part, pin or wire · drag pans · scroll zooms
+        {pointing ? 'Click a part, pin or wire to mark it · Esc puts the tool down' : 'Click a part, pin or wire · drag pans · scroll zooms'}
       </p>
     </div>
   )

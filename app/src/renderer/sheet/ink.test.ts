@@ -3,7 +3,8 @@ import { readBoard } from '../../shared/board/board'
 import { circuitOf } from '../../shared/circuit'
 import { sheetOf } from '../../shared/sheet'
 import { fx, read, readJson } from '../../test/fixtures'
-import { contentBox, inkSvg, KICAD_COLOURS, netShapes, sheetTargetAt, sheetWords, viewBoxOf } from './ink'
+import { point, stroke } from '../../test/marks'
+import { contentBox, inkSvg, KICAD_COLOURS, netShapes, sheetChipAt, sheetMarks, sheetTargetAt, sheetWords, viewBoxOf } from './ink'
 
 const sheet = sheetOf(readJson(fx('sheet.json')))!
 const circuit = circuitOf(readJson(fx('circuit.json')))!
@@ -90,5 +91,22 @@ describe('the words beside what is selected', () => {
   it('says a pin and its net, and a net and its pins', () => {
     expect(sheetWords(board, circuit, { kind: 'pad', ref: 'U2', number: vin.number })).toEqual({ head: 'U2.1 VIN', lines: ['net VBUS'] })
     expect(sheetWords(board, circuit, { kind: 'net', name: 'VBUS' })).toEqual({ head: 'net VBUS', lines: ['6 pins: F1.2, R9.2, C1.1, C3.1, U2.1, U2.3'] })
+  })
+})
+
+describe('marks on the sheet', () => {
+  it('draws the point marks whose target the sheet has, and puts their chips on them', () => {
+    const marks = [
+      point({ id: 'M1', target: { kind: 'part', ref: 'U2' } }),
+      point({ id: 'M2', space: 'sheet', target: { kind: 'net', name: 'VBUS' }, at: { x: 100, y: 60 } }),
+      point({ id: 'M3', target: { kind: 'track', uuid: 'x' } }),
+      point({ id: 'M4', target: { kind: 'part', ref: 'R99' } }),
+      stroke({ id: 'M5' }),
+      point({ id: 'M6', target: { kind: 'part', ref: 'U2' }, status: 'resolved' })
+    ]
+    expect(sheetMarks(sheet, marks).map((m) => m.id)).toEqual(['M1', 'M2'])
+    expect(sheetChipAt(sheet, marks[0] as never)).toEqual({ x: u2.x1, y: u2.y0 })
+    expect(sheetChipAt(sheet, marks[1] as never)).toEqual({ x: 100, y: 60 })
+    expect(sheetChipAt(sheet, point({ target: { kind: 'pad', ref: 'U2', number: vin.number } }))).toMatchObject({ x: vin.x, y: vin.y })
   })
 })

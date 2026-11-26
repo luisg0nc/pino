@@ -7,7 +7,7 @@
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { capture, clickTarget, resize, settled, waitForBuild } from './helpers'
+import { capture, clickTarget, markScene, resize, screenOf, settled, waitForBuild, zoomOn } from './helpers'
 import { launch, referenceProject, type Launched } from './launch'
 
 const folder = process.env.PINO_SHOTS ? resolve(process.env.PINO_SHOTS) : null
@@ -50,7 +50,30 @@ const in3d = async (run: Launched): Promise<void> => {
   await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().three?.loaded ?? false), { timeout: 20_000 }).toBe(true)
 }
 
+/** The marks of the mock's scene, made on the reference board round its regulator, and seen close. */
+const onMarks = async (run: Launched): Promise<void> => {
+  await onBoard(run)
+  await markScene(run.page)
+  await zoomOn(run.page, { kind: 'part', ref: 'U2' }, 900)
+  await run.page.locator('[data-mark-row="M3"]').click()
+  await run.page.mouse.move(5, 5)
+}
+
 const SHOTS: Record<string, Shot> = {
+  marks: { at: onMarks },
+  'marks-dark': { dark: true, at: onMarks },
+  'marks-drawing': {
+    at: async (run) => {
+      await onBoard(run)
+      await zoomOn(run.page, { kind: 'part', ref: 'U2' }, 900)
+      await run.page.keyboard.press('d')
+      const from = await screenOf(run.page, { kind: 'pad', ref: 'U2', number: '1' })
+      await run.page.mouse.move(from.x, from.y)
+      await run.page.mouse.down()
+      for (const [dx, dy] of [[-30, 20], [-55, 55], [-50, 100], [-20, 130], [30, 140], [75, 125]]) await run.page.mouse.move(from.x + dx, from.y + dy, { steps: 6 })
+      // held there: the picture is of a stroke being drawn
+    }
+  },
   '3d': { at: in3d },
   '3d-dark': { dark: true, at: in3d },
   sheet: { at: onSheet },

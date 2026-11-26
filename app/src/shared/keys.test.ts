@@ -78,7 +78,7 @@ it('knows what typing would take', () => {
 
 it('has the keys of the views in a scope of their own, with no clash', () => {
   expect(keyClashes(KEYS)).toEqual([])
-  expect(KEYS.filter((r) => r.scope === 'view').map((r) => r.id)).toEqual(['board.layer', 'board.fit', 'board.nets', 'view.drop'])
+  expect(KEYS.filter((r) => r.scope === 'view').map((r) => r.id)).toEqual(['board.layer', 'board.fit', 'board.nets', 'view.drop', 'mark.select', 'mark.point', 'mark.arrow', 'mark.stroke', 'mark.region'])
   expect(which({ key: '2' }, 'board.layer')).toBe(1)
   expect([pressed({ key: 'f' }, 'board.fit'), pressed({ key: 'n' }, 'board.nets'), pressed({ key: 'Escape' }, 'view.drop')]).toEqual([true, true, true])
 })

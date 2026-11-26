@@ -1,6 +1,7 @@
 // What the window shows, apart from the chats (`state/chat.ts`). Nothing here changes per frame.
 import { useStore as useZustand } from 'zustand'
 import { createStore, type StoreApi } from 'zustand/vanilla'
+import type { MarkTool } from '../board/marks/tools'
 import type { SessionStatus } from '../../shared/bridge'
 import type { BuildState } from '../../shared/build'
 import type { Mark } from '../../shared/marks'
@@ -28,6 +29,8 @@ export interface PinoState {
   hotBlock: string | null
   /** The project's marks, as main holds them. */
   marks: Mark[]
+  /** The marking tool in hand. */
+  tool: MarkTool
   /** The mark in hand: its row, its chip and its shape are lit. */
   heldMark: string | null
   /** The mark pointed at, from its chip or its row. */
@@ -40,10 +43,10 @@ export interface PinoState {
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [], heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
-const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [], heldMark: null, hotMark: null }
+const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
 
 export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
@@ -76,6 +79,9 @@ export const actions = {
     if (store.getState().project?.id !== projectId) return
     const held = store.getState().heldMark
     store.setState({ marks, ...(held && !marks.some((m) => m.id === held) ? { heldMark: null } : {}) })
+  },
+  setTool(tool: MarkTool): void {
+    store.setState({ tool })
   },
   holdMark(heldMark: string | null): void {
     store.setState({ heldMark, ...(heldMark ? { selection: null } : {}) })

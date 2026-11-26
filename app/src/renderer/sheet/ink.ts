@@ -5,6 +5,7 @@ import type { Board } from '../../shared/board/board'
 import { distToSeg, type BBox, type Pt } from '../../shared/board/geom'
 import { netMembers, shortLabel, type Target } from '../../shared/board/refs'
 import type { Circuit } from '../../shared/circuit'
+import type { Mark, PointMark } from '../../shared/marks'
 import type { Sheet, SheetPin, SheetSpot } from '../../shared/sheet'
 
 /** KiCad's colours in the export, and the ink each becomes (the design mocks' map). */
@@ -147,4 +148,21 @@ export function sheetWords(board: Board, circuit: Circuit | null, target: Target
     return { head: `${target.ref}.${target.number}${name}`, lines: [net ? `net ${net.name}` : 'not connected'] }
   }
   return { head: shortLabel(board, target), lines: [] }
+}
+
+/** The marks the sheet can show: open point marks on a part, pin or net it draws. */
+export function sheetMarks(sheet: Sheet, marks: readonly Mark[]): PointMark[] {
+  return marks.filter((m): m is PointMark => m.kind === 'point' && m.status !== 'resolved' && sheetPlace(sheet, m.target) !== null)
+}
+
+/** Where a mark's chip stands on the sheet: a part's top right corner, a pin, or where the net was pointed at. */
+export function sheetChipAt(sheet: Sheet, mark: PointMark): Pt | null {
+  if (mark.space === 'sheet' && mark.target.kind === 'net') return mark.at
+  if (mark.target.kind === 'part') {
+    const ref = mark.target.ref
+    const symbol = sheet.symbols.find((s) => s.ref === ref)
+    return symbol ? { x: symbol.x1, y: symbol.y0 } : null
+  }
+  const at = sheetPlace(sheet, mark.target)
+  return at && { x: at.x, y: at.y }
 }

@@ -76,6 +76,41 @@
   stroke-width: 0.2;
 }
 
+/* Marks: the person's in violet, Claude's in its orange, washed and edged as the selection is. */
+.sheet-part.sheet-by-user,
+.sheet-pin.sheet-by-user {
+  fill: var(--user-mark);
+  fill-opacity: 0.1;
+  stroke: var(--user-mark);
+  stroke-width: 0.5;
+}
+
+.sheet-part.sheet-by-agent,
+.sheet-pin.sheet-by-agent {
+  fill: var(--agent-mark);
+  fill-opacity: 0.1;
+  stroke: var(--agent-mark);
+  stroke-width: 0.5;
+}
+
+.sheet-net.sheet-by-user line {
+  stroke: var(--user-mark);
+  stroke-width: 0.7;
+}
+
+.sheet-net.sheet-by-user circle {
+  fill: var(--user-mark);
+}
+
+.sheet-net.sheet-by-agent line {
+  stroke: var(--agent-mark);
+  stroke-width: 0.7;
+}
+
+.sheet-net.sheet-by-agent circle {
+  fill: var(--agent-mark);
+}
+
 .sheet-net line {
   stroke: var(--accent);
   stroke-linecap: round;
