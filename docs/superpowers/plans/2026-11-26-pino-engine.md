@@ -1292,7 +1292,7 @@ git commit -m "kernel: pin-based assertions, ERC and DRC findings with positions
 - Consumes: `sexpr.parse`, `sexpr.dump`.
 - Produces: `circuit(text: str) -> dict`, `circuit_changes(old: dict, new: dict) -> list[str]`, `layout(text: str) -> dict`, `layout_changes(old: dict, new: dict) -> list[str]`, `changes(old_pcb: str | None, new_pcb: str) -> dict[str, list[str]]` (`{"circuit": [...], "layout": [...]}`; with no old board, `{"circuit": ["first build"], "layout": []}`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_value_change(): assert "R3 value 10k -> 4.7k" in changes(board_text(r3="10k"), board_text(r3="4.7k"))["circuit"]
@@ -1307,21 +1307,21 @@ def test_first_build(): assert changes(None, base) == {"circuit": ["first build"
 
 The board texts are small `.kicad_pcb` strings built in the test file with `sexpr.dump`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_diff.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Port**
+- [x] **Step 3: Port**
 
 Take text, never a path. Drop the release parts of `layout()` (`title`, `prints`, `plotted_texts`, `_masked`): silk texts are compared as written. Use pino's `sexpr` (its `Sym` matches pcb-kit's bare-atom convention).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_diff.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/diff.py kernel/tests/test_diff.py
