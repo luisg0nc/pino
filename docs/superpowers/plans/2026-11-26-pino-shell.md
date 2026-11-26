@@ -231,7 +231,7 @@ git add -A && git commit -m "Add the app prefix and torno's local HTTP server wi
 
 The one tool is `project`: no input (`inputSchema` empty object, unknown keys refused by zod `.strict()`), `_meta: { 'anthropic/alwaysLoad': true }`. It answers one text block: `Project <name> in <dir>. board.py: <present|absent>. brief.md: <present|absent>. pino has no engine yet: nothing is built or drawn.` An id with no open project is an `isError` result: `No project <id> is open in pino.` `SERVER_INSTRUCTIONS` is two sentences saying the server is pino's, for the open project, and that only `project` exists for now. `SYSTEM_PROMPT` says pino is a workbench where Claude designs printed circuit boards from `board.py`, that this build has no engine, and that Claude says so instead of pretending to build.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `server.test.ts` starts `startHttp()`, mounts with a `ToolDeps` of one temp project, grants a token for `/mcp/<id>`, and talks with the SDK's `Client` over `StreamableHTTPClientTransport` with the header.
 
@@ -248,19 +248,19 @@ it('the tools loaded up front are [project], in at most 33,000 characters of nam
 it('the text pino adds to the system prompt, with its server\'s instructions, is under 12,000 characters', () => { expect(SYSTEM_PROMPT.length + SERVER_INSTRUCTIONS.length).toBeLessThan(12_000) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/mcp/server.test.ts src/main/turncost.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy and adapt `server.ts` and `turncost.test.ts`; write `project.ts`, `tools.ts`, `schemas.ts`, `prompt.ts`**
+- [x] **Step 3: Copy and adapt `server.ts` and `turncost.test.ts`; write `project.ts`, `tools.ts`, `schemas.ts`, `prompt.ts`**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Mount pino's MCP server per project with one tool, and hold the turn's cost"
