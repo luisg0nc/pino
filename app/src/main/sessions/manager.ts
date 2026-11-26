@@ -3,7 +3,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { join } from 'node:path'
 import { APP, envName } from '../../shared/app'
-import type { SessionStatus } from '../../shared/bridge'
+import type { SessionStatus, StartResult } from '../../shared/bridge'
 import { agentChoiceOf, type ChatAnswer, type ChatCommand, type ChatHistory, type ChatItem, type ChatMeta, type ChatModel, type Effort, isEffort, isMode, type Mode, MODEL_NAME } from '../../shared/chat'
 import type { ProjectInfo } from '../../shared/project'
 import { BodyTooLarge, type HttpRouter, readBody, sendJson } from '../http'
@@ -41,10 +41,7 @@ const TOOL_EVENTS = new Set(['PreToolUse', 'PostToolUse'])
 const NOT_FOUND = `Claude Code was not found on PATH. Install it, or start ${APP.name} from a terminal where claude runs.`
 const UNTRUSTED = 'This folder has Claude Code settings of its own'
 
-/** What `start` answers with: the session as it stands, or why there is none, with what the person may say to that. */
-export type StartResult =
-  | { sessionId: string; status: SessionStatus }
-  | { refused: string; question?: { kind: 'trust'; files: string[] } }
+export type { StartResult }
 
 /** How a session is started: `resume` continues the conversation on file; `model` and `effort` are this session's alone. */
 export interface StartOptions {
@@ -385,6 +382,11 @@ export class Sessions {
       s.killTimer = setTimeout(() => agent.kill(), 2 * TERM_AFTER_MS)
     }
     return s.exited
+  }
+
+  /** Whether any agent is there or on its way: one that has not gone yet, or one that is being started. */
+  get busy(): boolean {
+    return this.sessions.size > 0 || this.starting.size > 0
   }
 
   /**

@@ -306,9 +306,12 @@ describe('Sessions', () => {
 
   it('ends a session that is still starting when everything is stopped', async () => {
     const sessions = manager()
+    expect(sessions.busy).toBe(false)
     const starting = sessions.start(project)
+    expect(sessions.busy).toBe(true)
     await sessions.stopAll()
     await starting
+    expect(sessions.busy).toBe(false)
     expect(sessions.current(project.id)).toBeNull()
     for (const pid of pids) await until(() => expect(alive(pid)).toBe(false), 5000)
     expect(tokens.length).toBe(pids.length)

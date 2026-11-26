@@ -554,6 +554,14 @@ git add -A && git commit -m "Cut torno's session manager to its plumbing behind 
 
 ### Task 8: Electron main, preload, bridge and opening a project
 
+> **Note from the build:** The check of `SURFACE` against `tokens.css` is left out of `window.test.ts`: the sheet comes in Task 10, whose `contrast.test.ts` keeps that line.
+>
+> **Note from the build:** `StartResult` lives in `shared/bridge.ts` (the window needs it too); `manager.ts` exports it from there. `Sessions` gains `busy`, for the quit gate.
+>
+> **Note from the build:** A second pino opens the folder it was given only when none is open in the first; otherwise it says so in a notice, since opening it would end a session on the word of a command line.
+>
+> **Note from the build:** `project.current()` rejects once with why a folder named at start (`PINO_PROJECT`) could not be opened, so the first screen can say it.
+
 **Files:**
 - Copy as-is: `app/electron.vite.config.ts`, `app/src/main/quit.ts`, `app/src/main/quit.test.ts`, `app/src/renderer/ui/openFolder.ts`, `app/src/renderer/ui/openFolder.test.ts`
 - Copy adapted:
@@ -593,7 +601,7 @@ notices: { onNotice(cb: (m: { text: string }) => void): () => void }
 - `main/index.ts` environment switches, said in a comment block as torno's: `PINO_TEST=1` (hidden window, temp profile, no single-instance lock, test hooks), `PINO_PROJECT=<path>` (project to open at start), `PINO_CONFIG=<path>` (config file; none under test unless given), `PINO_AGENT_CMD=<cmd>` (the stand-in), `PINO_DEBUG=1`. It calls `app.setName(APP.name)` and `setDesktopName('pino.desktop')`. The window is 1440 by 900, `show: false`, and shown on `ready-to-show` only outside test. It has `contextIsolation: true`, `nodeIntegration: false`, `backgroundThrottling: false`, `backgroundColor` from `SURFACE`, and `disable-frame-rate-limit` under test. It calls `Menu.setApplicationMenu(null)` and `applyLoginPath()` before the first session. Then `startHttp`, `mountMcp` with `ToolDeps.project` (the open project or undefined), `Sessions` with `NO_DOMAIN`, `systemPrompt(toolName)`, `Trust(<userData>/trusted.json)` and `KnownModels(<userData>/models.json)`. `onNotOwn` sends a notice to the window. `before-quit` runs `stopAll` through `quitGate(3000)`. `project.close` and opening another project stop the current session first.
 - `globalThis.__pinoMain` (test only): `pickFolder: string | null`, `picks: number`, `mcpFor(projectId): { url: string; token: string }`, `configPath(): string | null`.
 
-- [ ] **Step 1: Copy the tests named above, and write `project.test.ts`**
+- [x] **Step 1: Copy the tests named above, and write `project.test.ts`**
 
 ```ts
 it('opens a real folder by its real path, with a stable id', async () => { expect(p).toEqual({ id: projectIdOf(real), dir: real, name: basename(real) }) })
@@ -603,19 +611,19 @@ it('refuses a file and a missing path in plain words', async () => { await expec
 it('makes ids that are one URL segment', () => { expect(projectIdOf('/a b/ç')).toMatch(/^p[0-9a-f]{12}$/) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/project.test.ts src/main/recent.test.ts src/main/window.test.ts src/main/loginPath.test.ts src/main/testProfile.test.ts src/main/quit.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt the modules; write `project.ts`, `bridge.ts`, `ipc.ts`, `preload/index.ts`, `index.ts`, the placeholder `App.tsx`**
+- [x] **Step 3: Copy and adapt the modules; write `project.ts`, `bridge.ts`, `ipc.ts`, `preload/index.ts`, `index.ts`, the placeholder `App.tsx`**
 
-- [ ] **Step 4: Run to verify they pass, and that it builds**
+- [x] **Step 4: Run to verify they pass, and that it builds**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm -C app build`
 Expected: PASS; `app/out/main/index.js`, `out/preload/index.js`, `out/renderer/index.html` exist.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add pino's Electron main, preload and bridge, and project opening"

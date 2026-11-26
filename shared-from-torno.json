@@ -56,6 +56,21 @@
     { "pino": "app/src/main/sessions/models.test.ts", "torno": "app/src/main/sessions/models.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the temp folder's name" },
     { "pino": ".claude/rules/chat-transcript.md", "torno": ".claude/rules/chat-transcript.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's transcript, without the CAD seams" },
     { "pino": "app/src/main/sessions/manager.ts", "torno": "app/src/main/sessions/manager.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "cut to its plumbing behind SessionDomain: chat only, no builds, holds, notes or undo; start answers refusals; the agent's group ends with the session" },
-    { "pino": ".claude/rules/sessions.md", "torno": ".claude/rules/sessions.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's cut-down manager and its domain seam" }
+    { "pino": ".claude/rules/sessions.md", "torno": ".claude/rules/sessions.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's cut-down manager and its domain seam" },
+    { "pino": "app/electron.vite.config.ts", "torno": "app/electron.vite.config.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/main/quit.ts", "torno": "app/src/main/quit.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/main/quit.test.ts", "torno": "app/src/main/quit.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/ui/openFolder.ts", "torno": "app/src/renderer/ui/openFolder.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/renderer/ui/openFolder.test.ts", "torno": "app/src/renderer/ui/openFolder.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/src/main/recent.ts", "torno": "app/src/main/recent.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Config holds a project, RecentFolder from shared/project" },
+    { "pino": "app/src/main/recent.test.ts", "torno": "app/src/main/recent.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "to match recent.ts" },
+    { "pino": "app/src/main/frame.ts", "torno": "app/src/main/frame.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Linux only: no overlay, no MUTED, no drawsControls" },
+    { "pino": "app/src/main/window.test.ts", "torno": "app/src/main/window.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "Linux cases only; the surface colours are held by contrast.test.ts" },
+    { "pino": "app/src/main/loginPath.ts", "torno": "app/src/main/loginPath.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's marker; Linux only: no platform argument, no macOS folders" },
+    { "pino": "app/src/main/loginPath.test.ts", "torno": "app/src/main/loginPath.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "to match loginPath.ts" },
+    { "pino": "app/src/main/testProfile.ts", "torno": "app/src/main/testProfile.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the folder's prefix from APP.name" },
+    { "pino": "app/src/main/testProfile.test.ts", "torno": "app/src/main/testProfile.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's prefix" },
+    { "pino": "app/src/renderer/index.html", "torno": "app/src/renderer/index.html", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "title pino" },
+    { "pino": "app/src/renderer/main.tsx", "torno": "app/src/renderer/main.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's App; no platform attribute" }
   ]
 }
