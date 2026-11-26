@@ -429,7 +429,7 @@ git commit -m "Each board's newest build on its card; a copy renamed by a pino r
   ```
 - Produces, `main/cards/file.ts`: `FILE = 'cards.json'`; `textOf(file: CardsFile): string`; `sanitiseCard(value: unknown): Card | null`; `readCardsFile(value: unknown): { file: CardsFile; dropped: number } | null`; `loadCardsFile(dir: string, now?: () => Date): Promise<{ file: CardsFile; text: string | null; problem?: string }>`; `saveCardsFile(dir: string, file: CardsFile): Promise<void>`.
 
-- [ ] **Step 1: Copy the four files and their tests, cut what pino has no use for, then write the failing tests**
+- [x] **Step 1: Copy the four files and their tests, cut what pino has no use for, then write the failing tests**
 
 ```ts
 // shared/cards.test.ts
@@ -465,21 +465,21 @@ it('keeps a merge-conflicted file aside and never reuses its ids', async () => {
 it('writes nothing through a .pino/brief that is a link', async () => { /* saveCardsFile rejects; the link's target is untouched */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/cards.test.ts src/shared/size.test.ts src/main/cards/file.test.ts`
 Expected: FAIL (the kinds, `readingOf`, `readingLine`, `fabText` and the pino paths are not there yet)
 
-- [ ] **Step 3: Adapt the copies to the interfaces above**
+- [x] **Step 3: Adapt the copies to the interfaces above**
 
 `sanitiseCard` takes `size` only on `size`, `part` only on `part` (`lcsc` matching `LCSC`; a `reading` whole or dropped alone), `fab` only on `fab`, `name` only on `frame`, `text` on the rest; `by` only `person` or `agent`. The salvaged `next` is one above the largest `C<n>` in the text, as torno's `salvagedNext`.
 
-- [ ] **Step 4: Run them to verify they pass**
+- [x] **Step 4: Run them to verify they pass**
 
 Run: `pnpm -C app exec vitest run src/shared/cards.test.ts src/shared/size.test.ts src/main/cards/file.test.ts src/manifest.test.ts src/names.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/shared/cards.ts app/src/shared/cards.test.ts app/src/shared/size.ts app/src/shared/size.test.ts app/src/main/cards shared-from-torno.json
