@@ -992,7 +992,7 @@ git commit -m "kernel: route job keyed by its inputs, cached, cancellable, with 
   - `waiting`: none `["routing: not started"]`; running `["routing: running"]`; stale `["routing: stale (parts moved)"]`; current with nets left `["routing: 2 nets left"]`; current and complete `[]`.
   - The engine constraint becomes: two builds of the same input differ only in `number`, `timings`, `changes`, `cached`, `routing`, and the `counts["unrouted"]`, `headline` and `waiting` values routing drives.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_no_route_yet(routed_project):
@@ -1031,26 +1031,32 @@ def test_headline_stays_within_160(routed_project): ...          # long stale re
 def test_result_with_routing_matches_schema(routed_project): ...   # jsonschema.validate for none, current and stale
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_routing_state.py tests/test_result.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.state'`
 
-- [ ] **Step 3: Write `state.py` and wire it into the build**
+- [x] **Step 3: Write `state.py` and wire it into the build**
 
 `result.json` in the build folder keeps `routing` as it was at build time; the returned result always has it fresh. The fast build never merges route findings: they stay in `route.json`, and the `check` tool (stage 6) reads both.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_routing_state.py tests/test_result.py tests/test_build.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/routing/state.py kernel/src/pino_kernel/result.py kernel/src/pino_kernel/build.py kernel/schema/build-result-1.schema.json kernel/tests/test_routing_state.py kernel/tests/test_result.py
 git commit -m "kernel: routing state in the build result, stale copper named and never reused"
 ```
+
+**Plan fixes (implementation):**
+- The schema case lives in `test_routing_state.py` (`test_result_with_routing_matches_schema`), since it needs the routed fixtures; `test_result.py` gains a round trip with `routing`. The engine's `test_build_folder_and_artifacts` pins the timing list, which now ends in `routing`.
+- The build folder's `result.json` keeps the fast build's own counts, headline and waiting, with `routing` as it was at build time; the returned result (fresh or cached) has `routing` computed again and the unrouted count, headline and waiting it drives. A cached build's `routing` timing comes last.
+- `waiting` for current copper with nets left reads the nets left from the route's share (`state.nets_left`). An error while reading the routing state never fails a build: it logs to stderr and leaves `routing` null.
+- `routing` is in the schema's `required` list (the kernel always writes it, null or an object).
 
 ---
 

@@ -47,6 +47,7 @@ class BuildResult:
     placement: dict | None
     waiting: list[str] = field(default_factory=list)
     cached: bool = False
+    routing: dict | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -56,6 +57,7 @@ class BuildResult:
             "truncated": self.truncated, "artifacts": self.artifacts,
             "timings": [t.to_json() for t in self.timings], "changes": self.changes,
             "placement": self.placement, "waiting": list(self.waiting), "cached": self.cached,
+            "routing": self.routing,
         }
 
     def to_json(self) -> str:
@@ -70,7 +72,7 @@ class BuildResult:
             d["schema"], d["kernel_version"], d["kicad_cli"], d["number"], d["hash"], d["verdict"], d["headline"],
             d["counts"], [Finding.from_json(f) for f in d["findings"]], d["truncated"], d["artifacts"],
             [Timing(t["step"], t["seconds"], t.get("cached", False)) for t in d["timings"]], d["changes"],
-            d["placement"], d.get("waiting", []), d.get("cached", False))
+            d["placement"], d.get("waiting", []), d.get("cached", False), d.get("routing"))
 
 
 def cut(text: str, most: int) -> str:

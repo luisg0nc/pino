@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import shutil
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -79,7 +80,7 @@ class _Clock:
 
 
 ORDER = ["libraries", "run board.py", "hash", "place", "write schematic", "write board", "erc", "netlist",
-         "schematic svg", "drc", "svg", "glb", "render", "checks", "diff"]
+         "schematic svg", "drc", "svg", "glb", "render", "checks", "diff", "routing"]
 
 
 def _rel(project: Path, path: Path) -> str:
@@ -181,6 +182,33 @@ def _svg_files(out_dir: Path, layers: list[str]) -> dict[str, Path]:
     return found
 
 
+def _routing(project: Path, build_folder: Path) -> dict | None:
+    from .routing.state import build_routing
+
+    try:
+        return build_routing(project, build_folder)
+    except Exception as e:  # noqa: BLE001 - routing state must never fail a build
+        print(f"pino-kernel: routing state could not be read: {e!r}", file=sys.stderr)
+        return None
+
+
+def _with_routing(result: BuildResult, routing: dict | None, project: Path) -> BuildResult:
+    """The result as returned: routing fresh, and the unrouted count, headline and waiting it drives. The build
+    folder's result.json keeps the fast build's own counts."""
+    from .routing.state import nets_left, waiting, with_headline
+
+    result.routing = routing
+    if routing is None or result.verdict == "failed":
+        return result
+    counts = dict(result.counts)
+    if routing["state"] == "current":
+        counts["unrouted"] = routing.get("unrouted") or 0
+    result.counts = counts
+    result.headline = with_headline(headline(result.number, result.verdict, counts, None), routing)
+    result.waiting = waiting(routing, nets_left(project, routing))
+    return result
+
+
 def _remove(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
@@ -258,11 +286,13 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
             stored.changes = cap_changes(diff_changes(prev_pcb, pcb)) if pcb else stored.changes
             stored.headline = headline(number, stored.verdict, stored.counts, None if stored.verdict != "failed" else
                                        stored.headline.split(": ", 1)[-1])
-            fresh = timings()
+            routing = clock.run("routing", _routing, project, final) if stored.verdict != "failed" else None
+            fresh = [t for t in timings() if t.step != "routing"]
             stored.timings = fresh + [Timing(t.step, t.seconds, True) for t in stored.timings
-                                      if t.step not in {f.step for f in fresh}]
+                                      if t.step not in {f.step for f in fresh} | {"routing"}]
+            stored.timings += [clock.times[s] for s in ("routing",) if s in clock.times]
             history.record(number, digest, stored.verdict)
-            return stored
+            return _with_routing(stored, routing, project)
 
     tmp = build_dir / f"{digest}.tmp-{os.getpid()}-{threading.get_ident()}"
     _remove(tmp)
@@ -433,10 +463,11 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
     if svg_found:
         artifacts["svg"] = {layer: rel(f"svg/{path.name}") for layer, path in sorted(svg_found.items())}
     score = placed_result.score
+    routing = clock.run("routing", _routing, project, tmp)
     result = BuildResult(SCHEMA, __version__, kicad_version, number, digest, verdict,
                          headline(number, verdict, counts, None), counts, kept, truncated, artifacts, timings(), changes,
                          {"score": round(score.total, 3), "crossings": score.crossings, "length_mm": round(score.length, 3)},
-                         list(WAITING), False)
+                         list(WAITING), False, routing)
     _write(tmp / "result.json", result.to_json())
     history.mark(number, digest)
 
@@ -459,4 +490,4 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
             _remove(tmp)
     history.record(number, digest, verdict)
     _prune(history, final.parent, KEEP_BUILDS, digest, prev["hash"] if prev else None)
-    return result
+    return _with_routing(result, routing, project)

@@ -30,3 +30,12 @@ def test_round_trip():
                     [Timing("hash", 0.01), Timing("place", 0.2, True)], {"circuit": [], "layout": []},
                     None, ["routing: not started"], True)
     assert BuildResult.from_json(r.to_json()).to_json() == r.to_json()
+
+
+def test_round_trip_with_routing():
+    routing = {"state": "stale", "key": "0123456789ab", "route": ".pino/routes/ba9876543210", "route_key": "ba9876543210",
+               "number": 2, "stale_because": ["parts moved"], "complete": None, "unrouted": None, "router_share": None,
+               "router_seconds": None, "drc_errors": None, "copper_errors": None, "verdict": None}
+    r = BuildResult("pino.build/1", "0.2.0", None, 3, "0123456789ab", "ok", "On h3: 0 errors, 0 warnings",
+                    {}, [], 0, {}, [], {"circuit": [], "layout": []}, None, [], False, routing)
+    assert BuildResult.from_json(r.to_json()).routing == routing
