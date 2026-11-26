@@ -42,11 +42,12 @@ export function refusalOf(dir: string, name: string, input: unknown): string | u
   const named = (input as Record<string, unknown>)[key]
   if (typeof named !== 'string' || named === '') return undefined
   // A relative path is from the project's folder, where the agent runs, whichever folder it is held against.
-  const path = resolve(dir, named)
+  // All three are judged by where the write lands, links followed.
+  const path = writtenAt(resolve(dir, named))
   if (isInsideFolder(join(dir, APP.folder), path)) {
     return `${name} may not write under ${APP.folder}/: it is ${APP.name}'s own, and a hand edit skips its rules. Read a file there with Read.`
   }
-  if (writtenAt(path) === writtenAt(join(dir, 'brief.md'))) return BRIEF_REFUSAL(name)
+  if (path === writtenAt(join(dir, 'brief.md'))) return BRIEF_REFUSAL(name)
   if (isInsideFolder(dir, path)) return undefined
   return `This session works on the project in ${dir}. ${name} may write only there. ` +
     `Another project is the person's to open: ask them to open it in ${APP.name}.`

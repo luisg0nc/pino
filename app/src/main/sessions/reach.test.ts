@@ -51,6 +51,24 @@ describe('refusalOf', () => {
     expect(refusalOf(bare, 'Write', { file_path: 'other.md' })).toBeUndefined()
     expect(refusalOf(bare, 'Write', { file_path: 'loop-a.md' })).toBeUndefined()
   })
+  it('refuses a write through a dangling link that lands under .pino/ or outside the project', () => {
+    const bare = join(root, 'dangling')
+    mkdirSync(join(bare, 'sub'), { recursive: true })
+    // Under .pino/, which is not there yet either, straight and by a chain.
+    symlinkSync('.pino/session.json', join(bare, 'notes.json'))
+    symlinkSync('../notes.json', join(bare, 'sub', 'chain.json'))
+    for (const path of ['notes.json', 'sub/chain.json']) expect([path, refusalOf(bare, 'Write', { file_path: path })]).toEqual([path, expect.stringContaining('Write may not write under .pino/')])
+    // Beside the project, by a relative link, a whole one, and a chain that comes back in on the way.
+    symlinkSync('../b/new.py', join(bare, 'beside.py'))
+    symlinkSync(join(root, 'fresh', 'new.py'), join(bare, 'sub', 'away.py'))
+    symlinkSync('sub/away.py', join(bare, 'round.py'))
+    for (const path of ['beside.py', 'sub/away.py', 'round.py']) expect([path, refusalOf(bare, 'Edit', { file_path: path })]).toEqual([path, expect.stringContaining(`works on the project in ${bare}`)])
+    // One that stays in the project is the project's own, also when it is reached from outside it.
+    symlinkSync('sub/later.py', join(bare, 'later.py'))
+    symlinkSync(join(bare, 'sub', 'later.py'), join(root, 'b', 'into.py'))
+    expect(refusalOf(bare, 'Write', { file_path: 'later.py' })).toBeUndefined()
+    expect(refusalOf(bare, 'Write', { file_path: join(root, 'b', 'into.py') })).toBeUndefined()
+  })
   it('refuses anything outside the project folder, a folder beside it among them, and says why', () => {
     for (const file of [join(root, 'b', 'board.py'), join(root, 'top.py'), join(root, 'common', 'shared.py'), join(root, 'fresh', 'board.py'), join(dir, '..', 'b', 'x.py'), join(dir, 'link', 'x.py')]) {
       expect(refusalOf(dir, 'Write', { file_path: file })).toContain(`works on the project in ${dir}`)
