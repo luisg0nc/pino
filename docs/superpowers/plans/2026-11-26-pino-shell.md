@@ -399,6 +399,16 @@ git add -A && git commit -m "Copy torno's Claude Code launch, stream, trust and 
 
 ### Task 6: Chat items, transcript, chat log and models
 
+> **Note from the build:** `models.test.ts` is adapted, not as-is (its temp folder names torno).
+>
+> **Note from the build:** pino has no terminal view, so the failed-login note has no button and its words say to sign in from a terminal; the `action` field of a note is gone from `shared/chat.ts` and from `chatlog.ts`.
+>
+> **Note from the build:** The recordings stay as-is: `transcript.test.ts` reads the app name each was recorded with from its `init` and reads it as pino.
+>
+> **Note from the build:** The caption that named onboarding pictures is cut with its test: pino has no onboarding.
+>
+> **Note from the build:** `chatlog.ts` also loses `readPrompts` and `conversations`, which only torno's prompt list used.
+
 **Files:**
 - Copy adapted (`shared/chat.ts` was copied in Task 5 with this adaptation; this task checks it):
   - `app/src/shared/chat.ts`: drop the imports of `board`, `drawing`, `git`, `sanity` and the fields they type. User items lose `drawing`, `notes`, `board`. Context items keep `kind, id, forUser, forTool?, text, marks, instructions?`. `TORNO_TOOL_PREFIX` becomes `TOOL_PREFIX` from `shared/app`, and `isTornoTool` becomes `isAppTool`. The tool item field `torno: boolean` becomes `own: boolean`. Drop `pulledFromTorno` and the ref grammar (`refsIn` and its patterns): refs come back with marks in stage 4.
@@ -415,7 +425,7 @@ git add -A && git commit -m "Copy torno's Claude Code launch, stream, trust and 
 - Consumes: Task 5 transport types and `shared/chat.ts`, `ownFolder`, `writeFileAtomic`, `ensureIgnored`.
 - Produces: `ChatItem`, `ChatImage`, `ChatMeta`, `ChatHistory`, `ChatCommand`, `ChatModel`, `ChatAnswer`, `Effort`, `Mode`, `EFFORTS`, `MODES`, `MODE_NOTE`, `MAX_ITEMS`, `isEffort`, `isMode`, `isAppTool`, `toolLabel`, `shownPath`, `agentChoiceOf`; `Transcript` (torno's options and methods minus `toolContext`); `appendItems`, `readLog`, `lastConversation`, `trimLog`; `KnownModels`, `modelsOf`.
 
-- [ ] **Step 1: Copy and trim the tests as named, and add**
+- [x] **Step 1: Copy and trim the tests as named, and add**
 
 ```ts
 // transcript.test.ts
@@ -432,19 +442,19 @@ it('keeps the log under .pino/chat and nowhere else in the project', async () =>
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/sessions/transcript.test.ts src/main/sessions/chatlog.test.ts src/main/sessions/models.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt as named**
+- [x] **Step 3: Copy and adapt as named**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's chat items, transcript, chat log and models, without the CAD seams"
