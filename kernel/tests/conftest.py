@@ -33,11 +33,73 @@ def _kicad_libs_found() -> bool:
     return True
 
 
+_OUTER_ENV = dict(os.environ)
+_REAL_KRT: list = []
+
+
+def _real_krt():
+    """The router installed on this machine (from the environment pytest started in), or None. Read, never installed."""
+    if not _REAL_KRT:
+        from pino_kernel.routing.krt import RouterMissing, locate
+
+        try:
+            _REAL_KRT.append(locate(_OUTER_ENV))
+        except RouterMissing:
+            _REAL_KRT.append(None)
+    return _REAL_KRT[0]
+
+
 def pytest_runtest_setup(item):
+    if item.get_closest_marker("network") and os.environ.get("PINO_TEST_NETWORK") != "1":
+        pytest.skip("needs the network: set PINO_TEST_NETWORK=1 to run it")
+    if item.get_closest_marker("krt") and _real_krt() is None:
+        pytest.skip("KiCadRoutingTools not installed: run uv run --directory kernel pino-kernel router install")
     if item.get_closest_marker("kicad_cli") and not _kicad_cli_found():
         pytest.skip("kicad-cli not found: install KiCad 10 to run this test")
     if item.get_closest_marker("kicad_libs") and not _kicad_libs_found():
         pytest.skip("KiCad's libraries not found")
+
+
+@pytest.fixture(autouse=True)
+def _isolated_router_cache(request, monkeypatch, tmp_path):
+    """Every test gets its own pino cache, so no test reads or writes the user's. A `krt` test gets the router
+    installed on this machine, read only."""
+    monkeypatch.setenv("PINO_CACHE_DIR", str(tmp_path / "pino-cache"))
+    for k in ("PINO_KRT_DIR", "PINO_KRT_PYTHON", "PINO_KRT_REPO"):
+        monkeypatch.delenv(k, raising=False)
+    if request.node.get_closest_marker("krt") and _real_krt() is not None:
+        monkeypatch.setenv("PINO_KRT_DIR", str(_real_krt().root))
+        monkeypatch.setenv("PINO_KRT_PYTHON", str(_real_krt().python))
+
+
+@pytest.fixture
+def fake_krt(tmp_path, monkeypatch):
+    """A copy of tests/fake_krt in tmp_path, used as the router through PINO_KRT_DIR."""
+    import sys
+    from types import SimpleNamespace
+
+    root = tmp_path / "fake_krt"
+    shutil.copytree(TESTS / "fake_krt", root, ignore=shutil.ignore_patterns("__pycache__"))
+    env = {"PINO_KRT_DIR": str(root), "PINO_KRT_PYTHON": sys.executable, "PINO_CACHE_DIR": str(tmp_path / "pino-cache")}
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    return SimpleNamespace(root=root, env=env)
+
+
+@pytest.fixture
+def argv_log(tmp_path, monkeypatch):
+    """argv_log() -> every fake router call so far, as {"script", "argv", "cwd"}."""
+    import json
+
+    path = tmp_path / "krt-argv.jsonl"
+    monkeypatch.setenv("FAKE_KRT_ARGV_LOG", str(path))
+
+    def read() -> list[dict]:
+        if not path.exists():
+            return []
+        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    return read
 
 
 @pytest.fixture

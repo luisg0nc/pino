@@ -24,4 +24,6 @@ testpaths = ["tests"]
 markers = [
     "kicad_cli: runs the real kicad-cli (skipped when it is missing)",
     "kicad_libs: needs KiCad's own libraries (skipped when they are missing)",
+    "krt: runs the installed KiCadRoutingTools (skipped when it is not installed)",
+    "network: needs the network (skipped unless PINO_TEST_NETWORK=1)",
 ]

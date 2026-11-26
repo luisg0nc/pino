@@ -121,7 +121,7 @@ kernel/
   - CLI `pino-kernel router status|install`: prints `{"router": "KiCadRoutingTools", "version": "0.17.7", "commit": "6ab59a6…", "installed": bool, "root": str | null, "problems": [finding json]}`; exit 0 when installed and `check` is empty, else 1.
   - `conftest.py`: fixture `fake_krt` (a copy of `tests/fake_krt` in `tmp_path` plus the env dict `{"PINO_KRT_DIR", "PINO_KRT_PYTHON": sys.executable, "PINO_CACHE_DIR"}` applied with monkeypatch); marker `krt` (skips with "KiCadRoutingTools not installed: run uv run --directory kernel pino-kernel router install" unless `locate()` succeeds) and marker `network` (skips unless `PINO_TEST_NETWORK=1`).
 
-- [ ] **Step 1: Write the fake router and the failing tests**
+- [x] **Step 1: Write the fake router and the failing tests**
 
 `fake_krt/fakelib.py` is shared by the fake scripts. Each script appends `{"script", "argv", "cwd"}` as one JSON line to `$FAKE_KRT_ARGV_LOG` when set, writes its pid to `$FAKE_KRT_PIDFILE` when set, and then by `$FAKE_KRT_MODE`: `copy` (default: output = input plus, for `route.py`/`route_diff.py`, one F.Cu segment per `--nets` net from its first pad centre to its second, skipping nets in `$FAKE_KRT_FAIL`), `sleep` (sleep 60 s), `crash` (exit 1, no output; only for the script named in `$FAKE_KRT_CRASH` when set), `env` (print the environment as one JSON line). `route.py` prints `[i/n] Routing <net> (id=i)` per net and `JSON_SUMMARY: {"successful": n, "failed": k, "failed_single": [...], "total_time": 0.01, "total_vias": 0}`. `startup_checks.py` defines `run_all_checks()` that returns. `VERSION` holds `0.17.7`.
 
@@ -193,12 +193,12 @@ def test_real_install_into_a_temp_cache(tmp_path):
     ensure(env); assert (tmp_path / "krt" / KRT_COMMIT[:12] / "stamp.json").stat().st_mtime_ns == stamp
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_krt.py tests/test_hygiene.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing'`
 
-- [ ] **Step 3: Write `routing/krt.py`, the CLI subcommand and the NOTICE section**
+- [x] **Step 3: Write `routing/krt.py`, the CLI subcommand and the NOTICE section**
 
 - `install`: under `fcntl.flock` on `<cache>/krt/<commit12>.lock`, in `<commit12>.tmp-<pid>/`: `git init src`, `git -C src fetch --depth 1 <PINO_KRT_REPO or KRT_REPO> <KRT_COMMIT>`, `git -C src checkout FETCH_HEAD`; venv `uv venv --python 3.12 venv` when `uv` is on PATH, else `python3.12 -m venv venv`; `uv pip install --python venv/bin/python <KRT_DEPS>` (or the venv's pip); `venv/bin/python build_router.py --tag v0.17.7` with `cwd=src` (it falls back to `cargo` by itself); `check()`; probe each script's `--help` into `flags`; write `stamp.json` last; rename the temp folder onto `<commit12>/`. Every failure removes the temp folder and raises `RouterMissing` whose message names the failed step in plain words ("could not fetch KiCadRoutingTools from <repo>: <last line>. pino needs network access once to install its router; run `pino-kernel router install` again when online, or set PINO_KRT_DIR and PINO_KRT_PYTHON to a checkout you made yourself.").
 - `check`: `VERSION` equals `KRT_VERSION`; for the cache install, `stamp.json` commit equals `KRT_COMMIT`; `python -c "import sys; sys.path.insert(0, ROOT); import startup_checks; startup_checks.run_all_checks()"` exits 0 within 60 s.
@@ -206,17 +206,24 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing'`
 - `krt_env`: `kicad.env()` (no display, isolated KiCad home, library variables) plus `PYTHONHASHSEED=0`, `PYTHONDONTWRITEBYTECODE=1`, `SDL_VIDEODRIVER=dummy`, `MPLBACKEND=Agg`, and `PATH` with the kicad-cli folder first (KRT's plane repair calls kicad-cli itself).
 - `NOTICE`: a "KiCadRoutingTools" section: what it is, the repo URL, the commit, "MIT License, Copyright (c) 2026 drandyhaas", that pino does not include its code and fetches it on first use into the user cache. (If the pcb-kit section still lives in `kernel/NOTICE`, add this one beside it.)
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_krt.py tests/test_hygiene.py -v`
 Expected: PASS (the `network` test skips with its marker message)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add NOTICE kernel/src/pino_kernel/routing kernel/src/pino_kernel/cli.py kernel/tests/fake_krt kernel/tests/conftest.py kernel/tests/test_krt.py kernel/tests/test_hygiene.py
 git commit -m "kernel: KiCadRoutingTools pinned, installed on first use into the user cache, version checked"
 ```
+
+**Plan fixes (implementation):**
+- KRT pin: tag `v0.17.7` is commit `bc48cce8ac603d5300b24eebddd993098a20d0e4`; the plan's `6ab59a6` is two later commits that touch only docs and a stress test. Per the director's call, `KRT_COMMIT` is the tag's commit, so the release's prebuilt core matches it. `ROUTER_ID` is `KiCadRoutingTools 0.17.7 bc48cce8ac60`.
+- Install does not run `build_router.py` (it falls back to `cargo` when the download fails). pino downloads `grid_router-linux-x86_64.so` from the v0.17.7 release itself and checks its pinned sha256 (`KRT_CORE`); other machines get a plain-words finding.
+- uv's and pip's caches and any Python uv downloads go under `<cache>/krt/` (`UV_CACHE_DIR`, `PIP_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`), so the install writes nowhere else.
+- `PINO_KRT_DIR` installs have their flags probed with `--help` once per process; cache installs read them from `stamp.json`.
+- conftest: an autouse fixture gives every test its own `PINO_CACHE_DIR`; `krt` tests get the router found in the environment pytest started in (read only). Extra tests: a stamp from another commit is refused, `router status` when missing, kicad-cli's folder first on PATH.
 
 ---
 

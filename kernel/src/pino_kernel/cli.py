@@ -3,6 +3,7 @@
     pino-kernel build <project> [--timeout S] [--render] [--no-kicad] [--no-cache]
     pino-kernel version
     pino-kernel serve
+    pino-kernel router status|install
 
 `build` prints one build result (schema pino.build/1) on stdout and exits 0 for ok, 1 for errors,
 2 for failed. `serve` reads one JSON request per stdin line and answers one JSON object per stdout
@@ -39,6 +40,24 @@ def _version() -> dict:
         with tempfile.TemporaryDirectory(prefix="pino-kernel-") as home:
             kicad = KicadCli(libs, Path(home), argv).version() or None
     return {"kernel": __version__, "schema": SCHEMA, "kicad_cli": kicad, "libraries": libraries}
+
+
+def _router(action: str) -> int:
+    from .routing import krt as K
+
+    out = {"router": "KiCadRoutingTools", "version": K.KRT_VERSION, "commit": K.KRT_COMMIT, "installed": False,
+           "root": None, "problems": []}
+    try:
+        if action == "install":
+            found = K.install(on_line=lambda s: print(s, file=sys.stderr))
+        else:
+            found = K.locate()
+        out["installed"], out["root"] = True, str(found.root)
+        out["problems"] = [f.to_json() for f in K.check(found)]
+    except K.RouterMissing as e:
+        out["problems"] = [e.finding.to_json()]
+    sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
+    return 0 if out["installed"] and not out["problems"] else 1
 
 
 def _options(raw) -> BuildOptions:
@@ -111,7 +130,11 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--no-cache", action="store_true", help="build again even when this input was built before")
     sub.add_parser("version", help="print versions and where the libraries are")
     sub.add_parser("serve", help="answer JSON-line requests on stdin")
+    r = sub.add_parser("router", help="show or install the router (KiCadRoutingTools)")
+    r.add_argument("action", choices=["status", "install"])
     args = parser.parse_args(argv)
+    if args.command == "router":
+        return _router(args.action)
     if args.command == "version":
         sys.stdout.write(json.dumps(_version(), ensure_ascii=False) + "\n")
         return 0
