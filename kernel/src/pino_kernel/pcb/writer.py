@@ -9,13 +9,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .. import ids
-from ..circuit import Circuit, Keepout, Placement
+from ..circuit import Circuit, Keepout, PinRef, Placement
 from ..coords import to_kicad
 from ..fab import PROFILES, FabProfile, for_layers
 from ..outline import polygon as outline_polygon
 from ..sexpr import Sym, dump, find, num, parse
-from .footprint import FootprintLibrary, Placed, place
-from .rules import kicad_dru, kicad_pro
+from .footprint import FootprintLibrary, Placed, pad_world, place
+from .rules import kicad_dru, kicad_pro, net_rules
 from .stackup import stackup
 
 VERSION = 20260206
@@ -205,6 +205,113 @@ def _setup(circuit: Circuit, fab: FabProfile) -> list:
             [S("capping"), n], [S("filling"), n], _PLOT]
 
 
+@dataclass(frozen=True)
+class KeptLeg:
+    net: str
+    route: int  # index in circuit.kept_routes
+    leg: int
+    a: tuple[float, float]  # board mm
+    b: tuple[float, float]
+    layer: str
+    width: float
+    start: str  # "J1.1" or "(x, y)", where the leg starts
+    line: int | None
+
+
+@dataclass(frozen=True)
+class KeptVia:
+    net: str
+    key: tuple[str, ...]  # its UUID parts
+    at: tuple[float, float]
+    diameter: float
+    drill: float
+
+
+def _pt_text(p) -> str:
+    return f"({num(p[0])}, {num(p[1])})"
+
+
+def kept_geometry(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> tuple[list[KeptLeg], list[KeptVia]]:
+    """The kept routes and fixed vias of board.py as legs and vias in board mm, pads where they are now."""
+    pads = {(p.ref, q.number): (q.x, q.y) for p in placed for q in pad_world(p)}
+    legs: list[KeptLeg] = []
+    vias: list[KeptVia] = []
+    for i, k in enumerate(circuit.kept_routes):
+        width, _, via_d, via_drill = net_rules(circuit, fab, k.net)
+        if k.width is not None:
+            width = k.width
+
+        def where(end):
+            if isinstance(end, PinRef):
+                return pads.get((end.ref, end.number)), str(end)
+            return (float(end[0]), float(end[1])), _pt_text(end)
+
+        cur, label = where(k.frm)
+        last, _ = where(k.to)
+        if cur is None or last is None:
+            continue  # a pin with no pad: the pin-pad check reports it
+        layer = k.layer
+        n_leg = n_via = 0
+        for s in k.steps:
+            nxt = (s.x, s.y)
+            if nxt != cur:
+                legs.append(KeptLeg(k.net, i, n_leg, cur, nxt, layer, width, label, k.line))
+                n_leg += 1
+            if s.kind == "via":
+                vias.append(KeptVia(k.net, ("kept", k.net, str(i), "via", str(n_via)), nxt, via_d, via_drill))
+                n_via += 1
+                layer = s.layer or layer
+            cur, label = nxt, _pt_text(nxt)
+        if last != cur:
+            legs.append(KeptLeg(k.net, i, n_leg, cur, last, layer, width, label, k.line))
+    for i, v in enumerate(circuit.fixed_vias):
+        _, _, via_d, via_drill = net_rules(circuit, fab, v.net)
+        vias.append(KeptVia(v.net, ("fixed-via", v.net, str(i)), (v.x, v.y),
+                            v.diameter if v.diameter is not None else via_d,
+                            v.drill if v.drill is not None else via_drill))
+    return legs, vias
+
+
+def kept_copper(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> list[list]:
+    """board.py's kept routes and fixed vias as locked top-level `segment` and `via` nodes."""
+    S = Sym
+    legs, vias = kept_geometry(circuit, placed, fab)
+    cu = [name for _, name in copper_layers(circuit.layers)]
+    out = []
+    for g in legs:
+        (X0, Y0), (X1, Y1) = to_kicad(*g.a), to_kicad(*g.b)
+        out.append([S("segment"), [S("start"), num(X0), num(Y0)], [S("end"), num(X1), num(Y1)],
+                    [S("width"), num(g.width)], [S("locked"), S("yes")], [S("layer"), g.layer], [S("net"), g.net],
+                    [S("uuid"), ids.uid("kept", g.net, str(g.route), "seg", str(g.leg))]])
+    for v in vias:
+        X, Y = to_kicad(*v.at)
+        out.append([S("via"), [S("at"), num(X), num(Y)], [S("size"), num(v.diameter)], [S("drill"), num(v.drill)],
+                    [S("layers"), cu[0], cu[-1]], [S("locked"), S("yes")], [S("net"), v.net],
+                    [S("uuid"), ids.uid(*v.key)]])
+    return sorted(out, key=track_order)
+
+
+_TRACK_RANK = {"segment": 0, "arc": 1, "via": 2}
+
+
+def layer_id(name: str) -> int:
+    """KiCad 9+ layer ids: F.Cu 0, B.Cu 2, In<k>.Cu 2 + 2k."""
+    if name == "F.Cu":
+        return 0
+    if name == "B.Cu":
+        return 2
+    if name.startswith("In") and name.endswith(".Cu") and name[2:-3].isdigit():
+        return 2 + 2 * int(name[2:-3])
+    return 1000
+
+
+def track_order(node) -> tuple:
+    """KiCad's save order for tracks and vias: by layer (a via by its first), then segment, arc, via, then UUID."""
+    lay = find(node, "layers") if node[0] == "via" else find(node, "layer")
+    u = find(node, "uuid")
+    return (layer_id(str(lay[1])) if lay else 1000, _TRACK_RANK.get(str(node[0]), 3), str(u[1]) if u else "")
+
+
 def write_board(circuit: Circuit, placement: Placement, footprints: FootprintLibrary) -> BoardFiles:
     S = Sym
     fab = fab_of(circuit)
@@ -228,6 +335,7 @@ def write_board(circuit: Circuit, placement: Placement, footprints: FootprintLib
     root.append(_setup(circuit, fab))
     root += [fp for _, _, fp in fps]
     root += _outline(circuit)
+    root += kept_copper(circuit, placed, fab)
     board_poly = outline_polygon(circuit.outline)
     for k, z in enumerate(circuit.zones):
         root.append(_fill_zone(k, z.net, z.layer, z.polygon or board_poly))

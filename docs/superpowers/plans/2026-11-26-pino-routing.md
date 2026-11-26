@@ -351,7 +351,7 @@ git commit -m "pino: keep_route, fixed_via, route_hint and diff_pair in the boar
   - `checks.kept.kept_findings(circuit: Circuit, placed: list[Placed]) -> list[Finding]`: source `routing`, code `kept_route_bent` (warning) when a written segment's angle is not a multiple of 45 degrees within 0.5 degrees; message "kept route VBUS (board.py line 31): the leg from J1.1 runs at 37 degrees; the pad may have moved. Route it again or update the points."; `at` the segment start.
   - `checks.kept.pair_findings(circuit: Circuit) -> list[Finding]`: source `routing`, code `pair_undeclared` (warning) for two nets whose names pair (Task 2's rule) with no `diff_pair`: "nets USB_D+ and USB_D- look like a differential pair; declare it with b.diff_pair(\"USB_D+\", \"USB_D-\") so the router couples them".
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_kept_route_becomes_locked_segments_and_a_via(fixture_libs, fp_lib):
@@ -388,26 +388,32 @@ def test_kept_copper_survives_kicad_resave(kicad, tmp_path):
     assert not {"track_dangling", "via_dangling"} & drc_types(kicad, filled)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_kept_copper.py -v`
 Expected: FAIL with `ImportError: cannot import name 'kept_copper'`
 
-- [ ] **Step 3: Write `kept_copper`, the two checks and their place in the build**
+- [x] **Step 3: Write `kept_copper`, the two checks and their place in the build**
 
 Pad centres come from `pad_world`, then `coords.to_kicad`. The build's "checks" step adds `kept_findings` and `pair_findings`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_kept_copper.py tests/test_board_writer.py tests/test_build.py -v`
 Expected: PASS (kicad tests pass or skip with the marker messages)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/pcb kernel/src/pino_kernel/checks/kept.py kernel/src/pino_kernel/build.py kernel/tests/test_kept_copper.py kernel/tests/helpers.py
 git commit -m "kernel: kept routes and fixed vias written as locked copper, with bent-leg and pair findings"
 ```
+
+**Plan fixes (implementation):**
+- The test route goes down to B.Cu and back up (two vias), because U1.VIN is an SMD pad on F.Cu: three segments on F.Cu, B.Cu, F.Cu. The plan's `[F, F, B]` would end on B.Cu at a top pad.
+- KiCad 10 writes a via's `(locked yes)` after `(layers ...)` and sorts tracks by layer id (a via by its first layer), then segment, arc, via, then UUID (seen in a kicad-cli resave). `writer.track_order` and `writer.layer_id` hold that rule; tests find a route's legs by their UUIDs.
+- `writer.kept_geometry()` gives the legs and vias in board mm; `kept_copper` and `kept_findings` both use it. `rules.default_rules(fab)` gives the Default class as written.
+- The resave test uses a kept route on the real board's LED net (R2.2 up to a via, across B.Cu, a via, down to D1.2), with pads from `pad_world`. Extra tests: default width, a fixed via, straight legs, the build reporting both findings.
 
 ---
 

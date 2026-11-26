@@ -27,6 +27,7 @@ from . import __version__, ids
 from .checks.courtyards import courtyard_overlaps
 from .checks.expect import check_expects
 from .checks.fit import fit_findings
+from .checks.kept import kept_findings, pair_findings
 from .checks.netlist import Netlist, compare, net_names, read_netlist
 from .checks.reports import drc_findings, erc_findings
 from .circuit import Circuit, placement_to_json
@@ -400,6 +401,7 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
             out += found
         out += courtyard_overlaps(files.placed)
         out += fit_findings(circuit, files.placed, fab_of(circuit))
+        out += kept_findings(circuit, files.placed) + pair_findings(circuit)
         out += model_findings(files.placed, footprints)
         out += lint(sch.canvas, circuit, symbols)
         for ref, numbers in circuit.nc_rest.items():
