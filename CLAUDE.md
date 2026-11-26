@@ -59,7 +59,7 @@ changed.
   `app/src/shared/contrast.test.ts`.
 - Type: Instrument Sans and Martian Mono from `@fontsource`, latin, bundled. Family names are written only in
   `shared/fonts.ts` and `renderer/styles/tokens.css`.
-- The mark is the probe (`renderer/ui/probe.ts`): the logo, the first screen's drawing and the icons are drawn from it.
+- The mark is pin one (`renderer/ui/pinOne.ts`): the logo, the first screen's drawing and the icons are drawn from it.
 - Linux only. No macOS code paths.
 - Tests never run the real `claude`: they set `PINO_AGENT_CMD` to the stand-in.
 - Tests never reach the network: jlcsearch answers are recorded (`PINO_PARTS_RECORDED`), every launch sets

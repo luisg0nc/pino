@@ -141,14 +141,15 @@ it('still says how it is used', () => {
   for (const word of ['usage: pino [folder]', '--print-command', '--install-desktop', '--uninstall-desktop', '--print-desktop', 'PINO_OZONE']) expect(help).toContain(word)
 })
 
-it('has the probe for its icon: the mark on its tile, and nothing that runs or reaches out', () => {
+it('has pin one for its icon: the mark on its tile, and nothing that runs or reaches out', () => {
   const svg = readFileSync(join(scripts, 'pino.svg'), 'utf8')
   const tokens = readFileSync(resolve(__dirname, 'renderer/styles/tokens.css'), 'utf8')
   const accent = /--accent:\s*(#[0-9A-Fa-f]{6})/.exec(tokens)![1]
   expect(svg).toContain('viewBox="0 0 64 64"')
-  // the paper tile, and one board in the accent under the probe
+  // the paper tile, the accent used once (pin 1), and the body's dot cut out rather than filled in
   expect(svg).toContain('<rect width="64" height="64" rx="14" fill="#F1EFEA"/>')
   expect(svg.match(new RegExp(accent, 'g'))).toHaveLength(1)
+  expect(svg).toContain('fill-rule="evenodd"')
   expect(svg).not.toMatch(/placeholder/i)
   for (const file of [svg, readFileSync(join(scripts, 'pino-16.svg'), 'utf8')]) expect(file).not.toMatch(/<(script|image|text)|href=/)
 })

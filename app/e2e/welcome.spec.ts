@@ -16,7 +16,7 @@ test('with no project, the window is the first screen on the green dye, with the
     const plate = page.locator('[data-region="viewport"] .plate')
     await expect(plate).toBeVisible()
     await expect(page.locator('.plate-headline')).toHaveText('pino')
-    await expect(page.locator('.probe-drawing')).toBeVisible()
+    await expect(page.locator('.pin-drawing')).toBeVisible()
     // What pino needs, as the stand-in engine says it; no agent was asked for, so Claude Code is not found.
     await expect(page.getByRole('list', { name: 'What pino needs' }).getByRole('listitem')).toHaveText([
       /^Claude Code was not found/,

@@ -41,10 +41,11 @@ paths:
 - **The first screen has no title bar and the window no frame**, so the top 40 px (`welcome-drag`) is a drag strip
   over both halves, and the window controls (`BareControls`) stand over its right end. pino draws the three controls
   itself everywhere (`ui/WindowControls.tsx`): it is Linux only.
-- **The mark is the probe** (`ui/probe.ts`): a spring test probe on a pad, seen from the side. `ui/Logo.tsx` draws
-  it with no tile (at 16 and 20 px from the drawing made on whole pixels). The first screen carries it as a scribed
-  drawing (`ui/plate/ProbeDrawing.tsx`, `plate.css`) that is made once, in 1.6 s, and stands drawn when less motion
-  is asked for. `scripts/pino.svg` and `pino-16.svg` are what the shapes draw (`probe.test.ts`); after a change
+- **The mark is pin one** (`ui/pinOne.ts`): a chip seen from above, eight legs, pin 1 in the accent, and the pin-1
+  dot cut out of the body (even-odd rule), so it works on any background. `ui/Logo.tsx` draws it with no tile (at 16
+  and 20 px from the drawing made on whole pixels). The first screen carries it as a scribed drawing
+  (`ui/plate/PinOneDrawing.tsx`, `plate.css`) that is made once, in 1.6 s, and stands drawn when less motion
+  is asked for. `scripts/pino.svg` and `pino-16.svg` are what the shapes draw (`pinOne.test.ts`); after a change
   there, redraw `scripts/pino.png` with `rsvg-convert -w 512 -h 512 scripts/pino.svg -o scripts/pino.png`.
 - Under the way in, three lines say whether Claude Code, KiCad and the engine are there (`shared/ready.ts`). Main
   asks the engine `version` once a run (`main/engineInfo.ts`), only when the screen asks.

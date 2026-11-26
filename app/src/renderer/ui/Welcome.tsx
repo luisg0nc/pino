@@ -3,7 +3,7 @@ import { APP } from '../../shared/app'
 import { readyLines, type ReadyLine } from '../../shared/ready'
 import { numbered } from './numbered'
 import { Plate } from './plate/Plate'
-import { ProbeDrawing } from './plate/ProbeDrawing'
+import { PinOneDrawing } from './plate/PinOneDrawing'
 import { nameOf } from './openFolder'
 import { actions, useStore } from '../state/store'
 
@@ -45,7 +45,7 @@ export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () =>
     <main className="welcome-page" data-region="viewport">
       <div className="welcome-drag" aria-hidden="true" />
       <Plate>
-        <ProbeDrawing />
+        <PinOneDrawing />
         <h1 className="plate-headline">{APP.name}</h1>
         <p className="plate-lead">
           <strong>Make circuit boards with an AI agent.</strong> It writes the board in Python; you point at what to change.
