@@ -35,15 +35,17 @@ marks drawn over it. The tab you are not on shows the selection's ref ("Board ·
 selection. The 3D tab is a live three.js view of the board's GLB in B's material look, with torno's compass and
 leader (not a raster render).
 
-## Logo and first screen: B, "the probe"
+## Logo and first screen: E, "pin one"
 
-A spring test probe touching a pad on a green board, seen from the side, in torno's construction (64-unit grid,
-graphite shapes, one green part, a 16 px version on whole pixels). The dyed first screen carries it as a scribed
-drawing whose dimensions draw themselves once (1.6 s). Source shapes: `design/mockups/logo/b-probe.html` on the
-`design-mocks` branch.
+Picked by Luis on 2026-11-26, replacing the probe (B). A chip seen from above with eight legs, in torno's
+construction (64-unit grid, graphite shapes, one green part, a 16 px version on whole pixels). Pino is pin 1: where a
+chip's pins are counted from, and the first thing checked before a board goes out. Pin 1, the top left leg, is the
+green one, and the pin-1 dot is a hole cut in the body, so the mark works on any background. The dyed first screen
+carries it as a scribed drawing whose dimensions (3.9, 1.27, pin 1) draw themselves once (1.6 s). Source shapes:
+`design/mockups/logo/e-pin-one.html` on the `design-mocks` branch.
 
 ## Open for Luis
 
 - Is the drafting view too quiet as a first impression? Net colours on by default instead?
-- Violet for his marks, and the probe over the header-pins logo (A)?
+- Violet for his marks?
 - The first screen's tagline.
