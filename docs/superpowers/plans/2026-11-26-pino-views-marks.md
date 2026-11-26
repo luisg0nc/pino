@@ -1248,6 +1248,8 @@ git commit -m "The probe: logo, 16 px icon, and the scribed first screen"
 
 ### Task 18: End to end in hidden windows, and the screenshots for the design review
 
+> As built: `views.spec.ts` has nine tests (the eight, and one for a bug the dense-marks shot found: the wheel did not zoom over a chip or a pin, on the board or the sheet). A hidden window resized with a board drawn gives `capturePage()` nothing, whatever the size, the GPU flags or the frames forced: test windows are now made at their size (`PINO_TEST_SIZE`, read under test alone) and `helpers.resize` is gone. The real-engine spec passed here, offline (`UV_NO_SYNC`, `UV_OFFLINE`). 19 pictures: the plan's 16, and `marks-dark`, `board-routed`, `marks-routed`. ci.yml needed no change.
+
 **Files:**
 - Create: `app/e2e/views.spec.ts`, `app/e2e/real-kernel.spec.ts`, `app/e2e/shots.spec.ts`
 - Modify: `app/e2e/launch.ts` (`kernel` option), `app/e2e/helpers.ts`, `app/src/e2e.test.ts`, `.claude/rules/e2e-hidden-window.md`, `.github/workflows/ci.yml` (nothing new to install: the stand-in kernel is node)
@@ -1270,24 +1272,24 @@ git commit -m "The probe: logo, 16 px icon, and the scribed first screen"
   - `real-kernel.spec.ts`: `builds the reference board with the real engine` (skips with "needs uv and kicad-cli on PATH" otherwise): build lands with verdict not `failed`, the board draws, the pad click of test 2 gives its reference.
   - `shots.spec.ts`: skips unless `PINO_SHOTS` names a folder outside the repo; with reduced motion (`page.emulateMedia({ reducedMotion: 'reduce' })`) and `nativeTheme.themeSource` set from main, captures at 1440x900 and 1920x1080 (`win.setContentSize`): `first-light`, `first-dark`, `board`, `board-1920`, `board-dark`, `board-nets`, `board-bottom`, `board-routing`, `board-stale`, `marks` (the six marks of the mock's scene made on the reference board: a part, an arrow, a stroke, a region, a track, a pad), `marks-drawing` (mouse held mid-stroke), `marks-dense` (five chips within 3 mm), `sheet`, `sheet-dark`, `3d`, `3d-dark`.
 
-- [ ] **Step 1: Write the specs**
+- [x] **Step 1: Write the specs**
 
-- [ ] **Step 2: Build and run them, expecting failures only where the code is wrong**
+- [x] **Step 2: Build and run them, expecting failures only where the code is wrong**
 
 Run: `pnpm -C app build && pnpm -C app exec playwright test e2e/views.spec.ts e2e/real-kernel.spec.ts`
 Expected: views PASS (8 tests); real-kernel PASS here (uv and kicad-cli are installed), skipped in CI.
 
-- [ ] **Step 3: Take the screenshots**
+- [x] **Step 3: Take the screenshots**
 
 Run: `PINO_SHOTS=<scratch folder> pnpm -C app exec playwright test e2e/shots.spec.ts`
 Expected: 16 PNGs in the folder; open each with the Read tool and compare with the mock it answers to (`board/a-drafting*.png`, `marks/a-pencil*.png`, `views/a-sheet*.png`, `logo/b-probe*.png`). Fix what differs in the task that owns it before going on, and list what remains for the design review.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `pnpm test && pnpm test:e2e && pnpm -C app typecheck && bash .claude/hooks/guard-bash.test.sh`
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/e2e app/src/e2e.test.ts .claude/rules/e2e-hidden-window.md .github/workflows/ci.yml

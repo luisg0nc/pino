@@ -165,7 +165,8 @@ export function SheetView({ model }: { model: ViewModel }) {
   }
 
   useEffect(() => {
-    const element = paper.current
+    // The whole view's: over a chip, a pin or a tag too.
+    const element = root.current
     if (!element) return
     const wheel = (e: WheelEvent) => {
       e.preventDefault()

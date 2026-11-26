@@ -11,7 +11,7 @@ const SESSION_VARIABLES = new Set([
 ])
 
 /** pino's own switches (src/main/index.ts, e2e/): they mean nothing to the agent, or mislead what it starts. */
-const OWN_VARIABLES = new Set([...['TEST', 'AGENT_CMD', 'CONFIG', 'PROJECT', 'DEBUG'].map(envName), ...SESSION_VARIABLES])
+const OWN_VARIABLES = new Set([...['TEST', 'TEST_SIZE', 'AGENT_CMD', 'CONFIG', 'PROJECT', 'DEBUG'].map(envName), ...SESSION_VARIABLES])
 
 /**
  * What a Claude Code session exports to the processes it starts. Only these:

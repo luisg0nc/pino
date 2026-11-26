@@ -7,7 +7,7 @@ import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
 import { Builds } from './builds'
 import { PinoDomain } from './domain'
-import { frameOptions, MIN_WINDOW, SURFACE } from './frame'
+import { frameOptions, MIN_WINDOW, SURFACE, windowSize } from './frame'
 import { startHttp } from './http'
 import { broadcast, type Projects, registerIpc } from './ipc'
 import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
@@ -237,8 +237,9 @@ function windowIcon(): NativeImage | undefined {
 function createWindow(): BrowserWindow {
   const icon = windowIcon()
   const win = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    ...windowSize(isTest, env('TEST_SIZE')),
+    // The size is the page's, as there is no native frame.
+    useContentSize: true,
     show: false,
     title: APP.name,
     ...(icon ? { icon } : {}),

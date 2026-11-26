@@ -7,7 +7,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { capture, clickTarget, markScene, markTrack, resize, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
+import { capture, clickTarget, markScene, markTrack, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
 import { launch, referenceProject, type Launched } from './launch'
 
 const folder = process.env.PINO_SHOTS ? resolve(process.env.PINO_SHOTS) : null
@@ -75,6 +75,21 @@ const routed = async (run: Launched): Promise<void> => {
 const SHOTS: Record<string, Shot> = {
   'first-light': { first: true },
   'first-dark': { first: true, dark: true },
+  'marks-dense': {
+    at: async (run) => {
+      await onBoard(run)
+      // Five marks within 3 mm of one another: their chips must stand clear of each other.
+      await run.page.evaluate(async () => {
+        const id = window.__pinoTest!.state().project!.id
+        for (const number of ['1', '2', '3', '4', '5']) {
+          await window.pino.marks.add(id, { kind: 'point', space: 'board', target: { kind: 'pad', ref: 'U2', number }, at: { x: 0, y: 0 }, note: `pad ${number}` })
+        }
+      })
+      await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.state().marks.length)).toBe(5)
+      await zoomOn(run.page, { kind: 'part', ref: 'U2' }, 600)
+      await run.page.mouse.move(5, 5)
+    }
+  },
   'board-routing': {
     env: { ...ROUTES, FAKE_KERNEL_ROUTE_MS: '700' },
     at: async (run) => {
@@ -135,13 +150,15 @@ for (const [name, shot] of Object.entries(SHOTS)) {
   test(name, async () => {
     const project = referenceProject()
     // The first screen with the stand-in found, as on a machine that is ready.
-    const run = await launch({ ...(shot.first ? { agent: true } : { project }), env: shot.env })
+    const size: Record<string, string> = shot.width ? { PINO_TEST_SIZE: `${shot.width}x${shot.height}` } : {}
+    const run = await launch({ ...(shot.first ? { agent: true } : { project }), env: { ...shot.env, ...size } })
     try {
       const scheme = shot.dark ? ('dark' as const) : ('light' as const)
       await run.app.evaluate(({ nativeTheme }, source) => void (nativeTheme.themeSource = source), scheme)
       // Playwright emulates a scheme of its own: it is told the same one.
       await run.page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme })
-      await resize(run.app, run.page, shot.width ?? 1440, shot.height ?? 900)
+      // Made at its size by main (PINO_TEST_SIZE): the picture is of that, or the run is wrong.
+      await expect.poll(() => run.page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([shot.width ?? 1440, shot.height ?? 900])
       if (shot.first) await expect(run.page.locator('.welcome-ready li[data-ok]')).toHaveCount(3)
       else await waitForBuild(run.page, 1)
       await shot.at?.(run, project)

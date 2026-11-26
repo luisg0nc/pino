@@ -58,12 +58,6 @@ export async function capture(app: ElectronApplication, file: string): Promise<v
   writeFileSync(file, Buffer.from(png, 'base64'))
 }
 
-/** The window's content at this size, and the page told of it. */
-export async function resize(app: ElectronApplication, page: Page, width: number, height: number): Promise<void> {
-  await app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height), { width, height })
-  await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([width, height])
-}
-
 /** Waits until build `n` has landed and the Board tab (or whichever is chosen) has drawn it. */
 export async function waitForBuild(page: Page, n: number): Promise<void> {
   await expect.poll(() => page.evaluate(() => window.__pinoTest!.state().build?.lastGood?.number ?? 0), { timeout: 20_000 }).toBeGreaterThanOrEqual(n)
@@ -118,4 +112,13 @@ export async function markTrack(page: Page): Promise<void> {
     const id = window.__pinoTest!.state().project!.id
     await window.pino.marks.add(id, { kind: 'point', space: 'board', target: { kind: 'track', uuid: 'dddddddd-0000-4000-8000-000000000001' }, at: { x: 0, y: 0 }, note: 'widen this track' })
   })
+}
+
+/** A drag with the pen from a thing in the chosen view, through points that far from it in screen pixels. */
+export async function drawStroke(page: Page, from: Target, through: Array<{ dx: number; dy: number }>): Promise<void> {
+  const start = await screenOf(page, from)
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  for (const at of through) await page.mouse.move(start.x + at.dx, start.y + at.dy, { steps: 20 })
+  await page.mouse.up()
 }

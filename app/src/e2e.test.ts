@@ -36,6 +36,18 @@ describe('the specs', () => {
     expect(src).toContain("PINO_AGENT_CMD: opts.agent ? `node ${FAKE_AGENT}` : NO_AGENT")
   })
 
+  it("runs the engine's stand-in everywhere but in the one spec of the real engine", () => {
+    expect(read('e2e/launch.ts')).toContain('PINO_KERNEL_CMD: `node ${FAKE_KERNEL}`')
+    expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts')).toEqual(['e2e/real-kernel.spec.ts'])
+  })
+
+  it('takes its pictures only where a run names a folder outside the repository, and never resizes the window first', () => {
+    const shots = read('e2e/shots.spec.ts')
+    expect(shots).toContain('test.skip(folder === null || inRepo')
+    // A hidden window resized with a board drawn gives no picture: it is made at its size (PINO_TEST_SIZE).
+    expect(specsNaming(/setContentSize|setBounds|setSize\(/)).toEqual([])
+  })
+
   it('no spec takes a screenshot or touches the clipboard', () => {
     expect(specsNaming(/\.screenshot\(|clipboard/)).toEqual([])
   })

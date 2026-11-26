@@ -300,7 +300,8 @@ export function BoardView({ model }: { model: ViewModel }) {
   }
 
   useEffect(() => {
-    const target = canvas.current
+    // The whole view's, so that the wheel zooms over a chip, a pin or a tag as it does over the drawing.
+    const target = root.current
     if (!target) return
     // Not React's: the wheel must be held back from scrolling anything, which a passive listener cannot do.
     const wheel = (e: WheelEvent) => {

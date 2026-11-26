@@ -31,7 +31,14 @@ The person is working on this desktop. No test, script or check may put a window
 - No test and no check runs `scripts/pino --install-desktop` or `--uninstall-desktop` with the person's own `HOME` or
   `XDG_DATA_HOME`: `src/launcher.test.ts` gives the script a temporary one of each. The entry is tested by
   `--print-desktop`, which writes nothing.
-- `page.screenshot()` never returns on a hidden window. Do not call it. Do not touch the clipboard.
+- `page.screenshot()` never returns on a hidden window. Do not call it. Do not touch the clipboard. What takes a
+  picture is `e2e/shots.spec.ts` alone, through main's `capturePage()` (`helpers.ts` `capture`), and only with
+  `PINO_SHOTS` naming a folder outside the repository. A hidden window gives **one** picture a launch, and **none**
+  once it has been resized with a board drawn (the call never returns): a shot of another size is a launch with
+  `PINO_TEST_SIZE=1920x1080`, which main reads under test alone (`frame.ts` `windowSize`). No spec resizes.
+- Every spec runs the engine's stand-in (`app/test/fake-kernel.mjs`, whose header lists its switches).
+  `real-kernel.spec.ts` alone asks for the real engine (`launch({ kernel: 'real' })`), and is skipped where uv,
+  kicad-cli or `kernel/.venv` is missing; it runs uv offline, so nothing is fetched into the run's empty home.
 - A CSS animation that never ends grows a hidden window's memory for as long as it runs: there is none, and
   `styles/styles.test.ts` fails for one.
 - State is read through hooks, not pixels: `window.__pinoTest.state()` in the window, and `globalThis.__pinoMain` in
