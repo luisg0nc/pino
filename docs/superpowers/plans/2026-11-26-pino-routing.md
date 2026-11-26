@@ -659,7 +659,7 @@ git commit -m "kernel: route plan from the board and its rules, hole-clearance f
   - `ChainResult(board_text: str, steps: list[StepRun], seconds: float, stopped: str | None)`; `stopped` in `None|cancelled|timed_out`; `board_text` has every `pino-router:` item stripped.
   - `run_steps(krt: Krt, steps: Sequence[ChainStep], board_text: str, pro_text: str, work: Path, *, plan: RoutePlan, env: Mapping[str, str], step_timeout: float, deadline: float, cancel: threading.Event, events: Events, index0: int = 0, total: int | None = None) -> ChainResult`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_chain_order_and_arguments(fake_krt, tmp_path, argv_log):
@@ -710,12 +710,12 @@ def test_corridor_hint(fake_krt, tmp_path): ...     # hint input has gr_line on 
 def test_rip_is_explicit(fake_krt, tmp_path): ...   # hint argv has --rip-existing-nets with names, never "*"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_route_chain.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.chain'`
 
-- [ ] **Step 3: Write `chain.py`**
+- [x] **Step 3: Write `chain.py`**
 
 Step names and arguments (rule flags `R` = `--via-size V --via-drill D --clearance C --board-edge-clearance E --grid-step G`, from `plan.rules` and `plan.grid_step`; `F` = `--fab-overrides {FAB}`; `N` = `--no-fix-drc-settings`; F and N only where `krt.flags` lists them):
 
@@ -736,17 +736,24 @@ hint <net> (board.py line <n>)
 - After a step: the output loses that step's `pino-router:region:` items and its corridor; a missing output or a non-zero exit makes the step's input the next step's input (`note` "failed, skipped: <last log line>"). Timeout and cancel stop the chain.
 - Step timeout = `min(step_timeout, deadline - now)`. Events: `step` at start (`index`, `of` over the whole job when `total` is given), `net` per `^\[(\d+)/(\d+)\] Routing (.+?)( \(id=\d+\))?$` line, `log` with the latest line at most every 0.5 s per step, `step_done` with `seconds`, `returncode`, `routed` (summary `successful`, else 0), `failed` (summary `failed_single`, else []).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_route_chain.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/routing/chain.py kernel/tests/fake_krt kernel/tests/test_route_chain.py
 git commit -m "kernel: router chain of planes, fanout, pairs, signals, plane repair and route hints"
 ```
+
+**Plan fixes (implementation):**
+- The chain tests run on the 4-layer case board (GND plane on In1.Cu), since a 2-layer board has no plane steps under the director's call.
+- `StepRun.folder` (the step's folder under `work/`) is additive; the tests find a step's input by it. Each step folder also keeps `log.txt`.
+- Only `--fab-overrides` and `--no-fix-drc-settings` are dropped when a script's `--help` lacks them; the rule flags always go.
+- A step whose exit is 0 but writes no output is skipped with the note "no output, skipped".
+- The director's "both orders' router share on the 2-layer reference board" needs the real router: it is measured in Task 12.
 
 ---
 
