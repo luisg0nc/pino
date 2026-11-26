@@ -1,0 +1,10 @@
+{
+  "torno": "https://github.com/luisg0nc/torno",
+  "files": [
+    { "pino": "LICENSE", "torno": "LICENSE", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/tsconfig.json", "torno": "app/tsconfig.json", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
+    { "pino": "app/vitest.config.ts", "torno": "app/vitest.config.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "one mode, no kernel or evals" },
+    { "pino": ".claude/hooks/guard-bash.sh", "torno": ".claude/hooks/guard-bash.sh", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's words and PINO_AGENT_CMD; the uv sync and eval rules dropped; pino and torno both in the pkill list" },
+    { "pino": ".claude/hooks/guard-bash.test.sh", "torno": ".claude/hooks/guard-bash.test.sh", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the uv sync and eval cases dropped; PINO_AGENT_CMD; pkill pino and torno" }
+  ]
+}

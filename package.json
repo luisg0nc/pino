@@ -1,0 +1,17 @@
+{
+  "name": "pino",
+  "private": true,
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "scripts/pino",
+    "dev": "pnpm -C app dev",
+    "build": "pnpm -C app build",
+    "test": "pnpm -C app test",
+    "test:e2e": "pnpm -C app test:e2e"
+  }
+}

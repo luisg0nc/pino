@@ -77,6 +77,8 @@ New pino files (not in the manifest): `shared/app.ts`, `shared/project.ts`, `sha
 
 ### Task 1: Repo scaffold, manifest and drift report
 
+> **Note from the build:** torno is found by `scripts/torno-sync` and its test as `$PINO_TORNO_DIR`, else `torno` beside the main checkout (the parent of the git common dir): from a worktree, `../torno` from the repo root points elsewhere. `tornoSync.test.ts` also holds every as-is copy against the real torno, and skips with a message where there is none. The guard test also lost torno's grep case that named a person.
+
 **Files:**
 - Create: `package.json`, `pnpm-workspace.yaml`, `.gitignore`, `NOTICE`, `README.md`, `CLAUDE.md`, `shared-from-torno.json`, `scripts/torno-sync`
 - Copy as-is: `LICENSE`, `app/tsconfig.json`
@@ -114,7 +116,7 @@ Decisions:
 
 - `scripts/torno-sync`: CommonJS (`#!/usr/bin/env node`, `require` only, no extension). Default `--pino` is the folder above the script, default `--torno` is `<pino>/../torno`. For each entry: `pinoChanged` (as-is only) is pino's bytes against `git show <commit>:<torno path>`; `tornoChanged` is `git show <commit>:<path>` against `git show HEAD:<path>`; `tornoRemoved` when HEAD has no such path. Text output, one line each: `pino-changed <pino path>`, `torno-changed <torno path> <commit7>..<head7>  (git -C <torno> diff <commit7> HEAD -- <path>)`, `torno-removed <torno path>`, then `<n> files, <k> drifted`. `--json` prints `{ head, entries: [{ pino, torno, mode, commit, pinoChanged, tornoChanged, tornoRemoved }] }`. Exit 2 with one plain line on stderr when torno is not a git repo, the manifest does not parse, or a commit is unknown.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `app/src/tornoSync.test.ts` builds, in a temp folder, a fake torno repo (`git -c user.name=t -c user.email=t@example.invalid`, files `a.ts`, `b.ts`, `c.ts`, commit X, then edit `b.ts` and delete `c.ts`, commit Y) and a fake pino root with a manifest and copies. It runs `node <repo>/scripts/torno-sync --torno <t> --pino <p> --json`.
 
@@ -136,19 +138,19 @@ it('keeps torno\'s paths: pino path is the torno path, with torno in a file name
 it('names only files that are tracked in pino', () => { /* git ls-files --cached --others --exclude-standard contains every pino path */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm install && pnpm -C app exec vitest run src/tornoSync.test.ts src/manifest.test.ts`
 Expected: FAIL, script and manifest missing.
 
-- [ ] **Step 3: Write the scaffold files, the manifest and `scripts/torno-sync` as decided above, copy `LICENSE` and `app/tsconfig.json` as-is, adapt `vitest.config.ts` and the guard hook and its test**
+- [x] **Step 3: Write the scaffold files, the manifest and `scripts/torno-sync` as decided above, copy `LICENSE` and `app/tsconfig.json` as-is, adapt `vitest.config.ts` and the guard hook and its test**
 
-- [ ] **Step 4: Run the tests and the guard cases**
+- [x] **Step 4: Run the tests and the guard cases**
 
 Run: `pnpm test && bash .claude/hooks/guard-bash.test.sh && node scripts/torno-sync`
 Expected: vitest PASS; guard test prints no FAIL line and exits 0; torno-sync prints `<n> files, 0 drifted` and exits 0 (it reads the real torno, read-only).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Scaffold pino: workspace, docs, guard hook, torno manifest and drift report"
