@@ -543,7 +543,7 @@ git commit -m "kernel: copper read, merge, hashed UUIDs and cleanup in the board
   - `key.route_key(board_text: str, pro_text: str, dru_text: str | None, plan: RoutePlan, *, router_id: str = ROUTER_ID, kernel_version: str = __version__) -> RouteKey`.
   - `key.stale_reasons(old: RouteKey, new: RouteKey) -> list[str]`, in `PARTS` order, words: `connections changed`, `parts moved`, `footprints changed`, `outline changed`, `zones or keep-outs changed`, `kept copper changed`, `rules changed`, `routing instructions changed`, `router or kernel version changed`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `PRO_2L` and `DRU_2L` are hand-written in the test: Default class 0.2 / 0.2 / via 0.6 / 0.3; rules `min_track_width 0.15`, `min_clearance 0.15`, `min_hole_clearance 0.25`, `min_hole_to_hole 0.5`, `min_copper_edge_clearance 0.3`; `power` class 0.5 on `VBUS` and `+3V3`.
 
@@ -609,12 +609,12 @@ def test_kept_copper_changes_the_key(): ...             # one locked segment add
 def test_key_is_twelve_hex(): assert re.fullmatch(r"[0-9a-f]{12}", route_key(board_text(), PRO_2L, DRU_2L, PLAN).key)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_route_plan.py tests/test_route_key.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.plan'`
 
-- [ ] **Step 3: Write `plan.py` and `key.py`**
+- [x] **Step 3: Write `plan.py` and `key.py`**
 
 - Fanout: a footprint is fanned out when it has at least 16 SMD pads, at least 3 on each of the four sides of its pad bounding box, and a smallest neighbour pitch of 0.65 mm or less (QFN, DFN, QFP; modules and one-row connectors are not). Step width = `max(rules.min_track, min(rules.track_width, narrowest pad dimension))`; clearance = `rules.min_clearance`. `grid_step` is 0.05 when a fanout part has pitch 0.5 mm or less, else 0.1.
 - Planes default to the nets of the board's fill zones (not rule areas), with their layers. Signals: nets with two or more pads, minus plane nets and pair nets, sorted. Power: nets whose class width is above `rules.track_width`. Pair width and gap: the positive net's class width and clearance unless the pair sets them.
@@ -622,17 +622,23 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.p
 - Region keep-outs: the board box grown by 1 mm, minus the region rectangle, as up to four rectangles named `pino-router:region:<n>`. Hole keep-outs: a 16-point circle of radius `drill / 2 + hole_clearance + track_width / 2` around each NPTH pad. Router rule areas forbid tracks and vias and allow pads, copper pour and footprints. The corridor is a `gr_line` chain on `User.1` with UUIDs `ids.uid("router", "corridor", str(k))`.
 - Key parts are sha256 digests of canonical text: `nets` (sorted `ref.pad=net`), `placement` (sorted `ref at x y rot side`), `footprints` (per ref, pad geometry relative to the footprint), `outline` (Edge.Cuts items), `zones` (zone and rule-area outlines, layers, nets, no fills), `kept` (locked copper), `rules` (the pro's `board.design_settings` and `net_settings`, and the dru text), `plan` (`RoutePlan.to_json()` without `rules` and `warnings`), `router` (`router_id` and `kernel_version`). `key` = first 12 hex of sha256 over `"name=digest"` lines in `PARTS` order.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_route_plan.py tests/test_route_key.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/routing/plan.py kernel/src/pino_kernel/routing/key.py kernel/tests/test_route_plan.py kernel/tests/test_route_key.py kernel/tests/copper_boards.py
 git commit -m "kernel: route plan from the board and its rules, hole-clearance fix, and the route key"
 ```
+
+**Plan fixes (implementation):**
+- Director's call over the plan's default: planes come from fill zones on boards of 4 or more layers only. On 2 layers the zone net is routed as tracks (`test_two_layer_ground_goes_as_tracks`); `planes=` asks for planes on any board. The plan's zone test runs on a 4-layer board (GND plane on In1.Cu), and so does the rip test.
+- Nets whose pads are all joined by kept (locked) copper are not in `signals` (`test_a_net_joined_by_kept_copper_is_not_routed`), so a fully kept board has nothing to route. A hint never rips its own net.
+- `RoutePlan.keepouts` holds the hole keep-outs; `RoutePlan.nothing_to_route`, `RoutePlan.to_dict()` and `plan.board_box(text)` are additive. Plan warnings: `via_grown` (info), `diff_pair_unknown`, `route_hint_unknown` (the hint is left out).
+- Shared test cases live in `tests/route_cases.py` (`pro()`, `PRO_2L`, `DRU_2L` from the engine's `kicad_dru`, the boards).
 
 ---
 

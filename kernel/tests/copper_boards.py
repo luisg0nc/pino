@@ -29,8 +29,9 @@ def pad(number: str, at=(0.0, 0.0), size=(0.8, 0.8), *, net: str | None = None, 
 
 
 def fp(ref: str, at=(0.0, 0.0, 0.0), pads=(), *, back: bool = False, nets: dict | None = None,
-       lib: str = "pino_test:R_0603"):
-    return dict(ref=ref, at=at, pads=list(pads), back=back, nets=nets or {}, lib=lib)
+       lib: str = "pino_test:R_0603", value: str = "", silk: str = "", uuid: str | None = None):
+    return dict(ref=ref, at=at, pads=list(pads), back=back, nets=nets or {}, lib=lib, value=value, silk=silk,
+                uuid=uuid)
 
 
 def track(net: str, a, b, width: float = 0.2, layer: str = "F.Cu", *, locked: bool = False, uuid: str | None = None):
@@ -85,9 +86,15 @@ def _footprint(f: dict):
     x, y, rot = (list(f["at"]) + [0.0])[:3]
     X, Y = to_kicad(x, y)
     at = [S("at"), num(X), num(Y)] + ([num(rot)] if rot else [])
-    node = [S("footprint"), f["lib"], [S("layer"), "B.Cu" if f["back"] else "F.Cu"], [S("uuid"), _uuid()], at,
-            [S("property"), "Reference", f["ref"], [S("at"), 0, -1.5, 0], [S("layer"), "F.SilkS"],
-             [S("uuid"), _uuid()]]]
+    node = [S("footprint"), f["lib"], [S("layer"), "B.Cu" if f["back"] else "F.Cu"], [S("uuid"), f["uuid"] or _uuid()],
+            at, [S("property"), "Reference", f["ref"], [S("at"), 0, -1.5, 0], [S("layer"), "F.SilkS"],
+                 [S("uuid"), _uuid()]]]
+    if f["value"]:
+        node.append([S("property"), "Value", f["value"], [S("at"), 0, 1.5, 0], [S("layer"), "F.Fab"],
+                     [S("uuid"), _uuid()]])
+    if f["silk"]:
+        node.append([S("fp_text"), S("user"), f["silk"], [S("at"), 0, 2.5, 0], [S("layer"), "F.SilkS"],
+                     [S("uuid"), _uuid()]])
     for p in f["pads"]:
         node.append(_pad_node(p, f["nets"].get(p["number"], p["net"]), rot, f["back"]))
     return node
@@ -154,3 +161,42 @@ def two_net_board(folder: Path) -> Path:
     path = Path(folder) / "board.kicad_pcb"
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def _qfn(n_side: int, pitch: float, pad_w: float = 0.25, pad_l: float = 0.8, body: float = 5.0):
+    """A QFN: n_side pads per side at `pitch`, numbered counter-clockwise from the top of the left side, plus an EP."""
+    pads, k = [], 1
+    span = (n_side - 1) * pitch
+    e = body / 2 - pad_l / 2 + 0.1
+    for side in ("left", "bottom", "right", "top"):
+        for i in range(n_side):
+            o = -span / 2 + i * pitch
+            if side == "left":
+                pads.append(pad(str(k), (-e, o), (pad_l, pad_w)))
+            elif side == "bottom":
+                pads.append(pad(str(k), (o, e), (pad_w, pad_l)))
+            elif side == "right":
+                pads.append(pad(str(k), (e, -o), (pad_l, pad_w)))
+            else:
+                pads.append(pad(str(k), (-o, -e), (pad_w, pad_l)))
+            k += 1
+    pads.append(pad(str(k), (0, 0), (3.0, 3.0), shape="rect"))
+    return pads
+
+
+QFN32_05 = _qfn(8, 0.5)
+QFN56_04 = _qfn(14, 0.4, pad_w=0.2, body=7.0)
+USB_C16 = [pad(f"A{i}" if i <= 8 else f"B{i - 8}", (-3.75 + 0.5 * (i - 1), -3.0), (0.3, 1.0)) for i in range(1, 17)] + [
+    pad("S1", (-4.3, -2.5), (1.0, 1.6), shape="oval", kind="thru_hole", layers=("*.Cu", "*.Mask"), drill=0.6),
+    pad("S2", (4.3, -2.5), (1.0, 1.6), shape="oval", kind="thru_hole", layers=("*.Cu", "*.Mask"), drill=0.6)]
+SOT23_3 = [pad("1", (-0.95, 1.1), (0.6, 0.9)), pad("2", (0.95, 1.1), (0.6, 0.9)), pad("3", (0, -1.1), (0.6, 0.9))]
+ESP32_MODULE = ([pad(str(i + 1), (-8.75, -5.26 + 1.27 * i), (1.5, 0.9)) for i in range(14)]
+                + [pad(str(15 + i), (-5.7 + 1.27 * i, 9.0), (0.9, 1.5)) for i in range(10)]
+                + [pad(str(25 + i), (8.75, 11.25 - 1.27 * i), (1.5, 0.9)) for i in range(14)])
+MOUNTING_HOLE = [pad("", (0, 0), (3.2, 3.2), shape="circle", kind="np_thru_hole", layers=("*.Cu", "*.Mask"),
+                     drill=3.2)]
+
+
+def mounting_holes(x: float = 24.5, y: float = 18.5):
+    return [fp(f"H{i + 1}", (sx * x, sy * y, 0), MOUNTING_HOLE, lib="MountingHole")
+            for i, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1)))]
