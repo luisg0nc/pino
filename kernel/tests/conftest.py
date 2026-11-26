@@ -49,3 +49,21 @@ def fixture_libs(monkeypatch):
     monkeypatch.setenv("PINO_KICAD_FOOTPRINT_DIR", str(libs / "footprints"))
     monkeypatch.setenv("PINO_KICAD_3DMODEL_DIR", str(libs / "3dmodels"))
     return discover()
+
+
+@pytest.fixture
+def make_project(tmp_path):
+    """make_project(board_py, extra={}, outline=None, name="project") -> a project folder in tmp_path."""
+
+    def make(board_py: str, extra: dict | None = None, outline: str | None = None, name: str = "project") -> Path:
+        project = tmp_path / name
+        project.mkdir(parents=True)
+        (project / "board.py").write_text(board_py, encoding="utf-8")
+        if outline is not None:
+            (project / "outline.json").write_text(outline, encoding="utf-8")
+        for rel, text in (extra or {}).items():
+            (project / rel).parent.mkdir(parents=True, exist_ok=True)
+            (project / rel).write_text(text, encoding="utf-8")
+        return project
+
+    return make

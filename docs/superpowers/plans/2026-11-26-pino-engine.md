@@ -618,7 +618,7 @@ git commit -m "pino: placement intent, outline.json, keep-outs, zones, net class
   - Child: `python -I -m pino_kernel.runner <board.py>`; prints exactly one JSON object on the real stdout: `{"ok": true, "circuit": {...}}` or `{"ok": false, "problems": [{"message", "file", "line"}]}`. `board.py`'s own prints go to stderr.
   - Parent: `RunResult(circuit: Circuit | None, problems: list[Problem], log: str, seconds: float)`; `run_board(project: Path, *, libraries: Libraries, timeout: float = 30.0, python: str = sys.executable) -> RunResult`. `log` is the child's stderr, last 4000 characters. Problem files are relative to the project when inside it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_good_board(make_project, fixture_libs):
@@ -654,22 +654,22 @@ def test_board_py_imports_a_sibling_module(make_project, fixture_libs):
 
 `make_project(board_py: str, extra: dict[str, str] = {}, outline: str | None = None) -> Path` (conftest) writes a project folder in `tmp_path`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_run_board.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.run_board'`
 
-- [ ] **Step 3: Write the runner and the parent**
+- [x] **Step 3: Write the runner and the parent**
 
 - Child: dup the real stdout, point `sys.stdout` at stderr, put the project folder at `sys.path[0]`, `os.chdir` to it, `runpy.run_path(board.py, run_name="__main__")`, then take the single board from `_BOARDS` and print `to_circuit().to_json()` wrapped as above. Map `SyntaxError` to its `lineno`; any other exception to the innermost traceback frame inside the project folder.
 - Parent: environment = `PATH`, `HOME`, `LANG`, `PYTHONHASHSEED=0` and the three `PINO_KICAD_*_DIR` values from `libraries`; `cwd=project`; `start_new_session=True`; on timeout kill the child's process group only. Output that is not one JSON object becomes the problem "board.py stopped the engine's runner: <last stderr line>".
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_run_board.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/runner.py kernel/src/pino_kernel/run_board.py kernel/tests/test_run_board.py kernel/tests/conftest.py
