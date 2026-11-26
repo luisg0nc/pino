@@ -458,6 +458,8 @@ git commit -m "Port the board-view spike's parser, hit test and references into 
 
 ### Task 5: Drawing the board in the drafting look
 
+> As built: `--agent-mark` is 2.79:1 (light) and 2.82:1 (dark) on `--cu-far`, under the plan's 3:1, and both are the picks' colours. Marks are drawn cased in the paper (4.5:1 all round) and the test holds the pair at 2.75. `toPaths` takes the board (and the stale uuids), since a scene needs it. `DrawOpts` also carries `netColourOf`.
+
 **Files:**
 - Create: `app/src/renderer/board/scene.ts`, `draw.ts`, `style.ts`, `app/src/renderer/styles/board.css`
 - Modify: `app/src/renderer/styles/tokens.css`, `app/src/renderer/styles/app.css`, `app/src/shared/contrast.test.ts`
@@ -471,7 +473,7 @@ git commit -m "Port the board-view spike's parser, hit test and references into 
   - `style.ts`: `interface BoardColours { paper; cu; cuFar; hatch; hatchFar; silk; rat; accent; accentWash; warn }` read from the tokens; `boardColours(el: Element): BoardColours`; `copperColour(o: { active: boolean; throughHole: boolean; net: string; netColours: boolean; stale: boolean }, c: BoardColours, netColourOf: (net: string) => string | null): string` with the drafting rules: active-layer copper `--cu`, other layers `--cu-far`, through-hole pads always `--cu`, net colours replace `--cu` only when on, stale copper mixed 60 % toward `--board-paper` while pads keep `--cu`, a via is a paper disc with a 1.3 px `--cu` ring and a `--cu` hole dot, pours are `--hatch` (active) or `--hatch-far` hatching with a 35 % mixed edge on the active layer, silk 1 px `--silk` (top only when the top is active), ratsnest `--rat` 1.3 px dashed `[4, 3]` with 2 px end dots.
   - Tokens: every new token of the Global Constraints in `tokens.css` (light and dark); `board.css` lays the two stacked canvases (`canvas.board`, `canvas.over`, `pointer-events: none` on the top one).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('bakes the reference board into batches by layer, net and width', () => {
@@ -492,21 +494,21 @@ it('holds the new tokens to their contrasts', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer/board src/shared/contrast.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the scene, the style and the draw**
+- [x] **Step 3: Write the scene, the style and the draw**
 
 Dim by mixing toward `--board-paper`, never by alpha (the spike's rule: overlaps inside a layer do not darken). The board fills with `--board-paper`; the edge is 1.4 px `--cu`.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run src/renderer/board src/shared/contrast.test.ts src/renderer/styles`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/renderer/board app/src/renderer/styles app/src/shared/contrast.test.ts
