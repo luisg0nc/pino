@@ -24,7 +24,7 @@ d1 = mcu.path("@LED_REF@", "pino_test:LED", "green"@LED_ID@)
 
 b.supply("VBUS", j1.VBUS, c1[1], u1.VIN, external=True)
 b.supply("+3V3", u1.VOUT, c2[1], u2.VDD, u2.EN, c3[1])
-b.gnd(j1.GND, c1[2], u1.GND, c2[2], u2.GND, c3[2]@LED_GND@)
+b.gnd(j1.GND, c1[2], u1.GND, c2[2], u2.GND, c3[2]@LED_GND@, external=True)
 b.net("STATUS", u2.IO1, r1[1])
 @LED_NET@
 b.nc(u2.IO2)

@@ -369,11 +369,14 @@ def _text_order(item, item_uuid):
     return head + first + [[Sym("uuid"), item_uuid]] + rest
 
 
-def _empty_prop(name, p, item_uuid):
+def _empty_prop(name, p, item_uuid, value="", thickness=None):
+    """A hidden field on the fab layer. KiCad writes a font thickness for user fields (LCSC) and none for
+    Datasheet and Description; matching it keeps a re-save unchanged."""
     S = Sym
-    return [S("property"), name, "", [S("at"), 0, 0, num(norm_angle(p.rot))],
+    font = [S("font"), [S("size"), num(1.27), num(1.27)]] + ([[S("thickness"), num(thickness)]] if thickness else [])
+    return [S("property"), name, value, [S("at"), 0, 0, num(norm_angle(p.rot))],
             [S("layer"), "B.Fab" if p.back else "F.Fab"], [S("hide"), S("yes")], [S("uuid"), item_uuid],
-            [S("effects"), [S("font"), [S("size"), num(1.27), num(1.27)]]]
+            [S("effects"), font]
             + ([[S("justify"), S("mirror")]] if p.back else [])]
 
 
@@ -482,6 +485,9 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
             for extra in ("Datasheet", "Description"):
                 if extra not in have:
                     out.append(_empty_prop(extra, p, ids.uid("footprint", key, "prop", extra)))
+            if "LCSC" not in have:
+                # the symbol's fields must be on its footprint, or DRC's parity check reports the one missing
+                out.append(_empty_prop("LCSC", p, ids.uid("footprint", key, "prop", "LCSC"), p.lcsc, 0.15))
     out += [d for _, d in sorted(drawings, key=lambda t: t[0])]
     # KiCad writes a footprint's zones after its pads and drawings, before embedded_fonts and models
     if zones:

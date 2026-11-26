@@ -96,6 +96,11 @@ def test_pad_nets_come_from_the_circuit(fixture_libs):
     assert pads["1"][1] == "VBUS" and pads["3"][1] == "+3V3"
 
 
+def test_no_connect_pads_get_kicads_unconnected_net(fixture_libs):
+    pads = {str(p[1]): find(p, "net") for p in find_all(footprint_named(write(small_board()), "U2"), "pad")}
+    assert pads["4"][1] == "unconnected-(U2-IO2-Pad4)" and pads["5"][1] == "unconnected-(U2-IO3-Pad5)"
+
+
 def test_holes_are_board_only_npth(fixture_libs):
     fp = footprint_named(write(small_board(outline=f'"{FIXTURES / "outline/enclosure.json"}"')), "H1")
     assert find(fp, "attr")[1:] == ["board_only", "exclude_from_pos_files", "exclude_from_bom"]

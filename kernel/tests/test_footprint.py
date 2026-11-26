@@ -68,7 +68,7 @@ def test_position_goes_into_kicads_frame(placed):
 
 def test_datasheet_and_description_are_written(placed):
     props = [p[1] for p in find_all(place(placed("R1"), copper_layers=CU2), "property")]
-    assert props == ["Reference", "Value", "Datasheet", "Description"]
+    assert props == ["Reference", "Value", "Datasheet", "Description", "LCSC"]
 
 
 def test_pad_nets_are_written(placed):

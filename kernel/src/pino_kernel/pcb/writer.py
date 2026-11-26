@@ -62,6 +62,12 @@ def copper_layers(n: int) -> list[tuple[int, str]]:
     return [(0, "F.Cu")] + inner + [(2, "B.Cu")]
 
 
+def unconnected_net(ref: str, pin_name: str, number: str) -> str:
+    """The net KiCad gives a pin marked no-connect, so the board's pads match the schematic."""
+    shown = "" if pin_name in ("", "~") else f"{pin_name}-"
+    return f"unconnected-({ref}-{shown}Pad{number})"
+
+
 def fab_of(circuit: Circuit) -> FabProfile:
     return PROFILES.get(circuit.fab) or for_layers(circuit.layers)
 
@@ -71,10 +77,13 @@ def placed_parts(circuit: Circuit, placement: Placement, footprints: FootprintLi
     for part in circuit.parts:
         pose = placement[part.ref]
         nets = {}
+        open_pins = {p.number for p in circuit.no_connects if p.ref == part.ref}
         for pin in part.pins:
             net = circuit.net_of(part.ref, pin.number)
             if net is not None:
                 nets[pin.number] = net.name
+            elif pin.number in open_pins:
+                nets[pin.number] = unconnected_net(part.ref, pin.name, pin.number)
         out.append(Placed(part.ref, part.key, footprints.load(part.footprint), float(pose.x), float(pose.y),
                           float(pose.rot), bool(pose.back), part.value, nets, part.dnp, part.lcsc))
     return out

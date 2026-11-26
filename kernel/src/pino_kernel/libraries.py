@@ -61,8 +61,13 @@ def discover(env: Mapping[str, str] = os.environ, roots: Sequence[str] = DEFAULT
     found: dict[str, Path] = {}
     tried: list[str] = []
     for kind, (var, folder) in KINDS.items():
-        candidates = [env.get(f"PINO_KICAD_{var}_DIR"), env.get(f"KICAD10_{var}_DIR")]
-        candidates += [f"{_expand(r, env)}/{folder}" for r in roots if _expand(r, env)]
+        explicit = env.get(f"PINO_KICAD_{var}_DIR")
+        if explicit:
+            # pino's own variable wins outright: a wrong one is reported, not quietly replaced
+            candidates = [explicit]
+        else:
+            candidates = [env.get(f"KICAD10_{var}_DIR")]
+            candidates += [f"{_expand(r, env)}/{folder}" for r in roots if _expand(r, env)]
         for c in candidates:
             if not c:
                 continue

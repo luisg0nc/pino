@@ -1349,7 +1349,7 @@ git commit -m "kernel: circuit and layout changes in words, ported from pcb-kit 
   - `build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult`. `KEEP_BUILDS = 20`.
   - Build folder `.pino/build/<hash>/`: `circuit.json`, `placement.json` (poses and ratsnest edges), `board.kicad_sch`, `board.kicad_pcb`, `board.kicad_pro`, `board.kicad_dru`, `sym-lib-table`, `fp-lib-table`, `filled/` (copies of the project files plus the refilled `board.kicad_pcb`), `erc.json`, `netlist.xml`, `drc.json`, `svg/board-<layer>.svg`, `schematic.svg`, `board.glb`, `render-top.png` (only with `render`), `result.json`. `artifacts` holds these paths relative to the project, POSIX separators; `svg` is a map layer to path.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 NO_KICAD = BuildOptions(kicad=False)
@@ -1406,12 +1406,12 @@ def test_two_builds_at_once(make_project, fixture_libs):
 def test_old_builds_are_pruned(make_project, fixture_libs, monkeypatch): ...   # KEEP_BUILDS=2, four different builds -> two folders remain
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_build.py tests/test_result.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write `result.py`, `history.py`, `build.py` and the schema**
+- [x] **Step 3: Write `result.py`, `history.py`, `build.py` and the schema**
 
 Steps and their timing names, in this fixed order in `timings` whatever order they finish in:
 
@@ -1438,17 +1438,27 @@ Steps and their timing names, in this fixed order in `timings` whatever order th
 - The temp folder is renamed onto `.pino/build/<hash>/` when complete; if that folder already exists (another build won the race), the temp folder is removed and the existing one used. History is recorded under the lock. Pruning removes build folders not among the newest `KEEP_BUILDS` history hashes, never the current or the previous one.
 - The JSON Schema file describes `pino.build/1` exactly as `BuildResult.to_json()` writes it (`additionalProperties: false` at the top level and in findings).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_build.py tests/test_result.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/result.py kernel/src/pino_kernel/history.py kernel/src/pino_kernel/build.py kernel/schema kernel/tests/test_build.py kernel/tests/test_result.py
 git commit -m "kernel: the fast build with a versioned result, cache, history and changes"
 ```
+
+> **Plan fixes (Task 16, during the build):**
+> - `test_missing_libraries_fail_in_plain_words` could not pass with Task 1's discovery order (a wrong
+>   `PINO_KICAD_SYMBOL_DIR` fell through to `/usr/share/kicad/symbols`). A `PINO_KICAD_<KIND>_DIR` that is set now wins
+>   outright, like `PINO_KICAD_CLI`; a wrong one is reported.
+> - The first kicad-cli build found three board-writer gaps: DRC parity wants every symbol field on the footprint
+>   (an `LCSC` property, font thickness 0.15 as KiCad writes it), pads of no-connect pins carry KiCad's
+>   `unconnected-(REF-PIN-PadN)` net, and the GLB export fails on a model file it cannot read (the test models are
+>   now a real 1.6 x 0.8 mm STEP box made with kicad-cli). A kicad-cli build of the small board is now a test.
+> - Build numbers are taken at the start under the lock (an entry marked `running`), so two builds at once get 1 and 2.
 
 ---
 

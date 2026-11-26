@@ -23,3 +23,11 @@ def test_missing_models_dir_is_allowed(tmp_path):
     libs = discover({"PINO_KICAD_SYMBOL_DIR": str(tmp_path / "s"), "PINO_KICAD_FOOTPRINT_DIR": str(tmp_path / "f"),
                      "HOME": "/nowhere"}, roots=())
     assert libs.footprints == tmp_path / "f" and not libs.models.is_dir()
+
+
+def test_a_wrong_pino_variable_is_not_replaced(tmp_path):
+    (tmp_path / "s").mkdir(); (tmp_path / "f").mkdir()
+    with pytest.raises(LibrariesNotFound) as e:
+        discover({"PINO_KICAD_SYMBOL_DIR": "/nowhere/symbols", "KICAD10_SYMBOL_DIR": str(tmp_path / "s"),
+                  "PINO_KICAD_FOOTPRINT_DIR": str(tmp_path / "f")})
+    assert e.value.missing == ["symbols"] and e.value.tried[:2] == ["/nowhere/symbols", str(tmp_path / "f")]
