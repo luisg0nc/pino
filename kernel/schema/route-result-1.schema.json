@@ -23,7 +23,8 @@
   "steps",
   "timings",
   "artifacts",
-  "cached"
+  "cached",
+  "reused"
  ],
  "properties": {
   "schema": {
@@ -314,6 +315,28 @@
   },
   "cached": {
    "type": "boolean"
+  },
+  "reused": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "additionalProperties": false,
+   "required": [
+    "number",
+    "key"
+   ],
+   "properties": {
+    "number": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "key": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{12}$"
+    }
+   },
+   "description": "the route whose copper this one kept, because only the labels moved since it; null when the router ran"
   }
  },
  "$defs": {

@@ -103,4 +103,6 @@ def test_reference_labels_keep_off_pads_and_each_other(ref):
     # U1's own outline meets the board edge (it sits on it for its antenna); no label does
     assert not [f for f in r.findings if f.code == "silk_edge_clearance" and "Reference" in f.message]
     hidden = [f for f in r.findings if f.code == "label_hidden"]
-    assert len(hidden) <= 1 and (not hidden or hidden[0].severity == "info")
+    # a label may sit over a neighbour's courtyard margin, so R3 shows beside J1. C5 and C7 are boxed in by U1's body
+    # and silk and their neighbours' pads; C3's last spot is taken by C1's label.
+    assert len(hidden) == 1 and hidden[0].severity == "info" and hidden[0].refs == ("C3", "C5", "C7")

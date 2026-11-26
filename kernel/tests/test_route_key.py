@@ -1,7 +1,9 @@
 import re
 
 from copper_boards import R0603, board, fp, track
-from pino_kernel.routing.key import PARTS, RouteKey, route_key, stale_reasons
+import pytest
+
+from pino_kernel.routing.key import PARTS, RouteKey, labels_only, route_key, stale_reasons
 from pino_kernel.routing.plan import plan_route
 from pino_kernel.sexpr import dump, parse
 from route_cases import DRU_2L, PRO_2L, pro
@@ -63,3 +65,21 @@ def test_key_is_twelve_hex_and_round_trips():
     k = route_key(board_text(), PRO_2L, DRU_2L, PLAN)
     assert re.fullmatch(r"[0-9a-f]{12}", k.key) and list(k.parts) == list(PARTS)
     assert RouteKey.from_json(k.to_json()) == k
+
+
+def keys_differing_in(*names):
+    old = RouteKey("000000000000", {k: "a" for k in PARTS})
+    return old, RouteKey("111111111111", {k: ("b" if k in names else "a") for k in PARTS})
+
+
+def test_labels_only_when_the_labels_alone_differ():
+    assert labels_only(*keys_differing_in("labels"))
+    assert not labels_only(*keys_differing_in())  # the same board is a cached route, not a reuse
+    old, new = keys_differing_in("labels")
+    assert not labels_only(RouteKey(old.key, {k: v for k, v in old.parts.items() if k != "router"}), new)
+
+
+@pytest.mark.parametrize("part", [k for k in PARTS if k != "labels"])
+def test_labels_only_is_false_when_anything_else_differs(part):
+    assert not labels_only(*keys_differing_in(part))
+    assert not labels_only(*keys_differing_in(part, "labels"))
