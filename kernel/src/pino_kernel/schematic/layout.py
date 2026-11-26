@@ -81,6 +81,7 @@ class Layout:
     def __init__(self, board: Model, symbols: SymbolLibrary):
         self.board = board
         self.symbols = symbols
+        self.arrangements: dict[str, str] = {}
         spans = {}
         for net in board.nets.values():
             spans[net.name] = {board.parts[p.ref].block.key for p in net.pins}
@@ -544,11 +545,15 @@ class Layout:
         if across:
             raise ValueError(f"across parts not bridging two nodes of one chain: {[p.ref for p in across]}")
         # The first chain is the block's main line; later chains flow with the clusters.
-        satellites = chains[1:] + [self.cluster(net, parts) for net, parts in pending.items()]
+        groups = self.split_chains(paths)
+        satellites = [(cv, set().union(*(self.part_nets(p) for p in grp))) for cv, grp in zip(chains[1:], groups[1:])]
+        satellites += [(self.cluster(net, parts), {net}) for net, parts in pending.items()]
         chains = chains[:1]
-        for net in self.board.nets.values():
-            if net.external and blk is self.board.blocks[0]:
-                satellites.append(self.flag_cluster(net.name))
+        # A block with a big part (more than SMALL_HUB pins) stacks its clusters in columns to its right;
+        # otherwise they stand in a row below. One rule, so one more part never flips a learned sheet.
+        hub = max(paths, key=lambda p: len(p.symbol.pins), default=None)
+        below = hub is None or len(hub.symbol.pins) <= SMALL_HUB
+        self.arrangements[blk.key] = "below" if below else "right"
 
         out = Canvas()
         bottom, right = 0, 0
@@ -559,10 +564,15 @@ class Layout:
             bottom, right = math.ceil(bx[3]) + 5, max(right, math.ceil(bx[2]))
             out.add(cv)
 
+        satellites = self.order_satellites(out, hub, satellites, below)
+        for net in self.board.nets.values():
+            if net.external and blk is self.board.blocks[0]:
+                satellites.append(self.flag_cluster(net.name))
+
         if satellites:
             sizes = [cv.bbox() for cv in satellites]
             tallest = max(b[3] - b[1] for b in sizes)
-            if len(chains) == 1 and right < 90 and len(paths) < 3:
+            if below:
                 # Short chain: put the clusters underneath, in a row.
                 cx, cy, limit, row_h = 0, bottom, max(right, 60), 0
                 for cv in satellites:
@@ -586,6 +596,20 @@ class Layout:
                     out.add(cv)
                     cy, col_w = cy + h + 4, max(col_w, w)
         return out
+
+    def order_satellites(self, drawn, hub, satellites, below):
+        """Clusters in the order of the hub pins they serve (left to right below, top to bottom on the
+        right); clusters that serve no hub pin keep their declaration order after them."""
+        if hub is None:
+            return [cv for cv, _ in satellites]
+        pins = [(p.x, p.y, p.net) for p in drawn.pins if p.ref == hub.ref and p.net]
+
+        def key(item):
+            i, (cv, nets) = item
+            spots = [(x, y) if below else (y, x) for x, y, net in pins if net in nets]
+            return (0, min(spots), i) if spots else (1, (0, 0), i)
+
+        return [cv for _, (cv, _) in sorted(enumerate(satellites), key=key)]
 
     # -- net names ----------------------------------------------------------------
 
@@ -684,7 +708,9 @@ class Layout:
                 moved = Canvas()
                 cv.move(left + pad - math.floor(bx[0]), top + pad + 3 - math.floor(bx[1]))
                 moved.add(cv)
-                moved.frames.append(Frame(blk.title, blk.key, (left, top, left + w, top + row_h)))
+                h = next(s[1] for b, _, s, _ in row if b is blk)
+                moved.frames.append(Frame(blk.title, blk.key, (left, top, left + w, top + h),
+                                          self.arrangements.get(blk.key, "")))
                 sheet.add(moved)
                 left += w + gap
             top += row_h + gap

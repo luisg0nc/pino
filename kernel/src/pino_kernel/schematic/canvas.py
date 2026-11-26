@@ -89,6 +89,7 @@ class Frame:
     title: str
     key: str
     box: tuple
+    arrangement: str = ""  # "below" or "right": where the block's clusters stand
 
 
 @dataclass

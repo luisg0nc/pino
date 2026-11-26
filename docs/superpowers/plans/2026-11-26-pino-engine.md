@@ -788,7 +788,7 @@ git commit -m "kernel: schematic writer with stable UUIDs and a pin-based netlis
 - Consumes: `Canvas`, `Circuit`, `SymbolLibrary`.
 - Produces: `lint(canvas: Canvas, circuit: Circuit, symbols: SymbolLibrary) -> list[Finding]`; source `lint`, severity `warning`, codes `overlap`, `wire_through`, `crossing`, `direction`, `blocks_overlap`; `at` is `At("sheet", x_mm, y_mm)`; `refs` names the parts involved.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_clean_board_has_no_findings(fixture_libs):
@@ -820,24 +820,24 @@ def test_mosfet_in_a_path_is_a_lint_finding():
     assert any(f.code == "direction" for f in lint(layout_sheet(c, syms)[0], c, syms))
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_lint.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.schematic.lint'`
 
-- [ ] **Step 3: Write the lint and the three layout fixes**
+- [x] **Step 3: Write the lint and the three layout fixes**
 
 - Lint: the spike's rules, each finding with a sheet position in mm (the centre of the overlap, the crossing point, the symbol origin) and the refs involved.
 - Frames: each frame takes its own block's height; frames in one row share their top edge.
 - Satellites: clusters are ordered by the position of the hub pin they share a net with (top to bottom for columns, left to right for rows); clusters with no hub pin keep declaration order after them.
 - Arrangement: "clusters below" when the block's largest path part has at most `SMALL_HUB` (8) pins, "columns to the right" otherwise. The spike's `right < 90 and len(paths) < 3` threshold is removed.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_lint.py tests/test_schematic_writer.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/schematic kernel/tests/test_schematic_lint.py
