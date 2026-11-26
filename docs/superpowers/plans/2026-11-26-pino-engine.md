@@ -97,7 +97,7 @@ kernel/
   - `libraries.Libraries(symbols: Path, footprints: Path, models: Path)` (frozen dataclass) with `path_vars() -> dict[str, str]` (the three `KICAD10_*_DIR` names), `libraries.discover(env: Mapping[str, str] = os.environ) -> Libraries`, `libraries.LibrariesNotFound(Exception)` with `.tried: list[str]`.
   - `pino_kernel.__version__ = "0.1.0"`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # test_sexpr.py
@@ -148,12 +148,12 @@ def test_no_pcbnew_import(): ...      # grep kernel/src for r"^\s*(import|from)\
 def test_no_personal_paths(): ...     # grep kernel/ text files (skip .venv and this file) for r"/home/[a-z]" and "/Users/"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel'`
 
-- [ ] **Step 3: Write the package**
+- [x] **Step 3: Write the package**
 
 - `pyproject.toml`: name `pino-kernel`, version `0.1.0`, `requires-python = ">=3.12"`, `dependencies = []`, build backend hatchling with packages `src/pino` and `src/pino_kernel`, `[project.scripts] pino-kernel = "pino_kernel.cli:main"`, dependency group `dev = ["pytest>=8", "jsonschema>=4"]`, pytest `testpaths = ["tests"]` and markers `kicad_cli`, `kicad_libs`.
 - `sexpr.py`: the board spike's reader and printer as they are (they match KiCad 10's save layout). Every later module uses its convention: `Sym` for bare atoms, `str` for quoted strings. The schematic spike's `Q` convention is not used.
@@ -162,12 +162,12 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel'`
 - `NOTICE`: append a "pcb-kit" section: source URL, commit `32867ca`, the three ported files, and the MIT licence text with "Copyright (c) 2026 Jeremy Seitz".
 - `.gitignore`: add `kernel/.venv/`, `__pycache__/`, `.pytest_cache/`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests -v`
 Expected: PASS (6 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add NOTICE .gitignore kernel
