@@ -3,7 +3,7 @@
   "files": [
     { "pino": "LICENSE", "torno": "LICENSE", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
     { "pino": "app/tsconfig.json", "torno": "app/tsconfig.json", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "as-is" },
-    { "pino": "app/vitest.config.ts", "torno": "app/vitest.config.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "one mode, no kernel or evals" },
+    { "pino": "app/vitest.config.ts", "torno": "app/vitest.config.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "one mode, no kernel or evals; tokens.css is read as text under test" },
     { "pino": ".claude/hooks/guard-bash.sh", "torno": ".claude/hooks/guard-bash.sh", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's words and PINO_AGENT_CMD; the uv sync and eval rules dropped; pino and torno both in the pkill list" },
     { "pino": ".claude/hooks/guard-bash.test.sh", "torno": ".claude/hooks/guard-bash.test.sh", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the uv sync and eval cases dropped; PINO_AGENT_CMD; pkill pino and torno" },
     { "pino": "app/src/main/http.ts", "torno": "app/src/main/http.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the header from APP.header; comments say project" },
@@ -181,6 +181,7 @@
     { "pino": "app/src/renderer/state/dock.test.ts", "torno": "app/src/renderer/state/dock.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's key and breakpoint, held to tokens.css; a case for no storage" },
     { "pino": "app/src/main/workspace.ts", "torno": "app/src/main/workspace.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "a project is any direct subfolder that is not hidden and not a link; board, brief and empty from its files; no models, no common/ or pyproject" },
     { "pino": "app/src/main/workspace.test.ts", "torno": "app/src/main/workspace.test.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's listing rules" },
-    { "pino": "app/src/shared/workspace.ts", "torno": "app/src/shared/workspace.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "ListedProject and WorkspaceInfo for boards; RecentFolder stays in shared/project.ts; no example" }
+    { "pino": "app/src/shared/workspace.ts", "torno": "app/src/shared/workspace.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "ListedProject and WorkspaceInfo for boards; RecentFolder stays in shared/project.ts; no example" },
+    { "pino": "app/src/main/thumb.ts", "torno": "app/src/main/show/cards.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "thumbnailRefusal, saveThumbnail and thumbnailOnFile only; of a build by its hash, no model, box or sources", "moved": "torno's show/cards.ts is the page's cards; in pino cards are the Brief's" }
   ]
 }

@@ -43,6 +43,10 @@ export interface PinoBridge {
     open(name: string): Promise<ProjectInfo>
     /** Ends the project's session and leaves the page of projects. */
     close(): Promise<void>
+    /** The picture on file of a project the open workspace lists, as a PNG's bytes; null when there is none. */
+    thumb(name: string): Promise<Uint8Array | null>
+    /** A picture of the open project's newest good build, by its hash, which main keeps. Anything else is dropped. */
+    saveThumb(projectId: string, hash: string, png: Uint8Array): Promise<void>
   }
   window: {
     minimize(): void

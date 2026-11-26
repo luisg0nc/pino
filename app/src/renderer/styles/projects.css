@@ -91,6 +91,12 @@
   font-size: 28px;
 }
 
+.project-picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .project-card-new .project-picture {
   border: 1px dashed var(--field-edge);
   background: transparent;

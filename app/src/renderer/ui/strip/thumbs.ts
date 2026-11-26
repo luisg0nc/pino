@@ -3,23 +3,26 @@
 import { useEffect, useState } from 'react'
 import { ratsFor } from '../../../shared/view'
 import { drawBoard, toPaths } from '../../board/draw'
-import { boardColours } from '../../board/style'
+import { boardColours, lightBoardColours } from '../../board/style'
 import { fit } from '../../board/viewport'
 import { useDark } from '../../board/useCanvas'
 import { loadViewModel, type ViewModel } from '../../state/viewModel'
 import { factsOf, type Facts, type StripNode } from './strip'
 
 export const THUMB = { w: 62, h: 44 }
+/** The picture on a project's card on the page of projects. */
+export const PAGE_THUMB = { w: 240, h: 160 }
 const SCALE = 2 // for a sharp picture on a dense screen
 
 const pictures = new Map<string, string>()
 
-function draw(model: ViewModel, dark: boolean): string {
+/** A board drawn small, as a PNG's data URL: in the dark theme's colours, or in the light ones whatever the theme. */
+export function boardPicture(model: ViewModel, size: { w: number; h: number }, dark: boolean): string {
   const canvas = document.createElement('canvas')
-  canvas.width = THUMB.w * SCALE
-  canvas.height = THUMB.h * SCALE
-  const colours = boardColours(document.documentElement)
-  const view = fit(model.board.box, THUMB.w, THUMB.h, { l: 3, r: 3, t: 3, b: 3 })
+  canvas.width = size.w * SCALE
+  canvas.height = size.h * SCALE
+  const colours = dark ? boardColours(document.documentElement) : lightBoardColours()
+  const view = fit(model.board.box, size.w, size.h, { l: 3, r: 3, t: 3, b: 3 })
   drawBoard(
     canvas.getContext('2d')!,
     toPaths(model.board, model.stale),
@@ -49,7 +52,7 @@ export function useThumbs(projectId: string | null, nodes: readonly StripNode[],
           const result = await window.pino.build.result(projectId, hash)
           const model = await loadViewModel(projectId, { ...result, number: Number(number) })
           if (!here) return
-          pictures.set(key, draw(model, dark))
+          pictures.set(key, boardPicture(model, THUMB, dark))
           onFacts(Number(number), factsOf(result))
           setDrawn((n) => n + 1)
         } catch {

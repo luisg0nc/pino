@@ -8,6 +8,39 @@ import { useReady } from './useReady'
 /** What a card says of a board with nothing drawn: a brief alone, or neither file. */
 const saidOf = (p: ListedProject): string | null => (p.board ? null : p.brief ? 'No board yet' : 'Empty')
 
+/** The board's picture on a card, asked for when the card comes into view. Where there is none the box stays blank. */
+function CardPicture({ name }: { name: string }) {
+  const box = useRef<HTMLSpanElement>(null)
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    let here = true
+    let made: string | null = null
+    const watcher = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      watcher.disconnect()
+      void window.pino.project.thumb(name).then(
+        (png) => {
+          if (!here || !png) return
+          made = URL.createObjectURL(new Blob([png as Uint8Array<ArrayBuffer>], { type: 'image/png' }))
+          setUrl(made)
+        },
+        () => {}
+      )
+    })
+    watcher.observe(box.current!)
+    return () => {
+      here = false
+      watcher.disconnect()
+      if (made) URL.revokeObjectURL(made)
+    }
+  }, [name])
+  return (
+    <span ref={box} className="project-picture" aria-hidden="true">
+      {url !== null && <img src={url} alt="" />}
+    </span>
+  )
+}
+
 /**
  * The page of projects, while a workspace is open and no project is: New project first, then a card a board. Arrows
  * move between the cards, Enter opens one, and typing filters them by name. Written after torno's page of projects
@@ -99,10 +132,11 @@ export function ProjectsPage({ busy, onOpen }: { busy: boolean; onOpen: (name: s
             <span className="project-card-name">New project</span>
           </button>
         </li>
+        {/* By its folder: a board of the same name in another workspace is another card, with its own picture. */}
         {shown.map((p) => (
-          <li key={p.name}>
+          <li key={p.dir}>
             <button type="button" className="project-card" aria-label={p.name} aria-description={saidOf(p) ?? undefined} title={p.dir} disabled={busy} onClick={() => onOpen(p.name)}>
-              <span className="project-picture" aria-hidden="true" />
+              <CardPicture name={p.name} />
               <span className="project-card-name">{p.name}</span>
               {saidOf(p) !== null && <span className="project-card-said">{saidOf(p)}</span>}
             </button>

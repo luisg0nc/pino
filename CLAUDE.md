@@ -39,8 +39,9 @@ changed.
 
 ## Global invariants
 
-- Copy now, extract later. A copied torno file lives at the same relative path as in torno; where torno's own file
-  name says torno, pino's says pino (`scripts/torno` is `scripts/pino`).
+- Copy now, extract later. A copied torno file lives at the same relative path as in torno (where torno's own file
+  name says torno, pino's says pino: `scripts/torno` is `scripts/pino`), unless a pino rule renames it (object to
+  project, torno's board of cards to cards); then its manifest entry says so in `moved`.
 - Every copied file is listed in `shared-from-torno.json` as `as-is` or `adapted`. A later edit of an as-is file makes
   it adapted in the same commit.
 - Copy the file from torno, then adapt it. Never retype torno code from memory.

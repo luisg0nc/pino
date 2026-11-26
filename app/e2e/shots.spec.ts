@@ -4,8 +4,8 @@
 // Each picture is a launch of its own: a hidden window's `capturePage()` gives one picture, and the next call never
 // returns (torno found the same).
 
-import { appendFileSync, mkdirSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { capture, clickTarget, markScene, markTrack, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
 import { launch, referenceProject, type Launched } from './launch'
@@ -72,6 +72,15 @@ const routed = async (run: Launched): Promise<void> => {
   await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().board?.route ?? null)).not.toBeNull()
 }
 
+/** The page of projects, the open board's picture on its card. */
+const onProjects = async (run: Launched, project: string): Promise<void> => {
+  await expect.poll(() => existsSync(join(project, '.pino', 'thumb.json'))).toBe(true)
+  await run.page.getByRole('button', { name: `Project ${basename(project)}` }).click()
+  await run.page.getByRole('menuitem', { name: 'All projects' }).click()
+  await expect.poll(() => run.page.locator('.project-picture img').evaluateAll((images) => images.map((img) => (img as HTMLImageElement).naturalWidth))).toEqual([480])
+  await run.page.mouse.move(5, 5)
+}
+
 /** An engine that makes fab files. */
 const FABBED = { FAKE_KERNEL_SERVE: '3' }
 
@@ -95,6 +104,8 @@ const SHOTS: Record<string, Shot> = {
   'fab-released-dark': { env: FABBED, dark: true, at: fabPopover(true) },
   'first-light': { first: true },
   'first-dark': { first: true, dark: true },
+  projects: { at: onProjects },
+  'projects-dark': { dark: true, at: onProjects },
   'marks-dense': {
     at: async (run) => {
       await onBoard(run)

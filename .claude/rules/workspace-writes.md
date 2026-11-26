@@ -10,6 +10,8 @@ paths:
   - "app/src/main/marks/**"
   - "app/src/main/builds.ts"
   - "app/src/main/artifacts.ts"
+  - "app/src/main/thumb.ts"
+  - "app/src/main/thumb.test.ts"
 ---
 
 # What pino writes in a project, and `.pino` itself
@@ -25,9 +27,13 @@ paths:
 
 ## What is written, and by whom
 
-- **pino's main** writes, besides the chat's files, one file in a project: `.pino/marks/marks.json` (`marks/file.ts`),
+- **pino's main** writes, besides the chat's files, in a project: `.pino/marks/marks.json` (`marks/file.ts`),
   through `ownFolder` and `writeFileAtomic`, and it is its only writer (`marks/store.ts` takes one change at a time).
   A file there that cannot be read is renamed `marks.json.bad-<n>` and said; it is never overwritten.
+- **The card's picture** (`main/thumb.ts`): `.pino/thumb.png` and `.pino/thumb.json` (the build's hash and when),
+  through `writeOwn`, both ignored by git. The window draws it and main keeps it only for the open project, only of its
+  newest good build, and only a PNG of 512 KB at most. It is read only as a plain file through no link. Opening a
+  workspace and listing it write nothing in any project.
 - **The engine** writes `.pino/build/`, `.pino/routes/`, `.pino/trials/`, `.pino/release/`, `.pino/kicad/`,
   `builds.json` and `routes.json` itself, and `fab/v<version>/` on release. Before main asks it to build, `.pino` and
   those folders must be the project's own (`builds.ts`, `whyNotOwn`): through a link it would write outside the

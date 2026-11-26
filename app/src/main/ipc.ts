@@ -3,7 +3,8 @@ import type { ArtifactName } from '../shared/build'
 import type { MarkPatch, NewMark } from '../shared/marks'
 import type { ProjectInfo } from '../shared/project'
 import type { Opened } from './opened'
-import { readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
+import { BUILD_HASH, readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
+import { saveThumbnail, thumbnailOnFile, thumbnailRefusal } from './thumb'
 import type { Builds } from './builds'
 import type { EngineInfo } from '../shared/ready'
 import type { MarkStore } from './marks/store'
@@ -19,7 +20,7 @@ import { takeAnswer, type ViewHolder } from './view'
 
 // The channels the window may ask on (src/preload/index.ts, `shared/bridge.ts`):
 //   invoked: workspace:current, workspace:pick, workspace:open, workspace:suggested, workspace:useSuggested,
-//            workspace:recent, workspace:list, project:open, project:close,
+//            workspace:recent, workspace:list, project:open, project:close, project:thumb, project:saveThumb,
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
@@ -89,6 +90,17 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
   // By name: only a project the open workspace lists.
   handle('project:open', (name: unknown) => opened.openProject(String(name)))
   handle('project:close', () => opened.closeProject())
+  handle('project:thumb', (name: unknown) => {
+    const listed = opened.workspace()?.projects.find((p) => p.name === name)
+    return listed ? thumbnailOnFile(listed.dir) : null
+  })
+  // Only of the open project and its newest good build, and only bytes that may be such a picture.
+  handle('project:saveThumb', async (id: unknown, hash: unknown, png: unknown) => {
+    const project = projectOf(id)
+    if (!project || typeof hash !== 'string' || !BUILD_HASH.test(hash) || builds.lastGood(project.id)?.hash !== hash) return
+    if (thumbnailRefusal(png as Uint8Array) !== null) return
+    await saveThumbnail(project.dir, png as Uint8Array, { hash }, new Date())
+  })
 
   handle('session:current', (id: unknown) => {
     const project = projectOf(id)

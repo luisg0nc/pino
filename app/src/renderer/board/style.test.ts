@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { read } from '../../test/fixtures'
-import { copperColour, mix, type BoardColours } from './style'
+import { copperColour, lightBoardColours, mix, type BoardColours } from './style'
 
 const css = read('src/renderer/styles/tokens.css')
 const token = (name: string) => new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(css)![1].trim()
@@ -22,6 +22,10 @@ const LIGHT: BoardColours = {
 }
 const none = () => null
 const plain = { active: true, throughHole: false, net: 'A', netColours: false, stale: false }
+
+it('has the light colours whatever the theme, as tokens.css says them', () => {
+  expect(lightBoardColours()).toEqual(LIGHT)
+})
 
 it('draws copper by the drafting rules', () => {
   expect(copperColour(plain, LIGHT, none)).toBe('#2A2F37')

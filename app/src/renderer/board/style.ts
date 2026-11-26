@@ -2,6 +2,8 @@
 // (styles/tokens.css); what is dimmed is mixed toward the paper, never drawn with alpha, so that overlaps inside a
 // layer do not darken.
 
+import tokens from '../styles/tokens.css?raw'
+
 export interface BoardColours {
   paper: string
   cu: string
@@ -40,6 +42,15 @@ const TOKENS: Record<keyof BoardColours, string> = {
 export function boardColours(el: Element): BoardColours {
   const style = getComputedStyle(el)
   return Object.fromEntries(Object.entries(TOKENS).map(([key, token]) => [key, style.getPropertyValue(token).trim()])) as unknown as BoardColours
+}
+
+/**
+ * The board's light colours, whatever the theme in use: read from the first `:root` block of tokens.css, which is the
+ * light one. For a picture that is kept, which must not depend on the theme it was drawn under.
+ */
+export function lightBoardColours(): BoardColours {
+  const light = /:root\s*\{([^}]*)\}/.exec(tokens)![1]
+  return Object.fromEntries(Object.entries(TOKENS).map(([key, token]) => [key, new RegExp(`${token}\\s*:\\s*([^;]+);`).exec(light)![1].trim()])) as unknown as BoardColours
 }
 
 /** `keep` of the colour, the rest the other. */

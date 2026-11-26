@@ -331,7 +331,7 @@ git commit -m "Open a workspace of boards: first screen, workspace and project c
   - `ui/strip/thumbs.ts`: `boardPicture(model: ViewModel, size: { w: number; h: number }, dark: boolean): string` (the drawing `draw` makes, of any size); `PAGE_THUMB = { w: 240, h: 160 }`.
   - `state/keepThumb.ts`: `useKeepThumb(): void`, used once in `App.tsx`: for each new hash of the open project's newest good build, draws `boardPicture(model, PAGE_THUMB, false)` and sends its PNG bytes.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // manifest.test.ts
@@ -359,21 +359,21 @@ test('a board built in this run has its picture on its card', async () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/manifest.test.ts src/main/thumb.test.ts`
 Expected: FAIL (`thumb` missing; the manifest rule has no `moved`)
 
-- [ ] **Step 3: Copy, adapt and wire**
+- [x] **Step 3: Copy, adapt and wire**
 
 `CLAUDE.md`'s first invariant becomes: "Copy now, extract later. A copied torno file lives at the same relative path as in torno (where torno's own file name says torno, pino's says pino), unless a pino rule renames it (object to project, torno's board of cards to cards); then its manifest entry says so in `moved`." `ProjectsPage` asks `project:thumb` for a card when it comes into view (`IntersectionObserver`), shows it as an `img` from a blob URL, revoked when the card goes.
 
-- [ ] **Step 4: Run the tests and the e2e suite**
+- [x] **Step 4: Run the tests and the e2e suite**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm test:e2e`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A app/src app/e2e CLAUDE.md shared-from-torno.json .claude/rules/workspace-writes.md

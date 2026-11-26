@@ -5,6 +5,7 @@ import type { WorkspaceInfo } from '../shared/workspace'
 import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
 import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
+import { useKeepThumb } from './state/keepThumb'
 import { actions, store, useStore } from './state/store'
 import { nameOf, openProblem } from './ui/openFolder'
 import { ProjectsPage } from './ui/ProjectsPage'
@@ -112,6 +113,8 @@ export function App() {
 
   // Claude's pictures are drawn here, when main asks.
   useEffect(() => answerLooks(), [])
+  // And the picture of the open project's card, for the page of projects.
+  useKeepThumb()
 
   // The marks of the project on show: as they stand, and every change main says.
   useEffect(() => window.pino.marks.onChange((m) => actions.setMarks(m.projectId, m.marks)), [])

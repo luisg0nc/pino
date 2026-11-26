@@ -34,7 +34,9 @@ const bridge: PinoBridge = {
   },
   project: {
     open: (name) => invoke('project:open', name),
-    close: () => invoke('project:close')
+    close: () => invoke('project:close'),
+    thumb: (name) => invoke('project:thumb', name),
+    saveThumb: (projectId, hash, png) => invoke('project:saveThumb', projectId, hash, png)
   },
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),

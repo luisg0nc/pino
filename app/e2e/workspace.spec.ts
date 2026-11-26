@@ -1,10 +1,10 @@
 // A workspace of boards: first run, the page of projects, the two crumbs and their menus.
-import { mkdirSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { newSession } from './helpers'
-import { agentsIn, launch, tempFolder, tempProject, type Launched } from './launch'
+import { newSession, waitForBuild } from './helpers'
+import { agentsIn, launch, referenceProject, tempFolder, tempProject, type Launched } from './launch'
 
 const state = (page: Page) => page.evaluate(() => window.__pinoTest!.state())
 const all = (page: Page) => page.getByRole('main', { name: 'All projects' })
@@ -161,6 +161,30 @@ test('a project in the home folder opens the first screen and says why', async (
   try {
     await expect(page.getByRole('alert')).toHaveText('blinky is in your home folder, not in a folder of boards. Choose a folder for your boards, such as ~/boards, and move blinky into it.')
     expect((await state(page)).page).toBe('first')
+  } finally {
+    await app.close()
+  }
+})
+
+test('a board built in this run has its picture on its card', async () => {
+  const dir = referenceProject('reference')
+  const { app, page } = await launch({ project: dir })
+  try {
+    await waitForBuild(page, 1)
+    // The picture is of the build, and is kept beside the board, which git is told to pass over.
+    await expect.poll(() => existsSync(join(dir, '.pino', 'thumb.json'))).toBe(true)
+    const hash = (await state(page)).build!.lastGood!.hash
+    expect(JSON.parse(readFileSync(join(dir, '.pino', 'thumb.json'), 'utf8'))).toMatchObject({ hash })
+    await page.getByRole('button', { name: 'Project reference' }).click()
+    await page.getByRole('menuitem', { name: 'All projects' }).click()
+    const picture = all(page).getByRole('button', { name: 'reference' }).locator('img')
+    await expect.poll(() => picture.evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]), { timeout: 10_000 }).toEqual([480, 320])
+    // Only the open project's newest build is taken: a picture said to be of another is dropped.
+    const id = await page.evaluate(() => window.pino.workspace.current().then((open) => open.project))
+    expect(id).toBeNull()
+    const before = readFileSync(join(dir, '.pino', 'thumb.json'), 'utf8')
+    await page.evaluate(() => window.pino.project.saveThumb('p000000000000', 'aaaaaaaaaaaa', new Uint8Array([1, 2, 3])))
+    expect(readFileSync(join(dir, '.pino', 'thumb.json'), 'utf8')).toBe(before)
   } finally {
     await app.close()
   }
