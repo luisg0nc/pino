@@ -192,6 +192,14 @@ describe('the fab holder', () => {
     expect(asked().filter((r) => r.op === 'parts').at(-1)).toMatchObject({ action: 'search', q: '10k 0603', basic: true })
   })
 
+  it('looks a part up with no project and no build', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const { fab, asked } = await fabOn()
+    const result = await fab.lookup({ lcsc: 'C25804' })
+    expect(result.parts[0].lcsc).toBe('C25804')
+    expect(asked().find((r) => r.op === 'parts')).not.toHaveProperty('project')
+  })
+
   it('drops a closed project', async () => {
     const { fab, loop, states } = await fabOn({ FAKE_KERNEL_RELEASE_MS: '200' })
     const running = fab.release(loop.info)

@@ -10,7 +10,7 @@ import { systemPrompt } from './prompt'
 /** What a picture costs: one token for each 28 px square of it, counted by rows and columns. */
 const pictureTokens = (width: number, height: number): number => Math.ceil(width / 28) * Math.ceil(height / 28)
 
-const UP_FRONT = ['check', 'look', 'marks', 'measure', 'nets', 'parts', 'point', 'project', 'resolve_mark', 'route']
+const UP_FRONT = ['add_card', 'brief', 'check', 'look', 'marks', 'measure', 'nets', 'parts', 'point', 'project', 'resolve_mark', 'route']
 const DEFERRED = ['trace', 'ratsnest', 'diff', 'route_net', 'nudge', 'keep']
 const listed = async () => (await toolsOver({})).list()
 
@@ -25,14 +25,18 @@ describe('what a turn costs', () => {
     expect(6 * pictureTokens(DEFAULT_SIZE, (DEFAULT_SIZE * 3) / 4)).toBeLessThan(10_000)
   })
 
-  it('the tools loaded up front are the ten the prompt relies on, in at most 33,000 characters', async () => {
+  it('the tools loaded up front are the twelve the prompt relies on, in at most 33,000 characters', async () => {
     const tools = await listed()
     const loaded = tools.filter((t) => (t._meta as Record<string, unknown> | undefined)?.['anthropic/alwaysLoad'] === true)
     expect(loaded.map((t) => t.name).sort()).toEqual(UP_FRONT)
     const chars = loaded.reduce((sum, t) => sum + JSON.stringify({ name: t.name, description: t.description, inputSchema: t.inputSchema }).length, 0)
     expect(chars).toBeLessThan(33_000)
     expect(tools.map((t) => t.name).sort()).toEqual([...UP_FRONT, ...DEFERRED].sort())
-    expect(tools).toHaveLength(16)
+    expect(tools).toHaveLength(18)
+  })
+
+  it("the prompt says brief.md is the person's and Claude writes cards", () => {
+    expect(systemPrompt(toolName)).toContain(`- Never edit brief.md: it is the person's own words. What you learn or settle goes on cards of yours with ${toolName('add_card')}`)
   })
 
   it('each tool says what it does in plain words, in under 700 characters', async () => {

@@ -609,7 +609,7 @@ Exact copy:
 - `DESCRIPTIONS.add_card`: `"Adds a card of yours to the Brief, or changes or removes one of yours; answers with its id, or why not. kind is requirement, decision, question (what is open and what waits on it), part, power (a rail, its source and what draws from it, with numbers), connection, size, rule, link or note. One card per topic, its text starting with the topic's name (\"MCU: ESP32-C3-MINI-1, for Wi-Fi\"); when a topic changes, give card and text rather than add another. A part takes lcsc, and pino fills its class, package, stock and price. brief.md and the person's cards are never yours to change."`
 - `BRIEF_REFUSAL(name)`: `` `${name} may not write brief.md: it is the person's own words, and only they change it. Write down what you learned as a card of yours with add_card, one card per topic that begins with its name ("Power: USB-C, 5 V"); when a topic changes, change your card of it (card and text) rather than add another.` ``
 
-- [ ] **Step 1: Copy, then write the failing tests**
+- [x] **Step 1: Copy, then write the failing tests**
 
 ```ts
 // main/cards/text.test.ts
@@ -655,21 +655,21 @@ it("the prompt says brief.md is the person's and Claude writes cards", () => {
 it('looks a part up with no project and no build', async () => { /* lookup({ lcsc: 'C25804' }) on a holder with no build: parts[0].lcsc C25804 */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/cards src/main/mcp src/main/sessions/reach.test.ts src/main/domain.test.ts src/main/turncost.test.ts src/main/fab.test.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Write the tools, the line, the refusal and `Fab.lookup`; wire the store in `index.ts`**
+- [x] **Step 3: Write the tools, the line, the refusal and `Fab.lookup`; wire the store in `index.ts`**
 
 `add_card` normalises `lcsc` with `.trim().toUpperCase()`, looks it up with `deps.fab.lookup({ lcsc })` and `readingOf`, and passes the reading (or none) in the stamp; a lookup that throws or refuses adds the card with no reading. `brief`'s answer is the `brief.md` words (`briefWords`, cut at `BRIEF_LIMIT` with "the rest is in brief.md") then `cardsText`, capped by `capText`. `index.ts` makes one `CardStore` (`dirOf` the open project's folder; `onChange` broadcasts `cards:changed`; `onProblem` a `notice`), passes it to `mountMcp`, `PinoDomain` and (Task 7) `registerIpc`; `turnNow` is `sessions.turnNow`, `prompts` is `listPrompts(project.dir)`.
 
-- [ ] **Step 4: Run them, and measure the turn's cost**
+- [x] **Step 4: Run them, and measure the turn's cost**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS. Put the measured up-front characters and the prompt plus instructions length (printed once by a temporary `console.log` in `turncost.test.ts`, removed before the commit) in the commit message.
 
-- [ ] **Step 5: Update `engine-client.md` (eighteen tools, `brief` and `add_card` up front) and commit**
+- [x] **Step 5: Update `engine-client.md` (eighteen tools, `brief` and `add_card` up front) and commit**
 
 ```bash
 git add -A app/src/main shared-from-torno.json .claude/rules/engine-client.md

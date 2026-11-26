@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path'
 import { APP } from '../../shared/app'
-import { isInsideFolder } from './inside'
+import { isInsideFolder, realPathOrNearest } from './inside'
 
 /** The tools that write a file, and the key of their input that names it. */
 const WRITERS: Record<string, string> = { Write: 'file_path', Edit: 'file_path', MultiEdit: 'file_path', NotebookEdit: 'notebook_path' }
@@ -8,8 +8,9 @@ const WRITERS: Record<string, string> = { Write: 'file_path', Edit: 'file_path',
 /**
  * Why a tool of the agent is refused, or undefined when it may go on. A session writes only in its own project's
  * folder: `Write`, `Edit` and `NotebookEdit` of any other path (another project, a folder beside it) are refused,
- * judged by real paths (`isInsideFolder`), and so is a write under `.pino/`, which is pino's alone. `Bash` is never
- * judged: no path can be read from a command, so the CLI's own card stays.
+ * judged by real paths (`isInsideFolder`), and so is a write under `.pino/`, which is pino's alone, and of the
+ * project's `brief.md`, which is the person's. `Bash` is never judged: no path can be read from a command, so the CLI's
+ * own card stays.
  */
 export function refusalOf(dir: string, name: string, input: unknown): string | undefined {
   const key = WRITERS[name]
@@ -21,10 +22,19 @@ export function refusalOf(dir: string, name: string, input: unknown): string | u
   if (isInsideFolder(join(dir, APP.folder), path)) {
     return `${name} may not write under ${APP.folder}/: it is ${APP.name}'s own, and a hand edit skips its rules. Read a file there with Read.`
   }
+  if (realPathOrNearest(path) === realPathOrNearest(join(dir, 'brief.md'))) return BRIEF_REFUSAL(name)
   if (isInsideFolder(dir, path)) return undefined
   return `This session works on the project in ${dir}. ${name} may write only there. ` +
     `Another project is the person's to open: ask them to open it in ${APP.name}.`
 }
+
+/**
+ * Why Claude may not write `brief.md` (#337): it is the person's own words, and what Claude learns is a card of its own,
+ * one per topic, which it changes rather than adding another.
+ */
+export const BRIEF_REFUSAL = (name: string): string =>
+  `${name} may not write brief.md: it is the person's own words, and only they change it. Write down what you learned as a card of yours with add_card, ` +
+  'one card per topic that begins with its name ("Power: USB-C, 5 V"); when a topic changes, change your card of it (card and text) rather than add another.'
 
 /** The `PreToolUse` answer that refuses a tool, with the reason the agent reads. */
 export function deniedAnswer(reason: string): unknown {

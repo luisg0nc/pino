@@ -240,12 +240,13 @@ async function streamMode() {
   /** Wait, or until the turn is interrupted. */
   const pause = (ms) => Promise.race([sleep(ms), turn.interrupted])
 
-  async function say(text) {
+  /** Said a word at a time, as the CLI streams; `whole` for what nobody reads as it comes, in one piece. */
+  async function say(text, { whole = false } = {}) {
     const id = next('msg')
     const event = (e) => out({ type: 'stream_event', event: e, ...base, uuid: next('uuid') })
     event({ type: 'message_start', message: { id, type: 'message', role: 'assistant', model, content: [] } })
     event({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } })
-    for (const word of text.split(/(?<= )/)) {
+    for (const word of whole ? [text] : text.split(/(?<= )/)) {
       if (turn.aborted) return
       event({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: word } })
       await pause(20)
@@ -417,7 +418,8 @@ async function streamMode() {
     } else if (command === 'rate') {
       out({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', resetsAt: Math.floor(Date.now() / 1000) + 3600, rateLimitType: 'five_hour', unifiedWindows: { five_hour: { utilization: Number(rest) / 100, resetsAt: Math.floor(Date.now() / 1000) + 3600 } } }, ...base, uuid: next('uuid') })
     } else if (command === 'argv') {
-      await say(JSON.stringify(argv))
+      // The whole system prompt is among them: word by word it would take longer than a test waits.
+      await say(JSON.stringify(argv), { whole: true })
     } else if (command === 'retry') {
       const [attempt, wait] = rest.split(' ')
       out({ type: 'system', subtype: 'api_retry', attempt: Number(attempt), max_retries: 10, retry_delay_ms: 500, error_status: 529, error: 'overloaded', ...base, uuid: next('uuid') })

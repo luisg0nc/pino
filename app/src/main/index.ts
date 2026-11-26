@@ -7,6 +7,9 @@ import { APP, envName, toolName } from '../shared/app'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
 import { Builds } from './builds'
+import { CardStore } from './cards/store'
+import { readBrief } from './cards/text'
+import { listPrompts } from './sessions/prompts'
 import { PinoDomain } from './domain'
 import { frameOptions, MIN_WINDOW, SURFACE, windowSize } from './frame'
 import { startHttp } from './http'
@@ -287,6 +290,7 @@ void app.whenReady().then(async () => {
     stopAll: () => sessions!.stopAll(),
     // No start is taken for a project that has been left, and `stopAll` waits for one under way.
     closed: (project) => {
+      cards.forget(project.id)
       routing.drop(project.id)
       fab.drop(project.id)
       builds.close(project.id)
@@ -294,6 +298,12 @@ void app.whenReady().then(async () => {
     opened: (project) => builds.open(project)
   }))
   openProjectId = () => holder.project()?.id
+  // The cards of the open project's Brief: main alone writes them.
+  const cards = new CardStore({
+    dirOf: (id) => (holder.project()?.id === id ? holder.project()!.dir : undefined),
+    onChange: (projectId, file) => broadcast('cards:changed', { projectId, file }),
+    onProblem: (_projectId, message) => broadcast('notice', { text: message })
+  })
   // The files an agent is given by path (its MCP server's, which holds no secret): what a pino that crashed left is of no use.
   const configDir = join(app.getPath('userData'), 'agent')
   rmSync(configDir, { recursive: true, force: true })
@@ -304,6 +314,8 @@ void app.whenReady().then(async () => {
   const domain = new PinoDomain({
     builds,
     marks,
+    cards,
+    brief: (project) => readBrief(project.dir),
     view: () => {
       const open = holder.project()
       return open ? views.of(open.id) : null
@@ -323,6 +335,9 @@ void app.whenReady().then(async () => {
       return win ? askWindow<LookResult>(win, 'look', request) : Promise.reject(new NoAnswer('there is no window'))
     },
     looked: (id) => domain.looked(id),
+    cards,
+    turnNow: (id) => sessions?.turnNow(id),
+    prompts: (project) => listPrompts(project.dir),
     fab,
     fabProfile: async (project) => {
       const model = await drawnModel(project)

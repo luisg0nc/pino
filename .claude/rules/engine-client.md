@@ -57,12 +57,15 @@ folds that prompt into it.
 
 ## Claude's tools (`main/mcp/`)
 
-- Sixteen: `project`, `look`, `check`, `measure`, `nets`, `parts`, `point`, `marks`, `resolve_mark` and `route` are
-  loaded up front; `trace`, `ratsnest`, `diff`, `route_net`, `nudge` and `keep` are loaded when needed. `project` ends
-  with the fab's limits, and `check` adds the newest release's findings while the build on show is the one it released.
+- Eighteen: `project`, `look`, `check`, `measure`, `nets`, `parts`, `point`, `marks`, `resolve_mark`, `route`, `brief`
+  and `add_card` are loaded up front; `trace`, `ratsnest`, `diff`, `route_net`, `nudge` and `keep` are loaded when
+  needed. `project` ends with the fab's limits, and `check` adds the newest release's findings while the build on show
+  is the one it released. `brief` and `add_card` read and keep the Brief's cards (`mcp/cardTools.ts`); a part's class,
+  package, stock and price are main's, from `Fab.lookup` (the engine's `parts get`, with no project).
 - Every turn pays for the descriptions, the schemas, the server's instructions and the system prompt, and every call
   for its answer: `turncost.test.ts` holds their sizes. A text is capped (`TOOL_TEXT_LIMIT`, `MOST_LINES`) and says
   how to narrow it. `look` returns one picture.
 - Inputs are zod strict objects. A refusal is words Claude can act on, with the nearest names for one that is not on
   the board. Answers name the build they read.
-- No tool changes the project. `route_net`, `nudge` and `keep` answer with lines for Claude to write into `board.py`.
+- No tool changes the board. `route_net`, `nudge` and `keep` answer with lines for Claude to write into `board.py`;
+  `add_card` writes only cards of Claude's own, under `.pino/brief/`.

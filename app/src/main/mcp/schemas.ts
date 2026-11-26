@@ -2,6 +2,7 @@
 // here costs on every turn (`turncost.test.ts`).
 
 import { z } from 'zod'
+import { AGENT_KINDS, CARD_KINDS, MAX_TEXT_CHARS } from '../../shared/cards'
 import { MOST_AGENT_TARGETS } from '../../shared/marks'
 
 /** The long edge of a picture, px. */
@@ -25,6 +26,7 @@ export const SERVER_INSTRUCTIONS = [
   "This server is pino's: the printed circuit board of the project open in pino. pino builds board.py on every save; the tools read the newest build, in the board's own frame: millimetres, origin at the outline centre, x right, y up. Name a thing as U1 (a part), U1.3 (a pad), net:VBUS, track:<uuid> or via:<uuid>.",
   "See: project (the folder, the newest build and the fab's limits), look (a picture of the views, with the marks), check (every check, and each finding with its place), measure (numbers from the board file), nets (nets by part and pin).",
   'Parts: parts (JLC parts by LCSC number or words: stock, price, basic or extended, and how board.py names them). The person makes the fab files with Fab files… in pino, from a routed board with no errors.',
+  "Brief: brief (brief.md, the person's words, and every card by id), add_card (a card of yours: a requirement, decision, question, part by LCSC number, power budget, connection, size, rule, link or note; card with text changes one of yours, remove takes it down). The person's words and cards are theirs.",
   'Marks: point (show the person what you mean, in orange), marks (the marks and their exact lines), resolve_mark (when you have done what a mark asks).',
   'Routing: route (start, follow or cancel the router, which runs in the background).',
   'More, to load when needed: trace (where a pin leads and what copper joins it), ratsnest (the placement score and the open connections), diff (what changed between two builds), route_net (try one net), nudge (try a part moved), keep (a routed net as lines for board.py). route_net, nudge and keep change nothing: they answer with lines for you to write into board.py.'
@@ -47,8 +49,20 @@ export const DESCRIPTIONS = {
   route_net: 'Try routing one net on the routed board (or the unrouted one), with a region, layers, a corridor or nets to rip up. Changes nothing: the answer says what it would do, and gives the line to write into board.py when you want it.',
   nudge: "Try one part moved or turned: what it does to the courtyards, the fit and the ratsnest (and, with route, to the router's share). Changes nothing: the answer gives the line to write into board.py.",
   keep: "A routed net's copper as keep_route lines for board.py, so that the next route keeps it as it is. Changes nothing until you write them.",
-  parts: "JLC parts: lcsc gives one part by its LCSC number (such as C25804) with how board.py names it; search looks parts up by words (package and basic narrow it). Each answer line says basic, preferred or extended, package, stock and price. Text search leaves out parts whose stock is not known, so look a known number up by lcsc."
+  parts: "JLC parts: lcsc gives one part by its LCSC number (such as C25804) with how board.py names it; search looks parts up by words (package and basic narrow it). Each answer line says basic, preferred or extended, package, stock and price. Text search leaves out parts whose stock is not known, so look a known number up by lcsc.",
+  brief: "The project's Brief: brief.md, the person's words, then every card by id, kind and author with the prompt it was written in. The person's: power, connections, size and shape, the parts they have, fab and assembly, rules, links. Yours: requirements, decisions, open questions, parts with their stock reading, power budgets. kind narrows to one kind. Read it before you plan and when the person points at a card.",
+  add_card: "Adds a card of yours to the Brief, or changes or removes one of yours; answers with its id, or why not. kind is requirement, decision, question (what is open and what waits on it), part, power (a rail, its source and what draws from it, with numbers), connection, size, rule, link or note. One card per topic, its text starting with the topic's name (\"MCU: ESP32-C3-MINI-1, for Wi-Fi\"); when a topic changes, give card and text rather than add another. A part takes lcsc, and pino fills its class, package, stock and price. brief.md and the person's cards are never yours to change."
 } as const
+
+export const briefInput = z.strictObject({ kind: z.enum(CARD_KINDS).optional() })
+export const addCardInput = z.strictObject({
+  kind: z.enum(AGENT_KINDS).optional(),
+  text: z.string().max(MAX_TEXT_CHARS).optional(),
+  size: z.strictObject({ what: z.string(), value: z.string(), unit: z.enum(['mm', '°']).optional(), note: z.string().optional() }).optional(),
+  lcsc: z.string().optional(),
+  card: z.string().optional(),
+  remove: z.boolean().optional()
+})
 
 export const noInput = z.strictObject({})
 

@@ -39,8 +39,9 @@ paths:
   stderr line and, when it never printed a line, what to check.
 - **The agent's writes** (`reach.ts`, `refusalOf`, answered in `Sessions.hook`). A `PreToolUse` of `Write`, `Edit`,
   `MultiEdit` or `NotebookEdit` whose path is outside the project folder, or under `<project>/.pino/`, is answered
-  `permissionDecision: deny` with the reason, judged by real paths. `Bash` is never judged: no path can be read from a
-  command, so the CLI's own card stays.
+  `permissionDecision: deny` with the reason, judged by real paths. So is a write of the project's `brief.md`, which is
+  the person's: the reason names `add_card`. `Bash` is never judged: no path can be read from a command, so the CLI's
+  own card stays.
 - **Mode, model and effort** are the session's alone (`set_permission_mode`, `set_model`, `apply_flag_settings`,
   held in the CLI's memory), checked before they are sent, and never written to a settings file. `start` takes a
   model and an effort and drops what is neither (`agentChoiceOf`). The last list of models a CLI offered is kept in

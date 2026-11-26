@@ -8,6 +8,8 @@ import type { ProjectInfo } from '../shared/project'
 import { TAB_NAMES, type BoardLook, type Selection, type ViewTab } from '../shared/view'
 import { layerWords } from '../shared/board/refs'
 import type { Builds } from './builds'
+import type { CardStore } from './cards/store'
+import { cardsLine } from './cards/text'
 import type { PromptContext, SessionDomain } from './sessions/domain'
 
 /** The most a prompt's added context may be, in characters, and the build's verdict within it. */
@@ -29,6 +31,10 @@ export interface DomainDeps {
     open(project: ProjectInfo): Promise<Mark[]>
     markSent(project: ProjectInfo, ids: string[]): Promise<void>
   }
+  /** The cards of the project's Brief, and what Claude was last told of them. */
+  cards: Pick<CardStore, 'read' | 'told' | 'markTold'>
+  /** The words of the project's `brief.md`; undefined where there is none. */
+  brief(project: ProjectInfo): Promise<string | undefined>
   /** What the person has on screen, as the window last said. */
   view(): { tab: ViewTab; look: BoardLook; selection: Selection | null } | null
   toolName: (tool: string) => string
@@ -114,6 +120,8 @@ export class PinoDomain implements SessionDomain {
     const lines: string[] = []
     if (state?.engine.state === 'failed') lines.push(`The engine is not running: ${state.engine.reason.slice(state.engine.reason.indexOf(': ') + 2)}.`)
     else if (state?.latest) lines.push(verdictText(state.latest, state, this.routedOn(project.id, state.latest)))
+    const brief = await this.briefNews(project)
+    if (brief.line) lines.push(brief.line)
 
     const [drafts, open] = await Promise.all([this.deps.marks.drafts(project), this.deps.marks.open(project)])
     const view = this.deps.view()
@@ -136,10 +144,34 @@ export class PinoDomain implements SessionDomain {
     if (left > 0) lines.push(`and ${left} more mark${left === 1 ? '' : 's'}: call ${this.deps.toolName('marks')}`)
     if (openLine) lines.push(cut(openLine, 600))
 
+    const told = brief.told
     return {
       text: cut(lines.join('\n'), CONTEXT_LIMIT),
       sentMarkIds: sent,
-      ...(sent.length ? { delivered: () => this.deps.marks.markSent(project, sent) } : {})
+      ...(sent.length || told
+        ? {
+            delivered: async () => {
+              if (sent.length) await this.deps.marks.markSent(project, sent)
+              if (told) await this.deps.cards.markTold(project.id, told)
+            }
+          }
+        : {})
+    }
+  }
+
+  /**
+   * The Brief's line for a prompt, and what to keep as told once it is delivered, when that is not what was told
+   * already. A Brief that cannot be read says nothing: the prompt goes without it.
+   */
+  private async briefNews(project: ProjectInfo): Promise<{ line: string; told?: Record<string, string> }> {
+    try {
+      const [file, before, words] = await Promise.all([this.deps.cards.read(project.id), this.deps.cards.told(project.id), this.deps.brief(project)])
+      const { line, told } = cardsLine(file, before, words, this.deps.toolName)
+      const same = Object.keys(told).length === Object.keys(before).length && Object.entries(told).every(([key, value]) => before[key] === value)
+      return { line, ...(same ? {} : { told }) }
+    } catch (e) {
+      console.error(`cannot read the Brief of ${project.id}: ${(e as Error).message}`)
+      return { line: '' }
     }
   }
 

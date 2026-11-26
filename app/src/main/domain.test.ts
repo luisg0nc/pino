@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { verdictWords, type BuildResult, type BuildState, type RoutingState } from '../shared/build'
+import type { CardsFile } from '../shared/cards'
 import type { StrokeMark } from '../shared/marks'
 import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../shared/view'
 import { fx, readJson } from '../test/fixtures'
@@ -18,8 +19,10 @@ const padSel: Selection = { tab: 'board', target: { kind: 'pad', ref: 'U2', numb
 
 const stateOf = (over: Partial<BuildState> = {}): BuildState => ({ projectId: 'p1', engine: { state: 'ready', kernel: 'x', serve: 1 }, building: false, latest: ref, lastGood: ref, history: [], route: null, copperFrom: null, problem: null, ...over })
 
-function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open?: StrokeMark[]; view?: { tab: ViewTab; look: BoardLook; selection: Selection | null } | null } = {}) {
+function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open?: StrokeMark[]; view?: { tab: ViewTab; look: BoardLook; selection: Selection | null } | null; cards?: CardsFile; brief?: string } = {}) {
   let state = stateOf(opts.state)
+  let told: Record<string, string> = {}
+  const markTold = vi.fn(async (_id: string, next: Record<string, string>) => void (told = next))
   let time = 1000
   let pending = false
   let startedAt: number | undefined
@@ -40,6 +43,8 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
     },
     marks: { drafts: async () => opts.drafts ?? [], open: async () => opts.open ?? [], markSent },
     view: () => opts.view ?? null,
+    cards: { read: async () => opts.cards ?? { next: 1, cards: [] }, told: async () => told, markTold },
+    brief: async () => opts.brief,
     toolName,
     now: () => time
   }
@@ -47,6 +52,7 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
   return {
     d,
     markSent,
+    markTold,
     later: (ms: number) => (time += ms),
     /** A build begins now; it is the running one until `lands`. */
     begins(over: Partial<BuildState> = {}) {
@@ -98,6 +104,27 @@ describe("the build in Claude's prompt", () => {
   it('adds nothing for a project with nothing built and nothing marked', async () => {
     const c = await domain({ state: { latest: null, lastGood: null } }).d.promptContext(project, 'x')
     expect(c).toEqual({ text: '', sentMarkIds: [] })
+  })
+
+  it("adds the Brief's line to a prompt and marks it told once delivered", async () => {
+    const cards: CardsFile = { next: 3, cards: [{ id: 'C1', kind: 'power', by: 'person', text: 'USB-C, 5 V' }, { id: 'C2', kind: 'rule', by: 'person', text: '0603 or larger' }] }
+    const t = domain({ cards, brief: '# blinky\n', drafts: [m3stroke] })
+    const first = await t.d.promptContext(project, 'x')
+    expect(first.text.split('\n')[0]).toBe(`On h1: ${verdictWords(ref).rest}.`)
+    expect(first.text).toContain('Brief: 2 cards (2 new: C1, C2). Read them with mcp__pino__brief.')
+    expect(t.markTold).not.toHaveBeenCalled()
+    await first.delivered!()
+    expect(t.markSent).toHaveBeenCalledWith(project, ['M3'])
+    expect(t.markTold).toHaveBeenCalledTimes(1)
+    const second = await t.d.promptContext(project, 'y')
+    expect(second.text).toContain('Brief: 2 cards (0 new).')
+  })
+
+  it('writes nothing down for a project with no brief and no cards, and goes on when the cards cannot be read', async () => {
+    const t = domain()
+    const c = await t.d.promptContext(project, 'x')
+    expect(c.text).not.toContain('Brief:')
+    expect(c.delivered).toBeUndefined()
   })
 
   it('stays under CONTEXT_LIMIT and counts the marks that do not fit', async () => {
