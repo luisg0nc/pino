@@ -3,17 +3,24 @@
 // nothing else outside .pino/; main only reads it.
 
 import type { EngineState } from '../shared/build'
-import { FAB_UNAVAILABLE, type FabProfile, type FabState, type PartsQuery, type PartsResult, type Readiness, type ReleaseResult } from '../shared/fab'
+import { ENGINE_STARTING, engineTooOld, NO_BUILT_BOARD, type FabProfile, type FabState, type PartsQuery, type PartsResult, type Readiness, type ReleaseResult } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
 import { engineMayWrite, type Builds } from './builds'
 import type { KernelClient } from './kernel/client'
 
 export interface FabDeps {
   kernel: () => KernelClient
-  builds: Pick<Builds, 'state'>
+  /** The engine that runs, if one does: what `kernel` would give without starting it. */
+  running: () => KernelClient | undefined
+  builds: Pick<Builds, 'state' | 'pong' | 'startFailure'>
   engine: () => EngineState
   onState: (s: FabState) => void
+  /** How long an engine a parts lookup started has to answer. */
+  pingTimeoutMs?: number
 }
+
+/** The copper layers of a board that says none (the engine's `Board`): its fab is the default, the engine's for them. */
+export const DEFAULT_LAYERS = 2
 
 interface Job {
   done: Promise<ReleaseResult>
@@ -39,14 +46,46 @@ export class Fab {
     return engine.state === 'ready' && engine.serve >= 3
   }
 
-  private need(): void {
-    if (!this.available()) throw new Error(FAB_UNAVAILABLE)
+  /** A release is of a built board, by an engine that makes fab files; else it says which is missing. */
+  private need(p: ProjectInfo): void {
+    const engine = this.deps.engine()
+    if (engine.state === 'failed') throw new Error(engine.reason)
+    if (engine.state === 'ready' && engine.serve < 3) throw new Error(engineTooOld(engine.serve))
+    if (!this.deps.builds.state(p.id)?.latest) throw new Error(NO_BUILT_BOARD)
+    if (engine.state !== 'ready') throw new Error(ENGINE_STARTING)
+  }
+
+  /**
+   * The engine for what needs no board and no build (parts, the default fab): started if none runs, and asked what it
+   * speaks. A new project has had no build to start one.
+   */
+  private async lookupEngine(): Promise<KernelClient> {
+    const own = this.deps.running() === undefined
+    const tooSoon = own ? this.deps.builds.startFailure() : null
+    if (tooSoon) throw new Error(tooSoon)
+    const client = this.deps.kernel()
+    const { serve } = await this.deps.builds.pong(client, { own, ...(this.deps.pingTimeoutMs ? { ms: this.deps.pingTimeoutMs } : {}) })
+    if (serve < 3) throw new Error(engineTooOld(serve))
+    return client
   }
 
   /** The engine's fab profiles, asked once for each engine that runs. */
   profiles(): Promise<FabProfile[]> {
-    if (!this.available()) return Promise.resolve([])
-    const client = this.deps.kernel()
+    return this.available() ? this.profilesOf(this.deps.kernel()) : Promise.resolve([])
+  }
+
+  /**
+   * The profile a board gets when it names none, as the engine picks it (its first for the board's layers), with all
+   * those it has.
+   */
+  async defaultFab(): Promise<{ profile: FabProfile; profiles: FabProfile[] }> {
+    const profiles = await this.profilesOf(await this.lookupEngine())
+    const profile = profiles.find((p) => p.layers === DEFAULT_LAYERS)
+    if (!profile) throw new Error(`the engine has no fab profile for ${DEFAULT_LAYERS} layers`)
+    return { profile, profiles }
+  }
+
+  private profilesOf(client: KernelClient): Promise<FabProfile[]> {
     if (this.asked?.client !== client) {
       const list = client.request<{ profiles: FabProfile[] }>('fab_profiles', {}).then((r) => (this.known = r.profiles))
       this.asked = { client, list }
@@ -73,7 +112,7 @@ export class Fab {
   }
 
   async readiness(p: ProjectInfo): Promise<Readiness> {
-    this.need()
+    this.need(p)
     await engineMayWrite(p.dir)
     const { status } = await this.deps.kernel().request<{ status: Readiness }>('release_status', { project: p.dir })
     this.patch(p.id, { readiness: status })
@@ -85,7 +124,7 @@ export class Fab {
     const held = this.jobs.get(p.id)
     if (held) return held.done
     try {
-      this.need()
+      this.need(p)
     } catch (e) {
       return Promise.reject(e as Error)
     }
@@ -129,10 +168,10 @@ export class Fab {
 
   /** One part by its LCSC number, or a search. */
   async parts(p: ProjectInfo, q: PartsQuery): Promise<PartsResult> {
-    this.need()
+    const client = await this.lookupEngine()
     await engineMayWrite(p.dir)
     const asked = q.lcsc ? { action: 'get', lcsc: q.lcsc } : { action: 'search', q: q.search, package: q.package, basic: q.basic, limit: q.limit }
-    return this.deps.kernel().job<PartsResult>('parts', asked, () => {}).done
+    return client.job<PartsResult>('parts', asked, () => {}).done
   }
 
   /** A new build: what a release would be is asked again when someone wants to know. */

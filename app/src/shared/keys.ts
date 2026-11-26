@@ -16,9 +16,10 @@ export type KeyContext = 'Everywhere' | 'The views' | 'Session' | 'In a field, a
  * - `window`: everywhere outside a field. Nobody else's either.
  * - `composer`: in the box a chat prompt is written in. `ask`: on a card of the chat that asks the person.
  * - `tabs`: on a focused tab of the views. `view`: over a view of the board, outside a field.
+ * - `separator`: on the focused edge of the session dock.
  * - `field`, `menu`, `sheet`: in a field, an open menu, a sheet or a question.
  */
-export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'field' | 'menu' | 'sheet'
+export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'separator' | 'field' | 'menu' | 'sheet'
 
 interface Row<Id extends string> {
   id: Id
@@ -52,6 +53,7 @@ const ROWS = [
   row('chat.stop', ['Esc', 'Ctrl+C'], 'Chat: stop the turn while Claude Code works (Ctrl+C with nothing selected in the box)', 'Session', 'composer'),
   row('chat.allow', ['Enter'], 'Chat: allow what the card in focus asks (in its reason field, Enter denies)', 'Session', 'ask'),
   row('ask.option', ['1', '2', '3', '4', '5', '6', '7', '8', '9'], 'Ask: the option of that number picks or toggles it on a question Claude Code asks', 'Session', 'ask'),
+  row('dock.resize', ['Left', 'Right'], 'On the edge of the session dock: wider or narrower', 'Session', 'separator'),
 
   row('field.keep', ['Enter'], 'Field: keep what was typed', 'In a field, a menu or a sheet', 'field'),
   row('field.leave', ['Esc'], 'Field: leave it as it was', 'In a field, a menu or a sheet', 'field'),
