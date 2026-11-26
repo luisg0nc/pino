@@ -1,0 +1,1384 @@
+/* ---- Chat: the conversation with Claude Code, in the session pane ---- */
+
+/* The pane is a column: the transcript, which scrolls, and the foot, which does not. */
+.chat {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Positioned, so that a picture shown large and the button that brings the reader down lie over the transcript only. */
+/* The pane with no session: the end of the last conversation and the buttons above, the box at the foot. */
+.chat-start {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-start-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  user-select: text;
+}
+
+.chat-start .session-actions {
+  margin-top: var(--space-3);
+}
+
+.chat-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat-transcript {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  user-select: text;
+}
+
+/* A document: one thing under another, a little air between the parts of a turn. */
+/* What is off screen is not laid out: a long conversation costs what is in view. */
+.chat-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+/* Not while a question stands from a button of it (`Popover`): containment would clip it to the turn, and a card fixed to the window needs none. It is in view. */
+.chat-group:has(.popover) {
+  content-visibility: visible;
+}
+
+.chat-group + .chat-group {
+  margin-top: var(--space-3);
+}
+
+.chat-group > .chat-item + .chat-item {
+  margin-top: var(--space-1);
+}
+
+.chat-quiet,
+.chat-empty {
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-wrap: pretty;
+}
+
+.chat-empty {
+  max-width: 38ch;
+  margin-top: var(--space-4);
+}
+
+.chat-earlier {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--divider);
+}
+
+.chat-earlier-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* A hairline to the right edge, as the head of a prompt has. */
+.chat-earlier-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+
+/* What the person said: a block of ink with the panel's own colour for its words, a small corner where it starts. */
+.chat-user {
+  color: var(--ink);
+}
+
+.chat-you {
+  display: inline-block;
+  box-sizing: border-box;
+  max-width: 88%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px 12px 12px 3px;
+  background: var(--ink);
+  color: var(--panel);
+  font-size: var(--text-size);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* A ref in it is a chip that holds its own on the ink: a ring of the ink around it, and the panel's colour where it names nothing now. */
+.chat-you .ref-chip {
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+
+.chat-you .ref-chip:not([data-live]) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--panel);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.chat-user-state {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* What went with it, under the person's words: "with M3 h40", muted and small. */
+.chat-added {
+  margin: 5px 0 0 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.chat-added-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.chat-added-label {
+  color: var(--muted);
+}
+
+.chat-added-build,
+.chat-added-selection {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+}
+
+.chat-added-instructions,
+.chat-added-board,
+.chat-added-held {
+  color: var(--muted);
+}
+
+.chat-added-build [data-verdict='ok'] {
+  color: var(--ok);
+}
+
+.chat-added-build [data-verdict='failed'] {
+  color: var(--fail);
+}
+
+.chat-more {
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-more:hover {
+  color: var(--accent);
+}
+
+/* The exact text, or a tool's input and result: the monospace face, selectable, scrolling rather than wrapping the page. */
+.chat-pre {
+  max-height: 260px;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2);
+  overflow: auto;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* An edit of the model as lines removed and added (ui/chat/Diff.tsx): the sign and the strike say which; the wash only groups. */
+.diff {
+  max-height: 260px;
+  overflow: auto;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.diff-hunk + .diff-hunk {
+  border-top: var(--divider);
+}
+
+.diff-title,
+.diff-note {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--muted);
+}
+
+.diff-caption {
+  border-top: var(--divider);
+}
+
+.diff-row {
+  display: flex;
+  min-width: max-content;
+  padding-right: var(--space-2);
+}
+
+.diff-row[data-kind='removed'] {
+  background: var(--diff-removed-wash);
+}
+
+.diff-row[data-kind='added'] {
+  background: var(--diff-added-wash);
+}
+
+.diff-row[data-kind='gap'] {
+  padding-left: 1.5em;
+  color: var(--muted);
+}
+
+.diff-sign {
+  flex: none;
+  width: 1.5em;
+  color: var(--muted);
+  text-align: center;
+  user-select: none;
+}
+
+.diff-row > del,
+.diff-row > ins,
+.diff-row > span:not(.diff-sign) {
+  text-decoration: none;
+  white-space: pre;
+}
+
+.diff-row > del {
+  text-decoration: line-through;
+}
+
+/* The agent's words: plain on the panel. */
+.chat-text {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.md > * + * {
+  margin-top: var(--space-2);
+}
+
+.md p {
+  text-wrap: pretty;
+}
+
+.md-heading {
+  margin-top: var(--space-3);
+}
+
+.md ul,
+.md ol {
+  padding-left: 1.4em;
+}
+
+.md li + li {
+  margin-top: 2px;
+}
+
+.md-inline,
+.md-code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.md-inline {
+  padding: 0 3px;
+  border-radius: var(--radius-inline);
+  background: var(--surface);
+}
+
+.md-code {
+  max-height: 320px;
+  padding: var(--space-2);
+  overflow: auto;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.md-url {
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.md-quote {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--hairline);
+  color: var(--muted);
+}
+
+.md-rule {
+  border: 0;
+  border-top: var(--divider);
+}
+
+.md-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--text-small);
+}
+
+.md-table th,
+.md-table td {
+  padding: 2px var(--space-2);
+  border: var(--divider);
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-table th {
+  font-weight: 500;
+}
+
+/* A ref in the chat: a chip you can point at. Marks are in their author's colour; faces and edges in the accent. */
+.ref-chip {
+  display: inline-block;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-inline);
+  background: transparent;
+  color: var(--ink);
+  font-size: 11.5px;
+  line-height: 16px;
+  vertical-align: baseline;
+  overflow-wrap: anywhere;
+}
+
+button.ref-chip {
+  cursor: pointer;
+}
+
+.ref-chip[data-kind='geometry'][data-live] {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.ref-chip[data-kind='geometry'][data-live]:hover,
+.ref-chip[data-kind='geometry'][data-live]:focus-visible {
+  border-color: var(--accent);
+}
+
+.ref-chip[data-kind='mark'] {
+  border-color: var(--user-mark);
+  background: var(--user-mark);
+  color: var(--panel);
+  font-weight: 600;
+}
+
+.ref-chip[data-kind='mark'][data-author='agent'] {
+  border-color: var(--agent-mark);
+  background: var(--panel);
+  color: var(--agent-mark);
+}
+
+/* A mark that is not here any more, or that cannot be shown: its colour is not claimed. */
+.ref-chip[data-kind='mark']:not([data-live]) {
+  border-color: var(--hairline);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.ref-chip[data-kind='geometry']:not([data-live]) {
+  color: var(--muted);
+}
+
+/* A tool as a chip: 24 px, round, on the surface; it opens to its input and result below. One of pino's is on the accent wash with its name in the accent; the one running has an accent ring. */
+.chat-tool {
+  font-size: 12px;
+}
+
+.chat-tool-row {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  max-width: 100%;
+  height: 24px;
+  gap: 6px;
+  padding: 0 9px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.chat-tool-row b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.chat-tool[data-own] .chat-tool-row {
+  background: var(--accent-wash);
+}
+
+.chat-tool[data-own] .chat-tool-row b {
+  color: var(--accent);
+}
+
+.chat-tool[data-state='running'] .chat-tool-row {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.chat-tool-row:hover {
+  background: var(--accent-wash);
+}
+
+.chat-tool-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+}
+
+.chat-tool-label .ref-chip,
+.chat-tool-act {
+  position: relative;
+  pointer-events: auto;
+}
+
+.chat-tool-act {
+  flex: none;
+}
+
+.chat-tool-said {
+  margin: var(--space-1) 0 0;
+  padding: 0 var(--space-1);
+  color: var(--muted);
+}
+
+.chat-tool-label {
+  min-width: 0;
+  pointer-events: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-tool-steps {
+  pointer-events: none;
+  flex: none;
+  color: var(--muted);
+}
+
+.chat-tool-state {
+  pointer-events: none;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.chat-tool[data-state='error'] .chat-tool-state {
+  color: var(--fail);
+}
+
+.chat-tool-body {
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.chat-lines-label {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+}
+
+/* A dot that is on while something is under way, and off for a second in two: set by the pane's beat, not by an animation. */
+.chat-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.chat-dot[data-beat='off'] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Pictures of a message or of a tool's result: thumbnails in a row, large over the pane when asked. */
+.chat-pictures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.chat-thumb {
+  height: 96px;
+  padding: 0;
+  overflow: hidden;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  cursor: zoom-in;
+}
+
+.chat-thumb-loading {
+  display: block;
+  width: 96px;
+  cursor: default;
+}
+
+.chat-thumb:hover {
+  border-color: var(--accent);
+}
+
+.chat-thumb img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+.chat-thumb-gone {
+  display: grid;
+  place-items: center;
+  height: 96px;
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-picture {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--panel);
+  cursor: zoom-out;
+}
+
+.chat-picture img {
+  max-width: 100%;
+  max-height: calc(100% - 28px);
+  object-fit: contain;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.chat-picture-size {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* The end of a turn: "Done in 58 s" in ink and what it did, muted; the buttons of the turn at the right. */
+.chat-turn,
+.chat-note {
+  color: var(--muted);
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}
+
+.chat-turn {
+  margin-top: var(--space-2);
+}
+
+/* The turn whose changes are open over the view: an accent bar and wash while they are. */
+.chat-turn[data-open] {
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  background: var(--accent-wash);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.chat-turn-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.chat-turn-line {
+  flex: 1 1 12em;
+  min-width: 0;
+  margin: 0;
+}
+
+.chat-turn-head {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.chat-turn-line + .chat-turn-line {
+  margin-top: var(--space-1);
+}
+
+/* What the person may do with a turn: See changes, Compare and the dots, quiet, at the right. */
+.chat-turn-actions {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+/* With a sentence to say (Pin, or why Go back did nothing) the row is the turn's whole width and the sentence goes under the buttons. */
+.chat-turn-actions:has(.chat-turn-said, .chat-turn-problem) {
+  flex: 1 1 100%;
+}
+
+.chat-turn-actions:empty {
+  display: none;
+}
+
+.chat-turn-actions .button {
+  gap: 5px;
+}
+
+/* What the person built between two prompts: one quiet line, with a ring in front of it. */
+.chat-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}
+
+.chat-save::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--field-edge);
+  border-radius: 50%;
+}
+
+/* Prompts a Go back undid: one faded row, to open. */
+.chat-gone {
+  margin: var(--space-1) 0;
+}
+
+.chat-gone-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--field-edge);
+  border-radius: var(--radius-float);
+  color: var(--muted);
+}
+
+.chat-gone-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px dashed var(--hairline);
+  color: var(--muted);
+}
+
+/* Faded by the muted face, not by opacity: text keeps the contrast its token was chosen for. */
+.chat-gone-body .chat-user,
+.chat-gone-body .chat-text,
+.chat-gone-body .chat-turn {
+  color: var(--muted);
+}
+
+/* What a Go back lists before it writes, one thing to a line, inside the question. */
+.goback-line {
+  display: block;
+}
+
+.chat-turn-problem {
+  color: var(--muted);
+}
+
+.chat-note[data-tone='warn'] {
+  color: var(--warn);
+}
+
+/* A note with a button beside it (the chat could not use the login: the terminal). */
+.chat-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The offer to restart on the whole prompt, above the box. */
+.chat-restart {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  color: var(--warn);
+}
+
+.chat-behind {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-3);
+  z-index: 2;
+  transform: translateX(-50%);
+  box-shadow: var(--float-shadow);
+}
+
+.chat-note-wait,
+.chat-attached,
+.chat-board-attached {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-note-wait img,
+.chat-attached img,
+.chat-attached-wait {
+  flex: none;
+  height: 40px;
+  border: var(--divider);
+  border-radius: var(--radius-inline);
+}
+
+.chat-attached-wait {
+  width: 60px;
+  background: var(--surface);
+}
+
+.chat-note-comment {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-note-undo {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-board-chip {
+  color: var(--ink);
+}
+
+.chat-board-gone {
+  color: var(--warn, var(--muted));
+}
+
+.chat-with-what {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* What the ink of a drawing lies over: refs as chips in a running line, then what else is to be said, each part set off by a dot. */
+.over {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.over-note,
+.over-warn,
+.over > .button {
+  margin-left: var(--space-1);
+}
+
+.over-note {
+  color: var(--muted);
+}
+
+.over-note::before {
+  content: '\00b7\00a0';
+}
+
+.over-warn {
+  color: var(--warn);
+}
+
+.chat-user-drawing {
+  margin-top: var(--space-1);
+  font-size: var(--text-small);
+}
+
+.chat-user-board {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-problem {
+  margin-top: var(--space-2);
+  color: var(--fail);
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}
+
+/* In the dock's header: the two views of Claude Code, a pair of quiet buttons with the one shown pressed. */
+.view-switch {
+  display: inline-flex;
+  flex: none;
+  gap: 1px;
+}
+
+.view-switch .button-quiet[aria-pressed='true'] {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+/* What the agent asks the person: a calm card, ruled by a thin line, the request in plain words and its input in the monospace face. */
+.chat-ask {
+  padding: var(--space-2) var(--space-3);
+  border: var(--divider);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.chat-ask:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.chat-ask[data-state='open'] {
+  border-color: var(--accent);
+}
+
+.chat-ask-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-size);
+  font-weight: 500;
+}
+
+.chat-ask-input {
+  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.chat-ask-input pre,
+.chat-ask-answers {
+  max-height: 160px;
+  margin: 0;
+  padding: var(--space-2);
+  overflow: auto;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-ask-lead {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.chat-ask-input pre + .chat-ask-lead {
+  margin: var(--space-1) 0 0;
+}
+
+.chat-ask-plan {
+  max-height: 260px;
+  margin-bottom: var(--space-2);
+  overflow: auto;
+}
+
+.chat-ask-outcome {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.chat-ask-reason,
+.chat-ask-other {
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.chat-ask-reason {
+  flex: 1 1 12ch;
+}
+
+.chat-ask-reason:focus-visible,
+.chat-ask-other:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -1px;
+}
+
+.chat-ask-question {
+  min-width: 0;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+}
+
+.chat-ask-question legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+}
+
+.chat-ask-header {
+  margin-right: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-ask-text {
+  font-weight: 500;
+}
+
+.chat-ask-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.chat-ask-option {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  padding: 4px var(--space-2);
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+}
+
+.chat-ask-option:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.chat-ask-option[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.chat-ask-desc {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.chat-ask-other {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* What the request says in words, and the path it is blocked on (the path in the monospace face). */
+.chat-ask-why {
+  margin: 0 0 var(--space-2);
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.chat-ask-path {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}
+
+.chat-ask-path .chat-ask-lead {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+/* The build slip (BuildLine) is in chat-slip.css. */
+
+/* A run of the agent's tools, once its turn is over, as one line. */
+.chat-fold-head .chat-tool-row {
+  color: var(--muted);
+}
+
+/* The agent's task list: in the transcript as a card, and above the box while it works. */
+.chat-tasks {
+  margin: var(--space-1) 0;
+  font-size: var(--text-small);
+}
+
+.chat-tasks-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0 0 2px;
+  color: var(--muted);
+}
+
+.chat-tasks-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-task {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 1px 0;
+  color: var(--ink);
+}
+
+.chat-task[data-status='completed'],
+.chat-task[data-status='pending'] {
+  color: var(--muted);
+}
+
+.chat-task-mark {
+  flex: none;
+  align-self: center;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+}
+
+.chat-task[data-status='in_progress'] .chat-task-mark {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent) 40%, transparent 45%);
+}
+
+.chat-task[data-status='completed'] .chat-task-mark {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.chat-task-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.chat-task-state {
+  flex: none;
+  color: var(--muted);
+}
+
+/* What a build was made from, in the text opened out under its line. */
+.chat-build-id {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Prompts only: the project's history as one row per prompt ---- */
+
+/* Over the transcript, which keeps its place beneath. */
+.prompts {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.prompts-head {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--divider);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.prompts-head .button-quiet[aria-pressed='true'] {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+.prompts-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  overflow-y: auto;
+}
+
+.prompts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* The prompt being compared. */
+.prompt:has(> .prompt-row[aria-pressed='true']) {
+  margin: 0 calc(var(--space-4) * -1);
+  padding: 0 var(--space-4);
+  background: var(--accent-wash);
+}
+
+.prompt-row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.prompt-row:hover:not([aria-disabled='true']) {
+  background: var(--surface);
+}
+
+.prompt-row[aria-disabled='true'] {
+  cursor: default;
+}
+
+.prompt-number {
+  flex: none;
+  width: 32px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.prompt-thumb {
+  display: block;
+  flex: none;
+  width: 56px;
+  height: 38px;
+  overflow: hidden;
+  border: var(--divider);
+  border-radius: var(--radius-inline);
+  background: var(--surface);
+}
+
+.prompt-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.prompt-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prompt-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-facts {
+  display: flex;
+  gap: 0 var(--space-2);
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.prompt-facts > * {
+  flex: none;
+}
+
+/* The marks and verdicts give way first: on a narrow dock they are cut, and the row stays one line (the title has all of it). */
+.prompt-facts > .prompt-carried {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prompt-star {
+  color: var(--ink);
+}
+
+.prompt-result[data-tone='ok'] {
+  color: var(--ok);
+}
+
+.prompt-result[data-tone='fail'] {
+  color: var(--fail);
+}
+
+.prompt-result[data-tone='warn'] {
+  color: var(--warn);
+}
+
+/* Beside the row, not inside it (a button holds no button): quiet, and there for the keys as much as for the pointer. */
+.prompt-open {
+  flex: none;
+}
+
+/* Go back to before this prompt, in a terminal's pane: beside the row; its question takes a line of its own. */
+.prompt-goback {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.prompt-goback:has(.chat-turn-problem) {
+  flex: 1 0 100%;
+  padding-bottom: var(--space-2);
+}
+
+.prompt-between {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.prompt-began {
+  padding: var(--space-2) 0;
+}
+
+.prompt-gone {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.prompt-gone-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--field-edge);
+  border-radius: var(--radius-float);
+  color: var(--muted);
+}
+
+.prompt-gone-body {
+  margin: var(--space-2) 0 0;
+  padding: 0 0 0 var(--space-3);
+  border-left: 2px dashed var(--hairline);
+  list-style: none;
+}
+
+/* Faded by the muted face, not by opacity. */
+.prompt-gone-body .prompt-row,
+.prompt-gone-body .prompt-text {
+  color: var(--muted);
+}
+
+/* Where the chat is not, Prompts only is a pane of its own over the session area. */
+.session-prompts {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.session-prompts-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: var(--divider);
+}
+
+.session-prompts-title {
+  margin: 0;
+  font-size: var(--text-size);
+  font-weight: 600;
+}
+
+.session-prompts .prompts {
+  position: static;
+  flex: 1;
+}
+
+/* "Earlier conversations" above the current one, and each conversation read there. */
+.chat-more-earlier {
+  margin: 0 0 var(--space-3);
+}

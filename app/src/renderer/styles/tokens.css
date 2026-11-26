@@ -1,0 +1,131 @@
+/* Design tokens. Light by default, dark when the system asks for it.
+   The idea is a toolroom surface plate: calm, light, exact. The board is the
+   only loud thing on screen, so nothing here competes with it. */
+
+:root {
+  /* One scheme at a time, said outright: what the system draws (a scrollbar, a field's own parts) follows the theme. */
+  color-scheme: light;
+
+  /* Colour */
+  --surface: #F1EFEA;      /* viewport ground; main/index.ts paints the window with the same value */
+  --panel: #FAF9F6;        /* the route card, the dock, the status line */
+  --raise: #FFFFFF;        /* what floats: tags, popovers, fields, the selected segment, the composer */
+  --ink: #20242B;
+  --muted: #62666D;        /* 4.5:1 on the surface, as all text is (shared/contrast.test.ts) */
+  --hairline: #DAD6CE;
+  --field-edge: #8A857B;   /* the edge of an input or a text area: 3:1 on the panel and the ground (WCAG 1.4.11); dividers keep the hairline */
+  --scroll-thumb: #84888E;  /* where a list is scrolled to: 3:1 on the panel and the ground, quieter than muted text */
+  --accent: #17663A;       /* solder-mask green */
+  --accent-wash: #E0EEE4;
+  --on-accent: #FFFFFF;    /* text and icons on the accent */
+  /* The dyed field (the first screen, the empty views): solder mask over a bare board. The accent's own green in light, a
+     deep green in dark. Lines drawn on it are --scribe, text --on-dye and --on-dye-muted. */
+  --dye: #17663A;
+  --scribe: #7DB892;
+  --on-dye: #F1F8F3;
+  --on-dye-muted: #C4E0CC;
+  /* An edit shown as a diff (the chat): a grey step from the panel toward the hairline for the lines removed, the accent's wash
+     for those added. No red, which is a failure's; a "−" and a "+" and the strike say which. */
+  --diff-removed-wash: #EAE8E2;
+  --diff-added-wash: #E0EEE4;
+  --user-mark: #6440C4;    /* marks made by the person: the violet of the design mocks */
+  --agent-mark: #C0502B;   /* marks made by Claude: Claude Code's orange, darkened to read on the panel and under --on-mark */
+  --on-mark: #FFFFFF;      /* text on a mark's chip */
+  /* Verdicts are read as text, and are no mark's colour to the eye: --ok 1.5:1 at least from Claude's orange, --fail
+     60 degrees of hue at least from the person's violet; 4.5:1 on both grounds and on the wash (shared/contrast.test.ts). */
+  --ok: #1B5B3C;
+  --warn: #8C5C16;
+  --fail: #9B2B1D;
+  /* The grounds of Needs you and of an ask, of a failed build or check; the route line down the card and its section
+     dots. All held to their contrasts (shared/contrast.test.ts). */
+  --warn-wash: #F4ECDD;
+  --fail-wash: #F6E6E2;
+  --route: #C9C4BA;
+  /* The three axes of the 3D view: the usual red, green and blue, kept clear of
+     the two mark colours. */
+  --axis-x: #9A3350;
+  --axis-y: #457528;
+  --axis-z: #2E5FA9;
+
+  /* Type */
+  --font-ui: 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'Martian Mono', ui-monospace, monospace;
+  --text-size: 13.5px;
+  --text-leading: 1.42;
+  --text-row: 12.5px;
+  --text-small: 12px;
+
+  /* Shape */
+  /* The radius grows with how far a thing floats: a chip in a line, a control, what floats, a sheet, a pill. */
+  --radius-inline: 4px;
+  --radius-control: 6px;
+  --radius-float: 10px;
+  --radius-sheet: 14px;
+  --radius-full: 999px;
+  --divider: 1px solid var(--hairline);
+  --field-border: 1px solid var(--field-edge);
+  --focus-ring: 2px solid var(--accent);
+  /* The one shadow: what floats over the view or a pane. */
+  --float-shadow: 0 1px 2px rgb(32 36 43 / .07), 0 8px 24px -6px rgb(32 36 43 / .16);
+  --scrim: color-mix(in srgb, var(--surface) 70%, transparent);   /* behind the keys */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* Layout */
+  /* The window's sizes. The shell is one grid of them (`styles/layout.css`). A window narrower than 1360px takes the
+     narrow defaults at the end of this block. */
+  --title-h: 40px;
+  --card-w: 296px;         /* the route card's default */
+  --panel-w: var(--card-w); /* what the card was called: the panel docked at the left */
+  --dock-w: 420px;         /* the session dock's default */
+  --status-h: 28px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+}
+
+/* Narrow defaults of the card and the dock: a window under 1360px. */
+@media (max-width: 1359px) {
+  :root {
+    --card-w: 264px;
+    --dock-w: 384px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --surface: #1A1C1F;
+    --panel: #222529;
+    --raise: #2A2D32;
+    --ink: #E9E7E2;
+    --muted: #9EA3AA;
+    --hairline: #33373C;
+    --field-edge: #747A82;
+    --scroll-thumb: #72777E;
+    --accent: #5CC489;
+    --accent-wash: #1F3A2A;
+    --on-accent: #0B1F13;
+    --dye: #123D25;
+    --scribe: #4C9A6A;
+    --on-dye: #E6F4EA;
+    --on-dye-muted: #A8D4B5;
+    --diff-removed-wash: #2B2E33;
+    --diff-added-wash: #1F3A2A;
+    --user-mark: #A88BFA;
+    --agent-mark: #D97757;
+    --on-mark: #1A1C1F;
+    --ok: #A9E6C8;
+    --warn: #CBAA6A;
+    --fail: #F9B2A7;
+    --warn-wash: #332B1E;
+    --fail-wash: #3A2826;
+    --route: #41464C;
+    --axis-x: #D98AC8;
+    --axis-y: #9CC56C;
+    --axis-z: #82A6EA;
+    --float-shadow: 0 1px 2px rgb(0 0 0 / .35), 0 10px 26px -6px rgb(0 0 0 / .5);
+  }
+}

@@ -1,0 +1,65 @@
+// The one way a spec starts pino (.claude/rules/e2e-hidden-window.md): hidden, with a profile, a config file and a
+// home of its own in the temporary folder, and never with the real claude.
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+
+export { agentsIn, cwdOf } from './terminal'
+
+const appDir = resolve(__dirname, '..')
+const FAKE_AGENT = join(appDir, 'test', 'fake-agent.mjs')
+/** What a run with no stand-in asked for is given: a command that is not there, so that nothing can reach `claude`. */
+export const NO_AGENT = '/nonexistent/claude'
+
+/** The temporary folders of this run of the specs, removed when it ends. */
+const made: string[] = []
+process.on('exit', () => {
+  for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true })
+})
+
+/** A folder of this run in the temporary folder, by its real path, which is how a process sees its cwd. */
+export function tempFolder(label: string): string {
+  const dir = mkdtempSync(join(realpathSync(tmpdir()), `pino-e2e-${label}-`))
+  made.push(dir)
+  return dir
+}
+
+/** A new, empty project folder with this name. */
+export function tempProject(name = 'blinky'): string {
+  const dir = join(tempFolder('project'), name)
+  mkdirSync(dir)
+  return dir
+}
+
+export interface Launched {
+  app: ElectronApplication
+  page: Page
+  /** The config file this run reads and writes: give it to the next launch to start where this one left off. */
+  config: string
+}
+
+export async function launch(opts: { project?: string; agent?: boolean; env?: Record<string, string> } = {}): Promise<Launched> {
+  const home = tempFolder('home')
+  const config = opts.env?.PINO_CONFIG ?? join(tempFolder('config'), 'config.json')
+  // What the shell the specs run from may have set of pino's own switches means nothing to a run.
+  const outer = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith('PINO_')))
+  const env: Record<string, string> = {
+    ...outer,
+    // The display still answers a run whose home is elsewhere.
+    XAUTHORITY: process.env.XAUTHORITY ?? join(homedir(), '.Xauthority'),
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, '.config'),
+    XDG_DATA_HOME: join(home, '.local', 'share'),
+    XDG_CACHE_HOME: join(home, '.cache'),
+    PINO_TEST: '1',
+    PINO_CONFIG: config,
+    PINO_AGENT_CMD: opts.agent ? `node ${FAKE_AGENT}` : NO_AGENT,
+    ...(opts.project ? { PINO_PROJECT: opts.project } : {}),
+    ...opts.env
+  }
+  const app = await electron.launch({ args: ['.'], cwd: appDir, env })
+  const page = await app.firstWindow()
+  await page.waitForSelector('[data-region]')
+  return { app, page, config }
+}
