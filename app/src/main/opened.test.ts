@@ -124,7 +124,29 @@ it('asks the dialog for a workspace, and a dialog put away changes nothing', asy
   expect(await o.pickWorkspace()).toBeNull()
   expect(o.workspace()).toBeUndefined()
   picked = root
-  expect((await o.pickWorkspace())?.root).toBe(root)
+  expect(await o.pickWorkspace()).toMatchObject({ workspace: { root }, project: null })
+})
+
+it('a project chosen in the dialog opens its parent as the workspace, on it', async () => {
+  const root = temp()
+  const blinky = project(root, 'blinky', 'brief.md')
+  const o = holder()
+  picked = blinky
+  expect(await o.pickWorkspace()).toMatchObject({ workspace: { root }, project: { dir: blinky } })
+  expect([o.workspace()?.root, o.project()?.name]).toEqual([root, 'blinky'])
+  expect(config).toEqual({ workspace: root, project: blinky, workspaces: [root] })
+  // The same one again ends nothing.
+  await o.pickWorkspace()
+  expect(stops).toBe(0)
+})
+
+it('a project in the home folder chosen in the dialog is refused, and what is open stays', async () => {
+  const root = temp()
+  const o = holder()
+  await o.openWorkspace(root)
+  picked = project(home, 'blinky', 'board.py')
+  await expect(o.pickWorkspace()).rejects.toThrow('blinky is in your home folder, not in a folder of boards. Choose a folder for your boards, such as ~/boards, and move blinky into it.')
+  expect([o.workspace()?.root, o.project()]).toEqual([root, undefined])
 })
 
 it('lists the open workspace again', async () => {

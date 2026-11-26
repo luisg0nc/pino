@@ -4,7 +4,7 @@
 import { lstat, mkdir, realpath } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import type { ProjectInfo, RecentFolder } from '../shared/project'
-import type { WorkspaceInfo } from '../shared/workspace'
+import type { OpenFolder, WorkspaceInfo } from '../shared/workspace'
 import { isProjectFolder, openProject, workspaceOf } from './project'
 import { type Config, listed, recentWith } from './recent'
 import { scanOrder, scanWorkspace } from './workspace'
@@ -30,7 +30,8 @@ export interface Opened {
   /** What is open; rejects once with why the folder pino was started with could not be. */
   current(): Promise<{ workspace: WorkspaceInfo | null; project: ProjectInfo | null }>
   openWorkspace(root: string): Promise<WorkspaceInfo>
-  pickWorkspace(): Promise<WorkspaceInfo | null>
+  /** Asks for a folder, held to the rule of a folder named at start: a project opens its parent, on it. */
+  pickWorkspace(): Promise<OpenFolder | null>
   suggested(): Promise<{ path: string; exists: boolean }>
   useSuggested(): Promise<WorkspaceInfo>
   recent(): Promise<RecentFolder[]>
@@ -115,23 +116,28 @@ export function openedHolder(deps: OpenedDeps): Opened {
       return listing
     })
 
-  /** The folder pino starts with, as a project in its workspace or as a workspace. */
-  const start = async (dir: string, remembered: boolean): Promise<void> => {
+  /** Why a project that is not in a folder of boards cannot be opened. */
+  class Stray extends Error {}
+
+  /**
+   * A folder given to pino, as a project in its workspace or as a workspace: the rule of a folder named at start, of
+   * the project open last (`asProject`, whatever it holds) and of the folder dialog.
+   */
+  const openFolder = async (dir: string, asProject = false): Promise<OpenFolder> => {
     const { dir: real } = await openProject(dir)
     const home = await realHome()
-    const isProject = real !== home && (remembered || (await isProjectFolder(real)))
-    if (!isProject) return void (await openWorkspace(real))
+    if (real === home || !(asProject || (await isProjectFolder(real)))) return { workspace: await openWorkspace(real), project: null }
     const parent = workspaceOf(real, home)
     if (parent === null) {
       const name = basename(real)
       const where = dirname(real) === home ? 'in your home folder' : 'at the top of the disk'
-      // Said also of a remembered project: without this the first screen would give no reason.
-      startProblem = `${name} is ${where}, not in a folder of boards. Choose a folder for your boards, such as ~/${SUGGESTED}, and move ${name} into it.`
-      return
+      throw new Stray(`${name} is ${where}, not in a folder of boards. Choose a folder for your boards, such as ~/${SUGGESTED}, and move ${name} into it.`)
     }
-    await inTurn(async () => {
+    return inTurn(async () => {
       const listing = await lookAt(parent)
-      await enter(listing, await listedProject(listing, basename(real)))
+      const next = await listedProject(listing, basename(real))
+      await enter(listing, next)
+      return { workspace: listing, project: next }
     })
   }
 
@@ -150,7 +156,7 @@ export function openedHolder(deps: OpenedDeps): Opened {
     openWorkspace,
     async pickWorkspace() {
       const root = await deps.pickFolder()
-      return root === null ? null : openWorkspace(root)
+      return root === null ? null : openFolder(root)
     },
     async suggested() {
       const path = join(deps.home, SUGGESTED)
@@ -203,8 +209,10 @@ export function openedHolder(deps: OpenedDeps): Opened {
     async startAt(dir, said) {
       const config = await deps.readConfig()
       try {
-        await start(dir, !said && config.project === dir)
+        await openFolder(dir, !said && config.project === dir)
       } catch (e) {
+        // Said also of a remembered project: without this the first screen would give no reason.
+        if (e instanceof Stray) return void (startProblem = e.message)
         // A folder named at this start that cannot be opened is said; a remembered one that is gone is only quiet,
         // and its workspace is opened without it.
         console.error((e as Error).message)

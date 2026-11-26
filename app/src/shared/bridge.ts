@@ -7,7 +7,7 @@ import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
 import type { EngineInfo } from './ready'
 import type { BoardLook, LookRequest, LookResult, Selection, ViewTab } from './view'
-import type { WorkspaceInfo } from './workspace'
+import type { OpenFolder, WorkspaceInfo } from './workspace'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
 export type AgentView = 'chat' | 'terminal'
@@ -26,8 +26,8 @@ export interface PinoBridge {
   workspace: {
     /** What is open. Rejects, once, with why the folder pino was started with could not be opened. */
     current(): Promise<{ workspace: WorkspaceInfo | null; project: ProjectInfo | null }>
-    /** Asks the person for a folder of boards and opens it; null when they choose none. */
-    pick(): Promise<WorkspaceInfo | null>
+    /** Asks the person for a folder and opens it: a board's folder opens its parent, on that board. Null when they choose none. */
+    pick(): Promise<OpenFolder | null>
     /** Opens a folder of boards, ending the session of the project that was open. Rejects with why it cannot. */
     open(root: string): Promise<WorkspaceInfo>
     /** The folder of boards suggested on a first run, `~/boards`, and whether it is there. */

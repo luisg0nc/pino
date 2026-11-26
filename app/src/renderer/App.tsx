@@ -184,7 +184,12 @@ export function App() {
   const pick = (): Promise<void> =>
     change('The folder', async () => {
       const opened = await window.pino.workspace.pick()
-      if (opened) showWorkspace(opened)
+      if (!opened) return
+      const { workspace, project: next } = opened
+      // The board that is on show already: its session is still running, and its chat stays drawn.
+      if (next && store.getState().project?.id === next.id) return actions.setWorkspace(workspace)
+      showWorkspace(workspace)
+      if (next) showProject(next)
     })
   const useSuggested = (): Promise<void> => change('The folder', async () => showWorkspace(await window.pino.workspace.useSuggested()))
   const openWorkspace = (root: string): Promise<void> => change(nameOf(root), async () => showWorkspace(await window.pino.workspace.open(root)))

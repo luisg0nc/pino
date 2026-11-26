@@ -138,6 +138,28 @@ test('the workspace menu lists the recent workspaces and opens another', async (
   }
 })
 
+test('Choose folder… and Open workspace… on a board open its parent, on that board', async () => {
+  const root = workspaceOfThree()
+  const { app, page } = await launch()
+  const choose = (folder: string) =>
+    app.evaluate((_main, picked) => {
+      ;(globalThis as unknown as { __pinoMain: { pickFolder: string | null } }).__pinoMain.pickFolder = picked
+    }, folder)
+  try {
+    await choose(join(root, 'a'))
+    await page.getByRole('button', { name: 'Choose folder…' }).click()
+    await expect(page.getByRole('button', { name: `Workspace ${basename(root)}` })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Project a' })).toBeVisible()
+    await choose(join(root, 'b'))
+    await page.getByRole('button', { name: `Workspace ${basename(root)}` }).click()
+    await page.getByRole('menuitem', { name: 'Open workspace…' }).click()
+    await expect(page.getByRole('button', { name: 'Project b' })).toBeVisible()
+    expect((await state(page)).project?.dir).toBe(join(root, 'b'))
+  } finally {
+    await app.close()
+  }
+})
+
 test('a launcher folder that is a project opens its parent on it, and starts there again next time', async () => {
   const dir = tempProject('blinky')
   const first = await launch({ project: dir })

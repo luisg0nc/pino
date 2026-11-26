@@ -41,6 +41,8 @@ paths:
   `project`, the ones to open at the next start, and `workspaces`, those opened lately: the newest first, eight at
   most. Never in a project. A config from before there were workspaces has `recent` project folders: their parents
   become `workspaces`, once. A test run reads and writes no config file but one it names with `PINO_CONFIG`.
+- **A folder given to pino** by the dialog ("Choose folder…", "Open workspace…") is held to the rule of a folder named
+  at start, below: a project opens its parent on it, and one in the home folder or at `/` is refused with the reason.
 - **A folder named at start** (`PINO_PROJECT`, the launcher's argument) that is a project (`board.py` or `brief.md`)
   opens its parent as the workspace, on it; any other folder is a workspace. The project open last is opened again as
   a project whatever it holds, so an empty board is not taken for a workspace. A project directly in the home folder
