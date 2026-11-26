@@ -1,7 +1,7 @@
 // The one spec that runs the real engine, through uv, on the reference board: that the app and the engine agree on
 // what a build is, and that the default fab's limits and a parts lookup (from recorded answers) are there before any board is. It is skipped where uv, kicad-cli or the engine's environment is missing (CI).
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { readBoard } from '../src/shared/board/board'
@@ -39,7 +39,9 @@ test('gives the default fab limits and answers a parts lookup in a project with 
     const said = await call('parts', { lcsc: 'C25804' })
     expect(said).toContain('C25804 · basic')
     expect(said).not.toContain('"isError":true')
-    expect(existsSync(join(dir, '.pino'))).toBe(false)
+    // No call wrote anything: what may be there is the Brief on screen keeping what was seen of it.
+    const there = existsSync(join(dir, '.pino')) ? readdirSync(join(dir, '.pino')) : []
+    expect(there.filter((name) => name !== 'brief' && name !== '.gitignore')).toEqual([])
   } finally {
     await app.close()
   }

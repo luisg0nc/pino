@@ -102,6 +102,31 @@ const onBrief = async (run: Launched, project: string): Promise<void> => {
   await run.page.mouse.move(5, 5)
 }
 
+/** What Claude wrote down over three prompts, the last two new since the person looked, one card changed. */
+const onSpine = async (run: Launched, project: string): Promise<void> => {
+  mkdirSync(join(project, '.pino', 'chat'), { recursive: true })
+  mkdirSync(join(project, '.pino', 'brief'), { recursive: true })
+  const at = (minute: number): number => Date.parse(`2026-11-26T10:${String(minute).padStart(2, '0')}:00.000Z`)
+  const prompts = ['Make a small USB-C sensor board for the workshop, with an SHT40.', 'Power it from a LiPo cell instead.', 'Which LDO would you use?']
+  writeFileSync(join(project, '.pino', 'chat', 'c1.jsonl'), prompts.map((text, i) => `${JSON.stringify({ kind: 'user', id: `u${i + 1}`, text, images: [], state: 'sent', at: at(i * 7) })}\n`).join(''))
+  const turn = (n: number) => ({ prompt: `u${n}`, conversation: 'c1' })
+  const cards = [
+    { id: 'C1', kind: 'requirement', by: 'agent', text: 'Sensor: reads temperature and humidity every minute', turn: turn(1) },
+    { id: 'C2', kind: 'decision', by: 'agent', text: 'Power: a single LiPo cell, charged over USB-C', turn: turn(2), was: [{ text: 'Power: USB-C, 5 V from a charger', turn: turn(1) }] },
+    { id: 'C3', kind: 'question', by: 'agent', text: 'Case: which enclosure? The connector edge waits on it', turn: turn(2) },
+    { id: 'C4', kind: 'part', by: 'agent', text: 'LDO: AP2112K-3.3, 600 mA', part: { lcsc: 'C51118', reading: { class: 'extended', package: 'SOT-25-5', stock: null, price: 0.09, checkedAt: '2026-11-03T22:33:00.000Z', fresh: true } }, turn: turn(3) }
+  ]
+  writeFileSync(join(project, '.pino', 'brief', 'cards.json'), JSON.stringify({ next: 5, cards }))
+  // Seen: the first prompt's card as it is, and nothing newer.
+  const { seenOf } = await import('../src/shared/brief')
+  writeFileSync(join(project, '.pino', 'brief', 'seen.json'), JSON.stringify(seenOf([cards[0]] as never, new Date(at(1)).toISOString())))
+  await tab(run, 'Brief').click()
+  await expect(run.page.locator('[data-card="C4"]')).toBeVisible()
+  await run.page.locator('[data-card="C4"] .brief-cn-id').click()
+  await run.page.locator('.brief-voices').evaluate((el) => el.scrollIntoView())
+  await run.page.mouse.move(5, 5)
+}
+
 /** An engine that makes fab files. */
 const FABBED = { FAKE_KERNEL_SERVE: '3' }
 
@@ -121,6 +146,7 @@ const fabPopover = (release: boolean) => async (run: Launched): Promise<void> =>
 const SHOTS: Record<string, Shot> = {
   brief: { env: FABBED, at: onBrief },
   'brief-dark': { env: FABBED, dark: true, at: onBrief },
+  'brief-spine': { at: onSpine },
   // The page below its first screenful: the sizes, the rules and the fab.
   'brief-foot': {
     env: FABBED,

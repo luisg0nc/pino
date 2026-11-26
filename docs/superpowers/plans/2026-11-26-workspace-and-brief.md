@@ -776,7 +776,7 @@ git commit -m "The Brief, the first tab: the person's words and pictures, their 
   - IPC: invoked `cards:seen(projectId) -> Seen | null`, `cards:markSeen(projectId) -> Seen`, `cards:restock(projectId, cardId) -> CardsFile` (main looks the card's `lcsc` up and stores the reading; a lookup that refuses rejects with its words and changes nothing), `chat:prompts(projectId) -> PromptRow[]`.
   - Page copy: each node `Prompt <n> · <time>` with `You: <the prompt, two lines>`, then the cards; a card's earlier words struck in the node of the prompt that wrote them with `Changed in prompt <n>`; cards with no prompt in one node first, `Before pino kept the prompt`; a prompt whose log is not here `A prompt not on this computer`; new prompts with the accent node and a `new` pill, the band `New since you looked: prompt 4` (`promptsSaid`), seen prompts folded to one line; buttons `Make it yours`, `Remove` (on Claude's own: the person may take Claude's card down), `Mark as seen`, and on a part card `Check stock again`. Leaving the Brief tab, or the project, marks seen (`markSeen`); the first time a project's Brief is opened nothing is new and `seen.json` is written.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // shared/brief.test.ts (spine cases copied from torno's, then)
@@ -802,19 +802,19 @@ test('Check stock again fills the reading and is not new since you looked', asyn
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/brief.test.ts && pnpm test:e2e -- brief.spec.ts`
 Expected: FAIL (`pnpm test:e2e` builds first)
 
-- [ ] **Step 3: Copy `Spine.tsx` and `usePrompts.ts`, adapt them, add the channels and the buttons**
+- [x] **Step 3: Copy `Spine.tsx` and `usePrompts.ts`, adapt them, add the channels and the buttons**
 
-- [ ] **Step 4: Run them to verify they pass**
+- [x] **Step 4: Run them to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm test:e2e`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A app/src app/e2e shared-from-torno.json .claude/rules/brief.md

@@ -1345,6 +1345,30 @@
   background: var(--warn-wash);
 }
 
+/* On the spine: whose a card is, before its id, and a part's stock under its words. */
+.brief-cn-line > .brief-hand-cell {
+  flex: none;
+  align-self: flex-start;
+  margin-left: auto;
+  padding: 0;
+}
+
+.brief-cn-line > .brief-hand-cell + .brief-cn-id {
+  margin-left: 0;
+}
+
+.brief-cn-reading {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: normal;
+}
+
+.brief-band-when {
+  color: var(--muted);
+}
+
 .brief-asked-fab {
   margin: 0 0 var(--space-2);
 }

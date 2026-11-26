@@ -6,7 +6,8 @@ import type { Opened } from './opened'
 import { BUILD_HASH, readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
 import { saveThumbnail, thumbnailOnFile, thumbnailRefusal } from './thumb'
 import type { Builds } from './builds'
-import type { PersonChange } from '../shared/cards'
+import { type PersonChange, readingOf } from '../shared/cards'
+import { listPrompts } from './sessions/prompts'
 import { linkOf, listReferences, readReference } from './cards/references'
 import type { CardStore } from './cards/store'
 import { readBrief } from './cards/text'
@@ -31,7 +32,8 @@ import { takeAnswer, type ViewHolder } from './view'
 //            build:state, build:rebuild, build:result, build:file, build:routeFile, build:engineInfo, view:tell,
 //            route:start, route:cancel, marks:list, marks:add, marks:update, marks:remove, marks:resolve,
 //            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder, cards:read, cards:change,
-//            cards:brief, cards:references, cards:reference, cards:openLink
+//            cards:brief, cards:references, cards:reference, cards:openLink, cards:seen, cards:markSeen,
+//            cards:restock, chat:prompts
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
 //            fab:state, cards:changed, cards:briefChanged (index.ts),
@@ -199,6 +201,21 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
     const url = linkOf(await cards.read(project.id), await readBrief(project.dir), String(from), Number.isInteger(nth) ? (nth as number) : 0)
     if (url === null) throw new Error('There is no web address to open there.')
     openExternal(url)
+  })
+  handle('cards:seen', (id: unknown) => cards.seen(mustBeOpen(id).id))
+  handle('cards:markSeen', (id: unknown) => cards.markSeen(mustBeOpen(id).id))
+  // The number is read from main's own card, and the reading is the engine's: a lookup that fails changes nothing.
+  handle('cards:restock', async (id: unknown, cardId: unknown) => {
+    const project = mustBeOpen(id)
+    const lcsc = (await cards.read(project.id)).cards.find((c) => c.id === cardId)?.part?.lcsc
+    if (lcsc === undefined) throw new Error(`${String(cardId)} is no part with an LCSC number: there is no stock to check.`)
+    const found = readingOf(await fab.lookup({ lcsc }), lcsc, new Date())
+    if ('refused' in found) throw new Error(`The stock was not checked: ${found.refused}`)
+    return cards.restock(project.id, String(cardId), found)
+  })
+  handle('chat:prompts', (id: unknown) => {
+    const project = projectOf(id)
+    return project ? listPrompts(project.dir) : []
   })
   handle('view:tell', (id: unknown, view: unknown) => {
     const project = projectOf(id)

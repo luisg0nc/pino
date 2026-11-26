@@ -210,6 +210,8 @@
     { "pino": "app/src/renderer/ui/brief/ops.ts", "torno": "app/src/renderer/ui/brief/ops.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's cards and channels" },
     { "pino": "app/src/renderer/ui/brief/refPieces.ts", "torno": "app/src/renderer/ui/brief/refPieces.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's cards and channels" },
     { "pino": "app/src/renderer/ui/brief/refPieces.test.ts", "torno": "app/src/renderer/ui/brief/refPieces.test.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's cards and channels" },
-    { "pino": "app/src/renderer/styles/brief.css", "torno": "app/src/renderer/styles/brief.css", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's tokens" }
+    { "pino": "app/src/renderer/styles/brief.css", "torno": "app/src/renderer/styles/brief.css", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's tokens" },
+    { "pino": "app/src/renderer/ui/brief/Spine.tsx", "torno": "app/src/renderer/ui/brief/Spine.tsx", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "PCB kinds and part readings; no 'Show prompt N in the chat'" },
+    { "pino": "app/src/renderer/ui/chat/usePrompts.ts", "torno": "app/src/renderer/ui/chat/usePrompts.ts", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's chat:prompts" }
   ]
 }

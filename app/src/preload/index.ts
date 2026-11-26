@@ -60,6 +60,7 @@ const bridge: PinoBridge = {
     setModel: (sessionId, model) => invoke('chat:setModel', sessionId, model),
     setMode: (sessionId, mode) => invoke('chat:setMode', sessionId, mode),
     setEffort: (sessionId, effort) => invoke('chat:setEffort', sessionId, effort),
+    prompts: (projectId) => invoke('chat:prompts', projectId),
     models: () => invoke('chat:models'),
     onItem: (cb) => subscribe('chat:item', cb),
     onMeta: (cb) => subscribe('chat:meta', cb),
@@ -107,6 +108,9 @@ const bridge: PinoBridge = {
     references: (projectId) => invoke('cards:references', projectId),
     reference: (projectId, file) => invoke('cards:reference', projectId, file),
     openLink: (projectId, cardId, nth) => invoke('cards:openLink', projectId, cardId, nth),
+    seen: (projectId) => invoke('cards:seen', projectId),
+    markSeen: (projectId) => invoke('cards:markSeen', projectId),
+    restock: (projectId, cardId) => invoke('cards:restock', projectId, cardId),
     onChanged: (cb) => subscribe('cards:changed', cb),
     onBriefChanged: (cb) => subscribe('cards:briefChanged', cb)
   },

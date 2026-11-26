@@ -1,9 +1,9 @@
 // The Brief, the first tab: the person's words and pictures, their cards, the sizes against the board, and what Claude
 // wrote down. Over temporary projects, the engine's stand-in and the stand-in agent.
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { waitForBuild } from './helpers'
+import { newSession, waitForBuild } from './helpers'
 import { launch, referenceProject, tempFolder, tempProject } from './launch'
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
@@ -121,6 +121,145 @@ test('a board built opens on the views next time; the route card opens the Brief
   try {
     await expect(tab(page, 'Brief')).toHaveAttribute('aria-selected', 'true')
     expect((await state(page)).tab).toBe('brief')
+  } finally {
+    await app.close()
+  }
+})
+
+const composer = (page: Page) => page.locator('[data-chat-composer]')
+const turns = (page: Page) => page.locator('[data-region="session"] .chat-turn')
+
+/** A prompt for the stand-in, sent as the person sends one, and waited for until its turn is over. */
+async function say(page: Page, text: string): Promise<void> {
+  const before = await turns(page).count()
+  await composer(page).fill(text)
+  await composer(page).press('Enter')
+  await expect(turns(page)).toHaveCount(before + 1)
+}
+const addCard = (page: Page, input: object) => say(page, `tool mcp__pino__add_card ${JSON.stringify(input)}`)
+
+/** The node of the spine a prompt's cards stand under, by its head. */
+const node = (page: Page, n: number) => part(page, 'What Claude wrote down').locator('.brief-node').filter({ has: page.locator('.brief-node-head b', { hasText: new RegExp(`^Prompt ${n}$`) }) })
+
+test("Claude's cards stand under the prompt that wrote them, a change struck in the older node", async () => {
+  const { app, page } = await launch({ project: tempProject('blinky'), agent: true })
+  try {
+    await newSession(page.locator('[data-region="session"]'))
+    await addCard(page, { kind: 'decision', text: 'Power: USB-C, 5 V' })
+    await addCard(page, { card: 'C1', text: 'Power: a LiPo cell' })
+    await expect(node(page, 1).locator('.brief-ghost s')).toHaveText('Power: USB-C, 5 V')
+    await expect(node(page, 1).locator('.brief-ghost')).toContainText('Changed in prompt 2.')
+    await expect(node(page, 1).locator('.brief-asked')).toContainText('You: tool mcp__pino__add_card')
+    const now = node(page, 2).locator('[data-card="C1"]')
+    await expect(now).toContainText('Power: a LiPo cell')
+    await expect(now.locator('.brief-hand')).toHaveText('Claude, prompt 2')
+    await expect(part(page, 'What Claude wrote down')).not.toContainText('Claude has written nothing down yet.')
+    // What Claude wrote is not among the person's words.
+    await expect(part(page, 'In your words')).not.toContainText('LiPo')
+  } finally {
+    await app.close()
+  }
+})
+
+test('Make it yours gives the card to the person, and Claude may no longer change it', async () => {
+  const dir = tempProject('blinky')
+  const { app, page } = await launch({ project: dir, agent: true })
+  try {
+    await newSession(page.locator('[data-region="session"]'))
+    await addCard(page, { kind: 'decision', text: 'Power: USB-C, 5 V' })
+    const card = brief(page).locator('[data-card="C1"]')
+    await card.getByRole('button', { name: /^C1,/ }).click()
+    await card.getByRole('button', { name: 'Make it yours' }).click()
+    // It is the person's now, and is edited where it stands.
+    const field = card.getByRole('textbox')
+    await expect(field).toHaveValue('Power: USB-C, 5 V')
+    await field.press('Escape')
+    await expect(card.locator('.brief-hand')).toHaveText('Yours, from prompt 1')
+    expect(cardsFile(dir).cards).toMatchObject([{ id: 'C1', by: 'person', from: { by: 'agent' } }])
+    await addCard(page, { card: 'C1', text: 'x' })
+    // The refusal is in the tool's card, which is folded until it is opened.
+    const refused = page.locator('[data-region="session"] .chat-tool[data-state="error"]')
+    await refused.locator('.chat-tool-line').click()
+    await expect(page.locator('[data-region="session"]')).toContainText("C1 is the person's")
+    expect(cardsFile(dir).cards[0].text).toBe('Power: USB-C, 5 V')
+  } finally {
+    await app.close()
+  }
+})
+
+test('what came since the person looked is marked new, once', async () => {
+  const dir = tempProject('blinky')
+  const { app, page } = await launch({ project: dir, agent: true })
+  try {
+    await newSession(page.locator('[data-region="session"]'))
+    await addCard(page, { kind: 'decision', text: 'Power: USB-C' })
+    await say(page, 'say noted')
+    // The first time the Brief is looked at, nothing in it is new.
+    await expect.poll(() => existsSync(join(dir, '.pino', 'brief', 'seen.json'))).toBe(true)
+    await tab(page, 'Schematic').click()
+    await addCard(page, { kind: 'question', text: 'Case: which enclosure?' })
+    await tab(page, 'Brief').click()
+    await expect(brief(page).locator('.brief-band')).toContainText('New since you looked: prompt 3')
+    await expect(node(page, 3).locator('.brief-newpill')).toHaveText('new')
+    // What was seen before is folded to one line, and shown again when asked.
+    await expect(node(page, 1)).toHaveCount(0)
+    await brief(page).getByRole('button', { name: 'Show them' }).click()
+    await expect(node(page, 1).locator('.brief-newpill')).toHaveCount(0)
+    await brief(page).getByRole('button', { name: 'Mark as seen' }).click()
+    await expect(brief(page).locator('.brief-newpill')).toHaveCount(0)
+    await expect(brief(page).locator('.brief-band')).toHaveCount(0)
+    // Leaving for the page of projects keeps what was on screen as seen.
+    await addCard(page, { kind: 'note', text: 'Silk: a name on it' })
+    await expect(node(page, 4).locator('.brief-newpill')).toHaveText('new')
+    await page.getByRole('button', { name: 'Project blinky' }).click()
+    await page.getByRole('menuitem', { name: 'All projects' }).click()
+    await page.getByRole('main', { name: 'All projects' }).getByRole('button', { name: 'blinky' }).click()
+    await expect(brief(page).locator('[data-card="C3"]')).toBeVisible()
+    await expect(brief(page).locator('.brief-newpill')).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
+test('Check stock again fills the reading and is not new since you looked', async () => {
+  const dir = tempProject('blinky')
+  const first = await launch({ project: dir, agent: true, env: { FAKE_KERNEL_SERVE: '3', FAKE_KERNEL_PARTS: 'offline' } })
+  try {
+    await newSession(first.page.locator('[data-region="session"]'))
+    await addCard(first.page, { kind: 'part', lcsc: 'C25804', text: 'Pull-up: 10k' })
+    await expect(brief(first.page).locator('[data-card="C1"]')).toContainText('(from 2026-11-20: jlcsearch could not be reached)')
+    // Leaving the tab keeps it as seen.
+    await tab(first.page, 'Schematic').click()
+    await expect.poll(() => existsSync(join(dir, '.pino', 'brief', 'seen.json'))).toBe(true)
+  } finally {
+    await first.app.close()
+  }
+  const { app, page } = await launch({ project: dir, env: { FAKE_KERNEL_SERVE: '3' } })
+  try {
+    await tab(page, 'Brief').click()
+    const card = brief(page).locator('[data-card="C1"]')
+    await card.getByRole('button', { name: /^C1,/ }).click()
+    await card.getByRole('button', { name: 'Check stock again' }).click()
+    await expect(card).toContainText('basic · 0603 · stock 1,234,567 · $0.0024 each (checked 2026-11-26)')
+    await expect(brief(page).locator('.brief-newpill')).toHaveCount(0)
+    await expect(brief(page).locator('.brief-band')).toHaveCount(0)
+    expect(cardsFile(dir).cards[0]).not.toHaveProperty('was')
+  } finally {
+    await app.close()
+  }
+})
+
+test("a part of the person's own has its stock checked from their words, and a lookup that fails says why", async () => {
+  const dir = tempProject('blinky')
+  writeCards(dir, [{ id: 'C1', kind: 'part', by: 'person', text: 'pull-up', part: { lcsc: 'C25804' } }])
+  const { app, page } = await launch({ project: dir, env: { FAKE_KERNEL_SERVE: '2' } })
+  try {
+    const row = part(page, 'In your words').locator('[data-card="C1"]')
+    await expect(row).toContainText('C25804 · stock not checked')
+    await row.hover()
+    await row.getByRole('button', { name: 'Check stock again' }).click()
+    await expect(brief(page).locator('.brief-problem')).toContainText('The engine is too old for parts')
+    expect(cardsFile(dir).cards[0].part).toEqual({ lcsc: 'C25804' })
   } finally {
     await app.close()
   }

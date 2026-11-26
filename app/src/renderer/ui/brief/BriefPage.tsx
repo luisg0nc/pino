@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { type Card, fabText } from '../../../shared/cards'
-import { briefSections, briefWords, handOf, referenceNotes, sizeAgainst } from '../../../shared/brief'
+import { type Card, fabText, readingOrder } from '../../../shared/cards'
+import { type Seen, briefSections, briefSpine, briefWords, freshCards, handOf, promptsSaid, referenceNotes, sizeAgainst, spineSaid, whenSaid } from '../../../shared/brief'
 import type { PromptRow } from '../../../shared/chat'
 import type { SizeFact } from '../../../shared/size'
 import { cardsActions, useCards } from '../../state/cards'
+import { useStore } from '../../state/store'
 import { useViewModel } from '../../state/viewModel'
+import { usePrompts } from '../chat/usePrompts'
+import { numbered } from '../numbered'
 import { FabBlock } from '../route/FabBlock'
-import { addNote, addRule, addSize, editSize, editText, removeCard, restoreCard } from './ops'
+import { type CardActs, Spine } from './Spine'
+import { addNote, addRule, addSize, adoptCard, editSize, editText, removeCard, restockCard, restoreCard } from './ops'
 import { PictureView } from './PictureView'
 import { type Acts, PictureTile, ReferenceLine, RuleRow, SizeRow, YourRow } from './Rows'
 import { BriefWords } from './BriefWords'
@@ -31,8 +35,35 @@ function Pen() {
 
 type Adding = 'size' | 'rule' | 'note' | null
 
-/** The prompts a card's hand is numbered by. */
-const NO_PROMPTS: ReadonlyMap<string, PromptRow> = new Map()
+/**
+ * What is new since the person looked (#340): what main kept when the Brief was last on screen, read once as the page
+ * opens; a project with none has nothing new, and is kept now. Leaving the page keeps what it showed.
+ */
+function useSince(projectId: string | null): [Seen | null, (seen: Seen) => void] {
+  const [since, setSince] = useState<{ of: string; seen: Seen } | null>(null)
+  useEffect(() => {
+    if (projectId === null) return
+    let live = true
+    // Only a page that has read what was seen marks it seen when it goes: a mount undone at once (React's StrictMode in
+    // development) would otherwise mark everything seen before the page read it.
+    let read = false
+    window.pino.cards.seen(projectId).then(
+      (seen) => {
+        if (!live) return
+        read = true
+        cardsActions.looking(projectId)
+        if (seen !== null) setSince({ of: projectId, seen })
+        else void window.pino.cards.markSeen(projectId).then((now) => live && setSince({ of: projectId, seen: now }), () => {})
+      },
+      () => {}
+    )
+    return () => {
+      live = false
+      if (read) void cardsActions.leaveBrief()
+    }
+  }, [projectId])
+  return [since !== null && since.of === projectId ? since.seen : null, (seen) => projectId !== null && setSince({ of: projectId, seen })]
+}
 
 export function BriefPage() {
   const projectId = useCards((s) => s.projectId)
@@ -48,7 +79,26 @@ export function BriefPage() {
   const sections = useMemo(() => (file ? briefSections(file) : null), [file])
   const words = useMemo(() => (brief ? briefWords(brief) : ''), [brief])
   const notes = useMemo(() => (brief ? referenceNotes(brief) : new Map<string, string>()), [brief])
-  const prompts = NO_PROMPTS
+  // The project's prompts, numbered across its conversations: asked again when a card names another prompt, and when the
+  // session moves on, since a prompt's own line may reach its log after the card it wrote.
+  const status = useStore((s) => s.session?.status ?? '')
+  const turnsKey = useMemo(() => (file?.cards ?? []).map((c) => c.turn?.prompt ?? c.from?.turn?.prompt ?? '').join(','), [file])
+  const rows = usePrompts(projectId !== null, `${turnsKey} ${status}`)
+  const prompts = useMemo(() => new Map((rows ?? []).map((r): [string, PromptRow] => [r.id, r])), [rows])
+  const nodes = useMemo(() => (file ? briefSpine(readingOrder(file.cards), prompts) : []), [file, prompts])
+  const spineCards = useMemo(() => nodes.flatMap((n) => n.cards), [nodes])
+  const [since, setSince] = useSince(projectId)
+  const [unfolded, setUnfolded] = useState(false)
+  const fresh = useMemo(() => freshCards(nodes, since), [nodes, since])
+  const freshNodes = useMemo(() => new Set(nodes.filter((n) => n.cards.some((c) => fresh.has(c.id))).map((n) => n.id)), [nodes, fresh])
+  // What a new card said before stays on show, struck where it was written: it is part of what is new.
+  const kept = nodes.filter((n) => freshNodes.has(n.id) || n.ghosts.some((g) => fresh.has(g.card)))
+  const seenNodes = nodes.filter((n) => !kept.includes(n))
+  const folded = freshNodes.size > 0 && !unfolded && seenNodes.length > 0
+  const newPrompts = nodes.filter((n) => freshNodes.has(n.id) && n.prompt).map((n) => n.prompt!.number)
+  const [pointed, setPointed] = useState<string | null>(null)
+  /** The card made the person's a moment ago, while it is edited (#339). */
+  const [justMine, setJustMine] = useState<string | null>(null)
   const outline = model?.board.box
   const box = useMemo(() => (outline ? { w: outline.x1 - outline.x0, h: outline.y1 - outline.y0 } : null), [outline])
 
@@ -85,11 +135,57 @@ export function BriefPage() {
   // The words of a card of Claude's are not the person's to change.
   const acts = (card: Card, what: string): Acts => ({
     ...(card.by === 'person' && card.kind !== 'fab' ? { onEdit: () => edit(card.id) } : {}),
+    ...(card.part?.lcsc !== undefined ? { onRestock: () => void restockCard(id, card.id) } : {}),
     onRemove: () => void remove(card, what)
   })
   const done = (): void => {
     setAdding(null)
     setEditing(null)
+    setJustMine(null)
+  }
+  const markSeen = (): void => {
+    void window.pino.cards.markSeen(id).then((now) => {
+      setSince(now)
+      setUnfolded(false)
+    }, (e: unknown) => cardsActions.say(e instanceof Error ? e.message : String(e)))
+  }
+  // A card may stand on the spine and in a table too: its form opens only where the person asked for it.
+  const onSpine = (card: Card): string => `spine:${card.id}`
+  const spineActs = (card: Card): CardActs => {
+    const { onEdit, ...rest } = acts(card, card.size?.what ?? 'the card')
+    return {
+      ...rest,
+      ...(onEdit ? { onEdit: () => edit(onSpine(card)) } : {}),
+      // Make it yours (#339): the card becomes the person's and is edited where it stands.
+      ...(card.by === 'agent'
+        ? {
+            onAdopt: () =>
+              void adoptCard(id, card.id).then((ok) => {
+                if (!ok) return
+                setPointed(null)
+                edit(onSpine(card))
+                setJustMine(card.id)
+              })
+          }
+        : {})
+    }
+  }
+  /** The form that takes a spine card's place while the person edits it. */
+  const editingOf = (card: Card) => {
+    if (editing !== onSpine(card)) return undefined
+    const wrote = handOf(card, prompts).label.replace(/^Yours, from /, '')
+    const note = (
+      <>
+        Yours now, so you can change it. Claude is told at the next prompt.
+        {card.from && (
+          <>
+            {' '}
+            {justMine === card.id ? 'Made yours just now. ' : ''}Claude wrote it in {numbered(wrote === 'Yours, from Claude' ? 'an earlier prompt' : wrote)}.
+          </>
+        )}
+      </>
+    )
+    return card.kind === 'size' ? <SizeForm was={card.size} onKeep={keepSize(card)} onCancel={done} note={note} /> : <TextForm initial={card.text} label="Words" onKeep={keepText(card, false)} onCancel={done} note={note} />
   }
   const keepSize = (card: Card | null) => async (size: SizeFact): Promise<void> => {
     if (await (card ? editSize(id, card.id, size) : addSize(id, size))) done()
@@ -119,6 +215,20 @@ export function BriefPage() {
               </button>
             </p>
           )}
+        </div>
+      )}
+
+      {freshNodes.size > 0 && since !== null && (
+        <div className="brief-band" role="status">
+          <span className="brief-fresh-dot" />
+          <span>
+            <b>{numbered(newPrompts.length > 0 ? `New since you looked: ${promptsSaid(newPrompts)}` : 'New since you looked')}</b>
+            <span className="brief-band-when">, {numbered(whenSaid(Date.parse(since.at)))}</span>
+          </span>
+          <span className="grow" />
+          <button type="button" className="button button-quiet brief-small" onClick={markSeen}>
+            Mark as seen
+          </button>
         </div>
       )}
 
@@ -169,8 +279,33 @@ export function BriefPage() {
       <section className="brief-voices" aria-label="What Claude wrote down">
         <div className="brief-block-head">
           <h2>What Claude wrote down</h2>
+          {spineCards.length > 0 && <span className="brief-said">by the prompt that wrote it: {numbered(spineSaid(spineCards))}</span>}
         </div>
-        <p className="brief-by">Claude has written nothing down yet.</p>
+        {nodes.length === 0 ? (
+          <p className="brief-by">Claude has written nothing down yet.</p>
+        ) : (
+          <Spine
+            projectId={id}
+            nodes={folded ? kept : nodes}
+            fresh={freshNodes}
+            freshCards={fresh}
+            before={
+              folded ? (
+                <li className="brief-node brief-fold">
+                  <span>Seen before: {numbered(spineSaid(seenNodes.flatMap((n) => n.cards)))}.</span>
+                  <button type="button" className="button button-quiet brief-small" onClick={() => setUnfolded(true)}>
+                    Show them
+                  </button>
+                </li>
+              ) : undefined
+            }
+            prompts={prompts}
+            pointed={pointed}
+            onPoint={setPointed}
+            actsOf={spineActs}
+            editingOf={editingOf}
+          />
+        )}
       </section>
 
       <section className="brief-block" aria-label="Size and shape">
@@ -209,7 +344,7 @@ export function BriefPage() {
         </div>
         {(sections.rules.length > 0 || adding === 'rule') && (
           <div className="brief-ledger">
-            {sections.rules.map((c) => (editing === c.id ? <TextForm key={c.id} initial={c.text} label="Rule" onKeep={keepText(c, true)} onCancel={done} /> : <RuleRow key={c.id} projectId={id} card={c} acts={acts(c, 'the rule')} hand={handOf(c, prompts)} />))}
+            {sections.rules.map((c) => (editing === c.id && !spineCards.includes(c) ?<TextForm key={c.id} initial={c.text} label="Rule" onKeep={keepText(c, true)} onCancel={done} /> : <RuleRow key={c.id} projectId={id} card={c} acts={acts(c, 'the rule')} hand={handOf(c, prompts)} />))}
             {adding === 'rule' && <TextForm label="New rule" onKeep={keepText(null, true)} onCancel={done} />}
           </div>
         )}
@@ -219,7 +354,7 @@ export function BriefPage() {
         <div className="brief-block-head">
           <h2>Fab</h2>
         </div>
-        {sections.fab?.fab && <p className="brief-asked-fab">{`You asked for ${fabText(sections.fab.fab)}`}</p>}
+        {sections.fab?.fab ? <p className="brief-asked-fab">{`You asked for ${fabText(sections.fab.fab)}`}</p> : <p className="brief-by">Nothing is asked of the fab on a card.</p>}
         <FabBlock />
       </section>
 

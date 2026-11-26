@@ -50,12 +50,19 @@ export function Words({ projectId, card, text = card.text ?? '' }: { projectId: 
 export interface Acts {
   onEdit?: () => void
   onRemove: () => void
+  /** A part with an LCSC number: its stock is looked up again. */
+  onRestock?: () => void
 }
 
 /** Edit, where the card's words are the person's to change, and Remove. `what` says which card, to whoever does not see where they stand. */
 function Buttons({ acts, what }: { acts: Acts; what: string }) {
   return (
     <span className="brief-acts">
+      {acts.onRestock && (
+        <button type="button" className="link-button" onClick={acts.onRestock}>
+          Check stock again
+        </button>
+      )}
       {acts.onEdit && (
         <button type="button" className="link-button" aria-label={`Edit ${what}`} onClick={acts.onEdit}>
           Edit

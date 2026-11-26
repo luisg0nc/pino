@@ -52,8 +52,17 @@ A project's **Brief** is two things: `brief.md`, the person's own words, and the
   `look` there draws the board unless it asks for a tab (`lookTab`).
 - Sections, in order: **In your words** (`brief.md` formatted, without its `# name` line and `## References`; the
   photos, doodles and PDFs of `reference/` beside it with their notes from that list; the person's cards by frame),
-  **What Claude wrote down**, **Size and shape** (every size; beside one named `Board width` or `Board height`, what
+  **What Claude wrote down** (its cards on a spine of the prompts that wrote them, `briefSpine`; see below),
+  **Size and shape** (every size; beside one named `Board width` or `Board height`, what
   the build on show measures, marked past 0.05 mm: the board file is the truth, the card what was asked for), **Rules**
   and **Fab** (what the person asked, above the fab's limits).
+- **The spine** (`ui/brief/Spine.tsx`): a node a prompt, "Prompt <n> · <time>", with what the person said in it; a
+  card Claude changed shows its old words struck in the node of the prompt that wrote them. Cards with no prompt are
+  one node first ("Before pino kept the prompt"). Pointing at a card (its id) gives "Make it yours", "Remove" and, on a
+  part, "Check stock again" (a person's part has it in its row). A card made the person's is edited where it stands.
+- **New since you looked** (#340): what main kept in `seen.json` when the Brief was last on screen, read as the page
+  opens (a first time: nothing is new, and it is kept). Leaving the tab marks seen; leaving the project does too, which
+  `App.tsx` asks for (`cardsActions.leaveBrief`) before main is told to close it, since main takes no mark of a project
+  that is not open. Seen prompts fold to one line, except those that hold old words of a new card.
 - The window is given no path and no address: it names a file of `reference/` that main lists, or a link by its card
   and place (`cards/references.ts`), and main opens only `http` and `https`, nothing under test.

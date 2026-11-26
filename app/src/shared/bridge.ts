@@ -2,7 +2,8 @@
 
 import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { CardsFile, PersonChange } from './cards'
-import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
+import type { Seen } from './brief'
+import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode, PromptRow } from './chat'
 import type { FabProfile, FabState, Readiness } from './fab'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
@@ -78,6 +79,8 @@ export interface PinoBridge {
     setModel(sessionId: string, model: string): Promise<void>
     setMode(sessionId: string, mode: Mode): Promise<void>
     setEffort(sessionId: string, effort: Effort): Promise<void>
+    /** The open project's prompts, oldest first, numbered across all its conversations. */
+    prompts(projectId: string): Promise<PromptRow[]>
     /** The models a session can be started on before it has said its own. */
     models(): Promise<ChatModel[]>
     /** An item of the transcript was added or changed. One whose `seq` is not above that of the history asked for before holds nothing new. */
@@ -147,6 +150,12 @@ export interface PinoBridge {
     reference(projectId: string, file: string): Promise<{ mediaType: string; bytes: Uint8Array } | null>
     /** Opens in the browser the `nth` web address of a card, or of `brief.md` when `cardId` is `brief`. */
     openLink(projectId: string, cardId: string, nth?: number): Promise<void>
+    /** What the person had seen of Claude's cards when they last had the Brief on screen; null for a first time. */
+    seen(projectId: string): Promise<Seen | null>
+    /** The person has seen the Brief as it is now. */
+    markSeen(projectId: string): Promise<Seen>
+    /** Has main look a part card's number up again and keep the new reading. Rejects with why the stock was not checked. */
+    restock(projectId: string, cardId: string): Promise<CardsFile>
     onChanged(cb: (m: { projectId: string; file: CardsFile }) => void): () => void
     onBriefChanged(cb: (m: { projectId: string }) => void): () => void
   }

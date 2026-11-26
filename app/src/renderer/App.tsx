@@ -4,7 +4,7 @@ import type { ProjectInfo } from '../shared/project'
 import type { WorkspaceInfo } from '../shared/workspace'
 import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
-import { connectCards } from './state/cards'
+import { cardsActions, connectCards } from './state/cards'
 import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
 import { useKeepThumb } from './state/keepThumb'
 import { actions, store, useStore } from './state/store'
@@ -165,6 +165,8 @@ export function App() {
     setBusy(true)
     actions.problem(null)
     try {
+      // The project may be left by what is asked: a Brief on screen is marked seen while main still holds it open.
+      if (store.getState().tab === 'brief') await cardsActions.leaveBrief()
       await ask()
     } catch (e) {
       say(why(what, e))

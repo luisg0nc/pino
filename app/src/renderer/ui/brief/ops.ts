@@ -1,4 +1,4 @@
-import type { PersonChange } from '../../../shared/cards'
+import type { CardsFile, PersonChange } from '../../../shared/cards'
 import type { SizeFact } from '../../../shared/size'
 import { cardsActions } from '../../state/cards'
 
@@ -7,10 +7,10 @@ import { cardsActions } from '../../state/cards'
 
 const wordsOf = (error: unknown): string => (error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']*': (?:Error: )?/, '') : String(error))
 
-/** One change of main's: the cards it answers with are the page's. Whether it took it, with why not said on the page. */
-async function ask(projectId: string, change: PersonChange): Promise<boolean> {
+/** What main answers with is the page's. Whether it took it, with why not said on the page. */
+async function took(projectId: string, asked: Promise<CardsFile>): Promise<boolean> {
   try {
-    const next = await window.pino.cards.change(projectId, change)
+    const next = await asked
     cardsActions.say(null)
     cardsActions.setFile(projectId, next)
     return true
@@ -19,6 +19,15 @@ async function ask(projectId: string, change: PersonChange): Promise<boolean> {
     return false
   }
 }
+
+/** One change of the person's, asked of main. */
+const ask = (projectId: string, change: PersonChange): Promise<boolean> => took(projectId, window.pino.cards.change(projectId, change))
+
+/** A card of Claude's made the person's own (#339): main keeps who wrote it. */
+export const adoptCard = (projectId: string, id: string): Promise<boolean> => ask(projectId, { op: 'adopt', id })
+
+/** A part's stock looked up again: main's own fields, which are no change of anyone's words. */
+export const restockCard = (projectId: string, id: string): Promise<boolean> => took(projectId, window.pino.cards.restock(projectId, id))
 
 export const addNote = (projectId: string, text: string): Promise<boolean> => ask(projectId, { op: 'add', kind: 'note', text })
 export const addRule = (projectId: string, text: string): Promise<boolean> => ask(projectId, { op: 'add', kind: 'rule', text })

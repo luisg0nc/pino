@@ -33,7 +33,24 @@ function sharing(prev: CardsFile | null, next: CardsFile): CardsFile {
 
 const isOpen = (projectId: string): boolean => cardsStore.getState().projectId === projectId
 
+/** The project whose Brief is on screen, once the page has read what was seen of it before. */
+let looking: string | null = null
+
 export const cardsActions = {
+  /** The page has read what was seen before: from here on, leaving it keeps what it shows as seen. */
+  looking(projectId: string): void {
+    looking = projectId
+  },
+
+  /**
+   * The Brief is about to leave the screen: what it shows has been seen (#340). Asked when the tab is left, and before
+   * main is asked to leave the project, which it takes no mark of afterwards. Never rejects.
+   */
+  async leaveBrief(): Promise<void> {
+    if (looking === null) return
+    await window.pino.cards.markSeen(looking).catch(() => {})
+  },
+
   /** Main's cards of a project; those of one that is not open are let go. */
   setFile(projectId: string, file: CardsFile): void {
     if (isOpen(projectId)) cardsStore.setState({ file: sharing(cardsStore.getState().file, file) })
@@ -47,6 +64,7 @@ export const cardsActions = {
 
   /** Another project is open, or none: its Brief is read. What cannot be read is left out, and the next change main tells of tries again. */
   async load(projectId: string | null): Promise<void> {
+    if (looking !== projectId) looking = null
     cardsStore.setState({ ...NONE, projectId }, true)
     if (projectId === null) return
     await Promise.all([
