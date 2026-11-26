@@ -1,0 +1,326 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://pino.invalid/schema/release-result-1.schema.json",
+ "title": "pino release result",
+ "description": "What `pino-kernel release` answers (pino_kernel.release.result.ReleaseResult).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "kernel_version",
+  "state",
+  "version",
+  "previous",
+  "bump",
+  "why",
+  "build",
+  "route",
+  "folder",
+  "files",
+  "counts",
+  "findings",
+  "truncated",
+  "headline",
+  "timings"
+ ],
+ "properties": {
+  "schema": {
+   "const": "pino.release/1"
+  },
+  "kernel_version": {
+   "type": "string"
+  },
+  "state": {
+   "enum": [
+    "released",
+    "unchanged",
+    "refused",
+    "failed",
+    "cancelled",
+    "busy"
+   ]
+  },
+  "version": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "previous": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "bump": {
+   "enum": [
+    "patch",
+    "minor",
+    "major",
+    null
+   ]
+  },
+  "why": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "build": {
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "number",
+      "hash"
+     ],
+     "properties": {
+      "number": {
+       "type": "integer"
+      },
+      "hash": {
+       "type": "string"
+      }
+     }
+    }
+   ]
+  },
+  "route": {
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "number",
+      "key"
+     ],
+     "properties": {
+      "number": {
+       "type": [
+        "integer",
+        "null"
+       ]
+      },
+      "key": {
+       "type": "string"
+      }
+     }
+    }
+   ]
+  },
+  "folder": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "files": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "path",
+     "bytes",
+     "sha256"
+    ],
+    "properties": {
+     "path": {
+      "type": "string",
+      "pattern": "^fab/v"
+     },
+     "bytes": {
+      "type": "integer"
+     },
+     "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+     }
+    }
+   }
+  },
+  "counts": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "assembled",
+    "bom_lines",
+    "hand_fit",
+    "dnp",
+    "basic",
+    "preferred",
+    "extended",
+    "easyeda",
+    "gerbers",
+    "drills"
+   ],
+   "properties": {
+    "assembled": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "bom_lines": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "hand_fit": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "dnp": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "basic": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "preferred": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "extended": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "easyeda": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "gerbers": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "drills": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  },
+  "findings": {
+   "type": "array",
+   "maxItems": 200,
+   "items": {
+    "$ref": "#/$defs/finding"
+   }
+  },
+  "truncated": {
+   "type": "integer",
+   "minimum": 0
+  },
+  "headline": {
+   "type": "string",
+   "maxLength": 160
+  },
+  "timings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "step",
+     "seconds"
+    ],
+    "properties": {
+     "step": {
+      "type": "string"
+     },
+     "seconds": {
+      "type": "number",
+      "minimum": 0
+     },
+     "cached": {
+      "type": "boolean"
+     }
+    }
+   }
+  }
+ },
+ "$defs": {
+  "finding": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "source",
+    "code",
+    "severity",
+    "message"
+   ],
+   "properties": {
+    "source": {
+     "type": "string"
+    },
+    "code": {
+     "type": "string"
+    },
+    "severity": {
+     "enum": [
+      "error",
+      "warning",
+      "info"
+     ]
+    },
+    "message": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "at": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "space"
+     ],
+     "properties": {
+      "space": {
+       "enum": [
+        "board",
+        "sheet",
+        "source"
+       ]
+      },
+      "x": {
+       "type": "number"
+      },
+      "y": {
+       "type": "number"
+      },
+      "layer": {
+       "type": "string"
+      },
+      "file": {
+       "type": "string"
+      },
+      "line": {
+       "type": "integer"
+      }
+     }
+    },
+    "refs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "pins": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "nets": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

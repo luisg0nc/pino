@@ -286,6 +286,28 @@ def _with_routing(result: BuildResult, routing: dict | None, project: Path) -> B
     return result
 
 
+SOURCE_SUFFIXES = (".py", ".json")
+NOT_SOURCES = ("fab", "reference", "__pycache__", "node_modules")
+
+
+def sources_digest(project: Path) -> str:
+    """A digest of what a build can read from the project: its Python and JSON files, outside pino's own folders,
+    fab/ and reference/."""
+    project = Path(project)
+    h = hashlib.sha256()
+    for root, folders, names in os.walk(project):
+        folders[:] = sorted(d for d in folders if not d.startswith(".") and d not in NOT_SOURCES)
+        for name in sorted(names):
+            if name.endswith(SOURCE_SUFFIXES) and not name.startswith("."):
+                path = Path(root) / name
+                try:
+                    data = path.read_bytes()
+                except OSError:
+                    continue
+                h.update(f"{path.relative_to(project).as_posix()}\0{hashlib.sha256(data).hexdigest()}\0".encode())
+    return h.hexdigest()
+
+
 def _stored_poses(build_folder: Path) -> dict:
     try:
         doc = json.loads((build_folder / "placement.json").read_text(encoding="utf-8"))
@@ -314,6 +336,7 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
     history = History(project)
     number = history.next_number()
     clock = _Clock()
+    sources = sources_digest(project)  # taken before board.py runs, so a save during the build shows
 
     def timings():
         return [clock.times[s] for s in ORDER if s in clock.times]
@@ -324,7 +347,7 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
     except LibrariesNotFound as e:
         f = Finding("kernel", "libraries_not_found", "error", str(e))
         result = _failed(number, "KiCad's libraries were not found", [f], timings(), None)
-        history.record(number, None, "failed")
+        history.record(number, None, "failed", sources)
         return result
 
     cli_argv = KicadCli.find() if options.kicad else None
@@ -343,7 +366,7 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
         where = f" at line {first.line}" if first and first.line else ""
         text = f"board.py failed{where}: {first.message}" if first else "board.py failed"
         result = _failed(number, text, findings, timings(), kicad_version)
-        history.record(number, None, "failed")
+        history.record(number, None, "failed", sources)
         return result
     circuit = run.circuit
     circuit_json = circuit.to_json()
@@ -385,7 +408,7 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
             stored.timings = [t for t in stored.timings if t.step not in last]
             stored.timings += [clock.times[s] for s in last if s in clock.times]
             stored = _with_parts(stored, found)
-            history.record(number, digest, stored.verdict)
+            history.record(number, digest, stored.verdict, sources)
             return _with_routing(stored, routing, project)
 
     tmp = build_dir / f"{digest}.tmp-{os.getpid()}-{threading.get_ident()}"
@@ -393,18 +416,18 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
     tmp.mkdir(parents=True)
     try:
         return _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs, symbols, footprints,
-                           cli, kicad_version, options, clock, timings, history, prev, prev_pcb, run.log, client)
+                           cli, kicad_version, options, clock, timings, history, prev, prev_pcb, run.log, client, sources)
     finally:
         _remove(tmp)
 
 
 def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs, symbols, footprints, cli,
-                kicad_version, options, clock, timings, history, prev, prev_pcb, log, client) -> BuildResult:
+                kicad_version, options, clock, timings, history, prev, prev_pcb, log, client, sources) -> BuildResult:
     findings: list[Finding] = []
 
     def fail(text, more):
         result = _failed(number, text, more, timings(), kicad_version)
-        history.record(number, digest, "failed")
+        history.record(number, digest, "failed", sources)
         return result
 
     # -- place
@@ -585,6 +608,6 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
             tmp.replace(final)
         except OSError:
             _remove(tmp)
-    history.record(number, digest, verdict)
+    history.record(number, digest, verdict, sources)
     _prune(history, final.parent, KEEP_BUILDS, digest, prev["hash"] if prev else None)
     return _with_routing(result, routing, project)

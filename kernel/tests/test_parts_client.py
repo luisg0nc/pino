@@ -176,3 +176,13 @@ def test_the_user_agent_names_only_pino(monkeypatch):
     with pytest.raises(OfflineError):
         http_transport("https://jlcsearch.tscircuit.com/api/search?q=C1", 1.0)
     assert seen == {"User-agent": f"pino-kernel/{__version__}"}
+
+
+def test_a_refresh_asks_again_even_when_the_cache_is_fresh(recorded, parts_cache):
+    t = RecordedTransport(recorded)
+    c = Jlcsearch(t, parts_cache)
+    c.parts(["C25804", "C99999999"])
+    calls = len(t.calls)
+    assert c.parts(["C25804", "C99999999"]) and len(t.calls) == calls
+    c.parts(["C25804", "C99999999"], max_age=timedelta(0))
+    assert len(t.calls) == calls + 2

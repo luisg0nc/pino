@@ -68,10 +68,12 @@ class History:
                     b["hash"] = hash
             self._write(builds)
 
-    def record(self, number: int, hash: str | None, verdict: str) -> None:
+    def record(self, number: int, hash: str | None, verdict: str, sources: str | None = None) -> None:
+        """`sources` is the digest of the files this build read, so release can tell they changed since."""
         with self._locked():
             builds = [b for b in self._read() if b.get("number") != number]
-            builds.append({"number": number, "hash": hash, "verdict": verdict, "at": self._now()})
+            entry = {"number": number, "hash": hash, "verdict": verdict, "at": self._now()}
+            builds.append({**entry, "sources": sources} if sources else entry)
             builds.sort(key=lambda b: b.get("number", 0))
             self._write(builds)
 

@@ -12,6 +12,7 @@
     pino-kernel keep <project> --net N
     pino-kernel parts search <text> [--package P] [--basic] [--preferred] [--limit N] [--events]
     pino-kernel parts get <LCSC> | fetch <LCSC>... | refresh <project> [--events]
+    pino-kernel release <project> [--patch | --minor | --major] [--dry-run] [--offline] [--events]
 
 `build` prints one build result (schema pino.build/1) on stdout and exits 0 for ok, 1 for errors,
 2 for failed. `serve` reads one JSON request per stdin line and answers one JSON object per stdout
@@ -19,6 +20,9 @@ line (see serve.py). `route` prints one route result (schema pino.route/1), or w
 progress event per line and last {"event": "done", "result": ...}; it exits 0 ok, 1 errors, 2 failed,
 timed out or busy, 130 cancelled. `parts` prints one parts result (schema pino.parts/1), or with --events
 {"event": "done", "result": ...}; it exits 0, or 2 when jlcsearch could not answer and nothing was cached.
+`release` writes fab/v<version>/ and prints one release result (schema pino.release/1); with --dry-run it prints
+what stands in the way and writes nothing. It exits 0 released or unchanged, 1 refused, 2 failed or busy, 130
+cancelled; SIGTERM and SIGINT cancel.
 Logs go to stderr; nothing else is written to stdout.
 """
 
@@ -189,6 +193,36 @@ def _parts(args) -> int:
     return code
 
 
+def _release(args) -> int:
+    import signal
+    import threading
+
+    from .release.job import ReleaseOptions, readiness, release_project
+
+    if args.dry_run:
+        status = readiness(args.project, network=not args.offline)
+        sys.stdout.write(json.dumps(status.to_json(), indent=1, sort_keys=True, ensure_ascii=False) + "\n")
+        return 0 if status.ready else 1
+    cancel = threading.Event()
+    signal.signal(signal.SIGTERM, lambda s, f: cancel.set())
+    signal.signal(signal.SIGINT, lambda s, f: cancel.set())
+
+    def emit(event: dict) -> None:
+        if args.events:
+            sys.stdout.write(json.dumps(event, ensure_ascii=False) + "\n")
+            sys.stdout.flush()
+
+    bump = "patch" if args.patch else "minor" if args.minor else "major" if args.major else None
+    result = release_project(args.project, ReleaseOptions(bump=bump, network=not args.offline), events=emit,
+                             cancel=cancel)
+    if args.events:
+        emit({"event": "done", "result": result.to_dict()})
+    else:
+        sys.stdout.write(result.to_json())
+        sys.stdout.flush()
+    return {"released": 0, "unchanged": 0, "refused": 1, "cancelled": 130}.get(result.state, 2)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pino-kernel", description="pino's engine: board.py to a KiCad project")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -235,9 +269,22 @@ def main(argv: list[str] | None = None) -> int:
     kp.add_argument("project", type=Path)
     kp.add_argument("--net", required=True)
     _parts_arguments(sub.add_parser("parts", help="look up JLC parts: stock, price, basic or extended"))
+    rl = sub.add_parser("release", help="write JLC's fab files into fab/v<version>/")
+    rl.add_argument("project", type=Path)
+    bumps = rl.add_mutually_exclusive_group()
+    for part in ("patch", "minor", "major"):
+        bumps.add_argument(f"--{part}", action="store_true", help=f"call the release a {part} one")
+    rl.add_argument("--dry-run", action="store_true", help="say whether a release would go through; write nothing")
+    rl.add_argument("--offline", action="store_true", help="look no parts up; use what the parts cache holds")
+    rl.add_argument("--events", action="store_true", help="print each step, then the result, one JSON per line")
     args = parser.parse_args(argv)
     if args.command == "parts":
         return _parts(args)
+    if args.command == "release":
+        if not args.project.is_dir():
+            print(f"pino-kernel: no project folder at {args.project}", file=sys.stderr)
+            return 2
+        return _release(args)
     if args.command in ("route-net", "nudge", "keep"):
         if not args.project.is_dir():
             print(f"pino-kernel: no project folder at {args.project}", file=sys.stderr)

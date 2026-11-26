@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import timedelta
 from pathlib import Path
 from typing import Sequence
 
@@ -139,11 +140,7 @@ def run_parts(action: str, *, q: str | None = None, lcsc: Sequence[str] | None =
         if action == "refresh":
             result.query = {"project": Path(project).name}
             numbers = _project_numbers(Path(project))
-            lookups = {}
-            if numbers:
-                # a refresh asks again: forget how young the cache is
-                client.cache.fresh = lambda _lcsc: None
-                lookups = client.parts(numbers, budget=LOOKUP_BUDGET)
+            lookups = client.parts(numbers, budget=LOOKUP_BUDGET, max_age=timedelta(0))
         else:
             numbers = [normalize_lcsc(n) for n in lcsc or []]
             result.query = {"lcsc": numbers}

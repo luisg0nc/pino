@@ -110,7 +110,7 @@ class Jlcsearch:
         entry = self.cache.stock(lcsc)
         if entry and self.cache.now() - entry[1] < max_age:
             return entry[0]
-        if self.cache.unknown(lcsc):
+        if max_age and self.cache.unknown(lcsc):
             return None
         rows = [r for r in self._rows([("q", lcsc), ("limit", "1")], timeout or self.timeout)
                 if str(r.get("lcsc")) == lcsc[1:]]
@@ -125,18 +125,19 @@ class Jlcsearch:
         entry = self.cache.stock(lcsc)
         return PartLookup(entry[0] if entry else None, False, why)
 
-    def parts(self, lcscs: Sequence[str], *, budget: float = 6.0, workers: int = 8) -> dict[str, PartLookup]:
-        """Many parts at once, within `budget` seconds. What cannot be asked in time comes from the cache,
-        however old, marked with the reason."""
+    def parts(self, lcscs: Sequence[str], *, budget: float = 6.0, workers: int = 8,
+              max_age: timedelta = STOCK_MAX_AGE) -> dict[str, PartLookup]:
+        """Many parts at once, within `budget` seconds; max_age=0 asks again about every one. What cannot be asked
+        in time comes from the cache, however old, marked with the reason."""
         wanted = list(dict.fromkeys(lcscs))
         out: dict[str, PartLookup] = {}
         todo: queue.SimpleQueue = queue.SimpleQueue()
         done: queue.SimpleQueue = queue.SimpleQueue()
         for lcsc in wanted:
-            info = self.cache.fresh(lcsc)
-            if info is not None:
-                out[lcsc] = PartLookup(info, True, None)
-            elif self.cache.unknown(lcsc):
+            entry = self.cache.stock(lcsc)
+            if entry and self.cache.now() - entry[1] < max_age:
+                out[lcsc] = PartLookup(entry[0], True, None)
+            elif max_age and self.cache.unknown(lcsc):
                 out[lcsc] = PartLookup(None, True, None)
             else:
                 todo.put(lcsc)
@@ -151,7 +152,7 @@ class Jlcsearch:
                     return
                 try:
                     left = max(0.5, min(self.timeout, deadline - time.monotonic()))
-                    done.put((lcsc, PartLookup(self.part(lcsc, timeout=left), True, None)))
+                    done.put((lcsc, PartLookup(self.part(lcsc, max_age=max_age, timeout=left), True, None)))
                 except (JlcSearchError, OSError) as e:
                     done.put((lcsc, self._stale(lcsc, str(e))))
 
