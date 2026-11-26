@@ -1226,7 +1226,7 @@ git commit -m "kernel: placer that turns edge, near, side, group and fixed inten
   - `courtyard_overlaps(placed: list[Placed]) -> list[Finding]` (source `courtyard`, code `courtyard_overlap`, error, `at` the centre of the overlap box, `layer` `F.CrtYd` or `B.CrtYd`).
   - `fit_findings(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> list[Finding]` (source `fit`, errors: `outside_outline`, `pad_near_edge`, `in_keepout`, `on_hole`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_path_on_one_net_passes(): assert check_expects(c_path_same_net, n_ok, PADS) == []
@@ -1257,23 +1257,23 @@ def test_fit(fixture_libs, fp_lib): ...                          # part past the
 def test_edge_part_may_cross_on_its_face_only(fixture_libs, fp_lib): ...
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_checks.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write the four checks**
+- [x] **Step 3: Write the four checks**
 
 - `expect_path`, no `through`: every pin of `a` and every pin of `b` sit on one exported net. With `through`: a breadth-first walk where nodes are exported nets and a step crosses one listed part from the net of one of its pins to the net of another; it must reach `b`'s net using only listed parts. The walk reads `netlist.nets` pin sets only; net names are only used in messages.
 - Severity map for both reports: `error` and `warning` as they are; `exclusion` and `ignore` dropped.
 - Courtyards and fit reuse the geometry the placer uses (Task 10); a through-hole part's courtyard counts on both sides.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_checks.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/checks kernel/tests/test_checks.py kernel/tests/fixtures/reports

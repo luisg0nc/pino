@@ -1,0 +1,63 @@
+{
+ "$schema": "https://schemas.kicad.org/erc.v1.json",
+ "coordinate_units": "mm",
+ "kicad_version": "10.0.6",
+ "source": "board.kicad_sch",
+ "included_severities": [
+  "error",
+  "warning"
+ ],
+ "sheets": [
+  {
+   "path": "/",
+   "uuid_path": "/00000000-0000-0000-0000-000000000001",
+   "violations": [
+    {
+     "description": "Input Power pin not driven by any Output Power pins",
+     "severity": "error",
+     "type": "power_pin_not_driven",
+     "items": [
+      {
+       "description": "Symbol U1 Pin 1 [VDD, Power input, Line]",
+       "pos": {
+        "x": 120.65,
+        "y": 50.8
+       },
+       "uuid": "11111111-2222-3333-4444-555555555555"
+      }
+     ]
+    },
+    {
+     "description": "Pin not connected",
+     "severity": "warning",
+     "type": "pin_not_connected",
+     "items": [
+      {
+       "description": "Symbol R9 Pin 2 [Passive, Line]",
+       "pos": {
+        "x": 30.48,
+        "y": 40.64
+       },
+       "uuid": "66666666-7777-8888-9999-000000000000"
+      }
+     ]
+    },
+    {
+     "description": "Excluded on purpose",
+     "severity": "exclusion",
+     "type": "pin_not_connected",
+     "items": [
+      {
+       "description": "Symbol R9 Pin 1",
+       "pos": {
+        "x": 1,
+        "y": 1
+       },
+       "uuid": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
