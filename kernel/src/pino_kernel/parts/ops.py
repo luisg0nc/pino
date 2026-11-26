@@ -11,13 +11,13 @@ from ..findings import Finding
 from ..result import MAX_HEADLINE, cut
 from .cache import PartsCache, parts_root
 from .jlcsearch import Jlcsearch, JlcSearchError, PartLookup
-from .model import PART_SCHEMA, PartInfo, normalize_lcsc
+from .model import PartInfo, normalize_lcsc
+from .resolve import NoMapping, PartNotCached, resolve
 from .transport import transport_from_env
 
 PARTS_SCHEMA = "pino.parts/1"
 ACTIONS = ("search", "get", "fetch", "refresh")
 LOOKUP_BUDGET = 30.0  # seconds for a command that only looks parts up
-assert PART_SCHEMA == "pino.part/1"
 
 
 @dataclass
@@ -69,6 +69,17 @@ def _project_numbers(project: Path) -> list[str]:
         except ValueError:
             continue  # no number, or not a JLC one: the build's checks say so
     return list(dict.fromkeys(found))
+
+
+def _resolved(cache: PartsCache, lcsc: str) -> dict:
+    """What board.py gets when it names only this number."""
+    try:
+        found = resolve(lcsc, cache)
+    except (NoMapping, PartNotCached):
+        return {"lcsc": lcsc, "how": None, "symbol": None, "footprint": None,
+                "notes": ["no KiCad mapping: pass symbol= and footprint= in board.py"]}
+    return {"lcsc": lcsc, "how": found.how, "symbol": found.symbol, "footprint": found.footprint,
+            "notes": found.notes}
 
 
 def _looked_up(result: PartsResult, lookups: dict[str, PartLookup]) -> int:
@@ -145,7 +156,10 @@ def run_parts(action: str, *, q: str | None = None, lcsc: Sequence[str] | None =
         result.findings.append(Finding("parts", "parts_request", "error", str(e)))
         result.headline = f"Parts: {e}"
         return result, 2
-    return result, _looked_up(result, lookups)
+    code = _looked_up(result, lookups)
+    if action in ("get", "fetch"):
+        result.resolved = [_resolved(client.cache, p.lcsc) for p in result.parts]
+    return result, code
 
 
 def parts_argv(req: dict) -> list[str]:

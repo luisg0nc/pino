@@ -142,3 +142,12 @@ def test_cancel_alias_cancels_any_job(routed_project, monkeypatch, tmp_path):
 def test_parts_op_with_missing_or_wrong_fields_says_what_to_send(request_fields, want):
     out = serve([{"id": 1, "op": "parts", **request_fields}, {"id": 2, "op": "shutdown"}])
     assert out[0]["ok"] is False and want in out[0]["error"]
+
+
+def test_cli_fetch_says_how_each_number_maps(recorded_env):
+    r = result_of(run_cli("parts", "fetch", "C900001", "C900002"))
+    assert r["resolved"] == [
+        {"lcsc": "C900001", "how": "kicad-rule", "symbol": "Device:R",
+         "footprint": "Resistor_SMD:R_0603_1608Metric", "notes": []},
+        {"lcsc": "C900002", "how": None, "symbol": None, "footprint": None,
+         "notes": ["no KiCad mapping: pass symbol= and footprint= in board.py"]}]

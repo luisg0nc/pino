@@ -56,6 +56,9 @@ class PartSpec:
     line: int | None = None
     datasheet: str = ""  # the symbol's, carried onto the footprint so DRC's parity check agrees
     description: str = ""
+    hand_fit: bool = False  # soldered by hand: left out of JLC's assembly files
+    why: str = ""  # board.py's reason for choosing this part (an extended part needs one)
+    source: str = "kicad"  # kicad when board.py named the symbol, else how the LCSC number was mapped
 
 
 @dataclass

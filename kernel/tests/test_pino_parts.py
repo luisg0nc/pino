@@ -132,3 +132,105 @@ def test_to_circuit_carries_parts_and_nets(fixture_libs):
 
 def test_to_circuit_is_deterministic(fixture_libs):
     assert small_board().to_circuit().to_json() == small_board().to_circuit().to_json()
+
+
+# --- parts by LCSC number -----------------------------------------------------------------------------------
+
+BY_NUMBER = '''from pino import Board
+b = Board("n", outline=(20, 20))
+r1 = b.block("p").path("R1", lcsc="c900001")
+b.nc(r1[1], r1[2])
+'''
+
+
+def cached(*numbers):
+    """Their recorded jlcsearch answers, put into this test's parts cache (the child process reads it)."""
+    from pino_kernel.parts.cache import PartsCache, parts_root
+    from pino_kernel.parts.jlcsearch import Jlcsearch
+    from pino_kernel.parts.transport import RecordedTransport
+    from helpers import FIXTURES
+
+    client = Jlcsearch(RecordedTransport(FIXTURES / "parts" / "jlcsearch"), PartsCache(parts_root()))
+    for n in numbers:
+        assert client.part(n) is not None
+
+
+@pytest.mark.kicad_libs
+def test_board_py_part_by_number_only(make_project, real_libs):
+    from pino_kernel.run_board import run_board
+
+    cached("C900001")
+    run = run_board(make_project(BY_NUMBER), libraries=real_libs)
+    assert run.problems == [] and run.missing_parts == []
+    p = run.circuit.part("R1")
+    assert (p.symbol, p.footprint, p.value, p.lcsc, p.source) == (
+        "Device:R", "Resistor_SMD:R_0603_1608Metric", "10k", "C900001", "kicad-rule")
+
+
+@pytest.mark.kicad_libs
+def test_explicit_footprint_and_value_still_win(make_project, real_libs):
+    from pino_kernel.run_board import run_board
+
+    cached("C900001")
+    board = BY_NUMBER.replace('lcsc="c900001"', 'value="9k9", lcsc="C900001", footprint="Resistor_SMD:R_0402_1005Metric"')
+    p = run_board(make_project(board), libraries=real_libs).circuit.part("R1")
+    assert (p.footprint, p.value) == ("Resistor_SMD:R_0402_1005Metric", "9k9")
+
+
+def test_missing_part_is_a_problem_with_its_number(make_project, fixture_libs):
+    from pino_kernel.run_board import run_board
+
+    run = run_board(make_project(BY_NUMBER), libraries=fixture_libs)
+    assert run.missing_parts == ["C900001"] and run.problems[0].code == "part_not_cached"
+    assert run.problems[0].line == 3 and run.problems[0].data == {"lcsc": "C900001"}
+    assert "R1: C900001 is not in pino's parts cache yet" in run.problems[0].message
+    assert "symbol=" in run.problems[0].message
+
+
+def test_a_part_with_no_mapping_asks_for_symbol_and_footprint(make_project, fixture_libs):
+    from pino_kernel.run_board import run_board
+
+    cached("C900002")
+    run = run_board(make_project(BY_NUMBER.replace("c900001", "C900002")), libraries=fixture_libs)
+    assert run.missing_parts == [] and [p.code for p in run.problems] == ["part_no_mapping"] and run.problems[0].line == 3
+    assert run.problems[0].message.startswith("R1: pino has no KiCad part for C900002 (SOT-23-5)")
+    assert "symbol='Library:Name' and footprint='Library:Name'" in run.problems[0].message
+
+
+def test_hand_fit_and_why_reach_the_circuit(fixture_libs):
+    b = small_board()
+    r = b.block("x").path("R9", "pino_test:R", "1k", footprint="pino_test:R_0603", lcsc="25804", hand_fit=True,
+                          why="only one in stock")
+    b.nc(r[1], r[2])
+    p = b.to_circuit().part("R9")
+    assert (p.hand_fit, p.why, p.lcsc, p.source) == (True, "only one in stock", "C25804", "kicad")
+    assert b.to_circuit().part("R1").hand_fit is False
+
+
+def test_symbol_none_without_lcsc_is_refused_at_its_line(fixture_libs):
+    b = block()
+    line = inspect.currentframe().f_lineno + 2
+    with pytest.raises(CircuitError, match="U1: pass symbol='Library:Name'") as e:
+        b.path("U1")
+    assert e.value.line == line
+
+
+@pytest.mark.parametrize("kw,match", [
+    ({"lcsc": "R0603"}, "not an LCSC number"),
+    ({"why": "x" * 201}, "why= takes one line of at most 200 characters"),
+    ({"why": "two\nlines"}, "why= takes one line"),
+])
+def test_bad_part_fields_are_refused(fixture_libs, kw, match):
+    with pytest.raises(CircuitError, match=match):
+        block().path("R1", "pino_test:R", "1k", footprint="pino_test:R_0603", **kw)
+
+
+def test_child_reads_only_the_cache(make_project, fixture_libs, monkeypatch, tmp_path):
+    """Even with recorded answers on offer, the child never looks a part up."""
+    from pino_kernel.run_board import run_board
+    from helpers import FIXTURES
+
+    monkeypatch.setenv("PINO_PARTS_RECORDED", str(FIXTURES / "parts" / "jlcsearch"))
+    run = run_board(make_project(BY_NUMBER), libraries=fixture_libs)
+    assert run.missing_parts == ["C900001"]
+    assert not (tmp_path / "pino-cache" / "parts").exists()

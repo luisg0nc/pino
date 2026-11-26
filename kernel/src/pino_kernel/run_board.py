@@ -18,6 +18,7 @@ from .circuit import Circuit, CircuitSchemaError
 from .libraries import Libraries
 
 LOG_TAIL = 4000
+PARTS_ENV = ("PINO_CACHE_DIR", "XDG_CACHE_HOME", "PINO_PARTS_OFFLINE", "PINO_PARTS_RECORDED")
 
 
 @dataclass
@@ -26,6 +27,12 @@ class RunResult:
     problems: list[Problem] = field(default_factory=list)
     log: str = ""
     seconds: float = 0.0
+
+    @property
+    def missing_parts(self) -> list[str]:
+        """LCSC numbers board.py named that the parts cache did not hold."""
+        found = [p.data["lcsc"] for p in self.problems if p.code == "part_not_cached" and p.data]
+        return list(dict.fromkeys(found))
 
 
 def _relative(file: str | None, project: Path) -> str | None:
@@ -44,6 +51,8 @@ def _env(libraries: Libraries, timeout: float) -> dict[str, str]:
     env["PINO_KICAD_SYMBOL_DIR"] = str(libraries.symbols)
     env["PINO_KICAD_FOOTPRINT_DIR"] = str(libraries.footprints)
     env["PINO_KICAD_3DMODEL_DIR"] = str(libraries.models)
+    # where the parts cache is: the child only reads it
+    env.update({k: os.environ[k] for k in PARTS_ENV if k in os.environ})
     return env
 
 
@@ -81,7 +90,8 @@ def run_board(project: Path, *, libraries: Libraries, timeout: float = 30.0, pyt
         last = lines[-1].strip() if lines else f"exit code {proc.returncode}"
         return RunResult(None, [Problem(f"board.py stopped the engine's runner: {last}", "board.py", None)], log, seconds)
     if not data["ok"]:
-        problems = [Problem(p.get("message", ""), _relative(p.get("file"), project), p.get("line"))
+        problems = [Problem(p.get("message", ""), _relative(p.get("file"), project), p.get("line"),
+                            p.get("code") or "board_py", p.get("data"))
                     for p in data.get("problems", [])]
         return RunResult(None, problems, log, seconds)
     try:

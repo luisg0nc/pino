@@ -23,12 +23,14 @@ from pino_kernel.circuit import (
     SCHEMA, BlockSpec, Circuit, Expect, FixedVia, GroupSpec, Intent, Keepout, KeptRoute, NetClassSpec,
     NetSpec, OutlineSpec, PairSpec, PartSpec, PinInfo, PinRef, RouteHint, RouteStep, ZoneSpec, pair_base,
 )
+from pino_kernel.parts.model import normalize_lcsc
 from pino_kernel.sexpr import num
 from pino_kernel.libraries import Libraries, LibrariesNotFound, discover
 from pino_kernel.symbols import Symbol, SymbolLibrary, SymbolNotFound, UnsupportedSymbol
 
 ROLES = ("path", "shunt", "tap", "across")
 SIDES = ("top", "bottom", "left", "right")
+MAX_WHY = 200
 # A net class's own values when board.py leaves them out: comfortable ones, not the least the fab can build.
 CLASS_CLEARANCE, CLASS_VIA_DIAMETER, CLASS_VIA_DRILL = 0.15, 0.6, 0.3
 FORBID = ("tracks", "vias", "pads", "copperpour", "footprints")
@@ -45,6 +47,8 @@ class Problem:
     message: str
     file: str | None = None
     line: int | None = None
+    code: str = "board_py"
+    data: dict | None = None
 
     def __str__(self) -> str:
         where = f"{self.file}:{self.line}: " if self.file and self.line else ""
@@ -83,6 +87,25 @@ def _symbols() -> SymbolLibrary:
     if libs not in _SYMBOL_LIBS:
         _SYMBOL_LIBS[libs] = SymbolLibrary(libs.symbols)
     return _SYMBOL_LIBS[libs]
+
+
+def _resolve(ref: str, lcsc: str, where):
+    """The KiCad part for a part named by its LCSC number only. Reads pino's parts cache; asks no one."""
+    from pino_kernel.parts.cache import PartsCache, parts_root
+    from pino_kernel.parts.resolve import ASK_FOR_PARTS, NoMapping, PartNotCached, resolve
+
+    if not lcsc:
+        raise _fail(f"{ref}: pass symbol='Library:Name', or lcsc= for a part pino can map to KiCad's libraries",
+                    where)
+    try:
+        return resolve(lcsc, PartsCache(parts_root()))
+    except PartNotCached:
+        message = (f"{ref}: {lcsc} is not in pino's parts cache yet. pino looks it up on the next build; offline, "
+                   f"run pino-kernel parts get {lcsc}, or pass symbol= and footprint=")
+        raise CircuitError([Problem(message, where[0], where[1], "part_not_cached", {"lcsc": lcsc})]) from None
+    except NoMapping as e:
+        message = f"{ref}: {e.reason}: {ASK_FOR_PARTS}"
+        raise CircuitError([Problem(message, where[0], where[1], "part_no_mapping", {"lcsc": lcsc})]) from None
 
 
 class PinSet(tuple):
@@ -134,9 +157,11 @@ def _pins_of(items) -> list[PinRef]:
 
 class Part:
     def __init__(self, board: "Board", block: "Block", role: str, ref: str, symbol: Symbol, value: str,
-                 footprint: str, lcsc: str, dnp: bool, key: str, where):
+                 footprint: str, lcsc: str, dnp: bool, key: str, where, *, hand_fit: bool = False, why: str = "",
+                 source: str = "kicad"):
         self.board, self.block, self.role, self.ref = board, block, role, ref
         self.symbol, self.value, self.footprint, self.lcsc, self.dnp = symbol, value, footprint, lcsc, dnp
+        self.hand_fit, self.why, self.source = hand_fit, why, source
         self.key = key
         self.file, self.line = where
 
@@ -160,7 +185,8 @@ class Block:
         self.board, self.key, self.title = board, key, title
         self.parts: list[Part] = []
 
-    def _add(self, role, ref, symbol, value="", *, footprint="", lcsc="", dnp=False, id=None) -> Part:
+    def _add(self, role, ref, symbol=None, value="", *, footprint="", lcsc="", dnp=False, id=None, hand_fit=False,
+             why="") -> Part:
         where = _caller()
         b = self.board
         if not isinstance(ref, str) or not REF_RE.match(ref):
@@ -173,6 +199,19 @@ class Block:
         if key in b._keys:
             what = f"id {key!r}" if id is not None else f"ref {ref}"
             raise _fail(f"{what} used twice: every part needs its own id", where)
+        if lcsc:
+            try:
+                lcsc = normalize_lcsc(lcsc)
+            except ValueError as e:
+                raise _fail(f"{ref}: {e}", where) from None
+        why = str(why).strip()
+        if len(why) > MAX_WHY or "\n" in why:
+            raise _fail(f"{ref}: why= takes one line of at most {MAX_WHY} characters", where)
+        source, mapped_value = "kicad", ""
+        if symbol is None:
+            found = _resolve(ref, lcsc, where)
+            symbol, source, mapped_value = found.symbol, found.how, found.value
+            footprint = footprint or found.footprint
         try:
             sym = _symbols().load(symbol)
         except (SymbolNotFound, UnsupportedSymbol) as e:
@@ -180,25 +219,26 @@ class Block:
         fp = footprint or sym.properties.get("Footprint", "")
         if not fp:
             raise _fail(f"{ref} has no footprint: pass footprint='Library:Name'", where)
-        part = Part(b, self, role, ref, sym, value or sym.properties.get("Value", ""), fp, lcsc, bool(dnp), key, where)
+        part = Part(b, self, role, ref, sym, value or mapped_value or sym.properties.get("Value", ""), fp, lcsc,
+                    bool(dnp), key, where, hand_fit=bool(hand_fit), why=why, source=source)
         b._parts[ref] = part
         b._keys[key] = part
         self.parts.append(part)
         return part
 
-    def path(self, ref, symbol, value="", **kw) -> Part:
+    def path(self, ref, symbol=None, value="", **kw) -> Part:
         """In series along the block's main line, left to right, in declaration order."""
         return self._add("path", ref, symbol, value, **kw)
 
-    def shunt(self, ref, symbol, value="", **kw) -> Part:
+    def shunt(self, ref, symbol=None, value="", **kw) -> Part:
         """From a node down to ground."""
         return self._add("shunt", ref, symbol, value, **kw)
 
-    def tap(self, ref, symbol, value="", **kw) -> Part:
+    def tap(self, ref, symbol=None, value="", **kw) -> Part:
         """From a supply down to a node (pull-up)."""
         return self._add("tap", ref, symbol, value, **kw)
 
-    def across(self, ref, symbol, value="", **kw) -> Part:
+    def across(self, ref, symbol=None, value="", **kw) -> Part:
         """Bridges two nodes of the main line."""
         return self._add("across", ref, symbol, value, **kw)
 
@@ -752,7 +792,8 @@ class Board:
         parts = [
             PartSpec(p.ref, p.key, p.symbol.lib_id, p.footprint, p.value, p.lcsc, p.dnp, p.block.key, p.role,
                      [PinInfo(s.number, s.name, s.etype) for s in p.symbol.pins], p.line,
-                     p.symbol.properties.get("Datasheet", ""), p.symbol.properties.get("Description", ""))
+                     p.symbol.properties.get("Datasheet", ""), p.symbol.properties.get("Description", ""),
+                     p.hand_fit, p.why, p.source)
             for blk in self._blocks for p in blk.parts
         ]
         declared = {ref: i for i, ref in enumerate(self._parts)}
