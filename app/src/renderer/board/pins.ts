@@ -30,6 +30,9 @@ export interface Cluster {
 
 const WORSE: Record<Severity, number> = { error: 2, warning: 1, info: 0 }
 
+/** Pins nearer than this on screen are gathered into one, in px: a pin is 18 across, and two keep a gap between them. */
+export const GATHER = 24
+
 export function clusterPins(pins: readonly Pinned[], place: (p: Pinned) => Pt, within: number): Cluster[] {
   const clusters: Cluster[] = []
   for (const pin of pins) {

@@ -5,7 +5,7 @@
 import type { Board, Shape, Track } from '../../shared/board/board'
 import type { Pt } from '../../shared/board/geom'
 import { padPolygons } from '../../shared/board/outlines'
-import { arrivalTracks, bakeBatches, edgeLoops, type Batch, type Prim } from './scene'
+import { arrivalTracks, bakeBatches, edgeLoops, outlineEdges, type Batch, type Prim } from './scene'
 import { copperColour, mix, type BoardColours } from './style'
 
 /** Screen CSS px = scale * (board file mm) + t. */
@@ -40,6 +40,8 @@ export interface BoardScene {
   batches: Batch[]
   paths: Map<Batch, Path2D>
   outline: Path2D
+  /** The outline of each batch of pours, without the slits their fills are cut with. */
+  rims: Map<Batch, Path2D>
   arrival: Track[]
 }
 
@@ -88,14 +90,25 @@ function addPrim(path: Path2D, prim: Prim): void {
 export function toPaths(board: Board, stale: ReadonlySet<string> = new Set()): BoardScene {
   const batches = bakeBatches(board, stale)
   const paths = new Map<Batch, Path2D>()
+  const rims = new Map<Batch, Path2D>()
   for (const batch of batches) {
     const path = new Path2D()
     for (const item of batch.items) addPrim(path, item)
     paths.set(batch, path)
+    if (batch.kind !== 'zone') continue
+    const rim = new Path2D()
+    for (const item of batch.items) {
+      if (item.p !== 'poly') continue
+      for (const [a, b] of outlineEdges(item.pts)) {
+        rim.moveTo(a.x, a.y)
+        rim.lineTo(b.x, b.y)
+      }
+    }
+    rims.set(batch, rim)
   }
   const outline = new Path2D()
   for (const loop of edgeLoops(board)) addPoly(outline, loop)
-  return { board, batches, paths, outline, arrival: arrivalTracks(board) }
+  return { board, batches, paths, outline, rims, arrival: arrivalTracks(board) }
 }
 
 const HATCH_GAP = 6 // px on screen, whatever the zoom
@@ -176,7 +189,7 @@ export function drawBoard(
         if (active && !batch.stale) {
           ctx.strokeStyle = quiet(mix(colours.cu, colours.paper, 0.35), batch.net)
           ctx.lineWidth = px
-          ctx.stroke(scene.paths.get(batch)!)
+          ctx.stroke(scene.rims.get(batch)!)
         }
       }
     }

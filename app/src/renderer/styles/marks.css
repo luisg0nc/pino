@@ -222,3 +222,12 @@ button.mark-chip {
   font: 400 10.5px / 1.5 var(--font-mono);
   letter-spacing: -0.02em;
 }
+
+/* In the list a mark's line is held to three lines: a stroke's path would fill the card. In hand it is whole. */
+.mark-rows .mark-payload {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}

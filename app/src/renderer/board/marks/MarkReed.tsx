@@ -21,7 +21,7 @@ const ICONS: Record<MarkTool, React.ReactNode> = {
 }
 
 /** torno's reed: the marking tools at the left of the view. The one in hand is filled and grows its name and key. */
-export function MarkReed({ tools }: { tools: readonly MarkTool[] }) {
+export function MarkReed({ tools, drawing = false }: { tools: readonly MarkTool[]; drawing?: boolean }) {
   const held = useStore((s) => s.tool)
   const chosen = tools.includes(held) ? held : 'select'
   return (
@@ -43,7 +43,8 @@ export function MarkReed({ tools }: { tools: readonly MarkTool[] }) {
                 {ICONS[tool]}
               </svg>
             </button>
-            {chosen === tool && tool !== 'select' && (
+            {/* Not over what a line is being drawn across. */}
+            {chosen === tool && tool !== 'select' && !drawing && (
               <span className="reed-pill" aria-hidden="true">
                 {TOOL_NAMES[tool]}
                 <span className="reed-key">{hint(TOOL_KEYS[tool])}</span>

@@ -31,13 +31,16 @@ route's copper while there is one.
 ## The look (the design picks)
 
 - The Board is a technical drawing: graphite copper on the layer in front, pencil tone on the others, pours as
-  hatching, pads in ink. Net colours are a switch, off by default. No net colour's hue lies from 235 to 285 degrees,
+  hatching, pads in ink. A pour's fill has slits to its holes, walked out and back: they are filled with it and never
+  stroked (`outlineEdges`). Net colours are a switch, off by default. No net colour's hue lies from 235 to 285 degrees,
   which is the violet of the person's marks (`palette.test.ts`).
 - Stale copper fades toward the paper; pads never do.
 - The Schematic is KiCad's SVG in pino's ink (`sheet/ink.ts` maps KiCad's colours to tokens and strips anything that
   runs or reaches out). What is where comes from `sheet.json`. Pins and chips on it are HTML at a fixed size.
 - 3D is the build's GLB, lit and recoloured (`three/stage.ts`, `material.ts`, by mesh name), drawn only when
   something changed.
+- The route card's head says how the build stands in a word or three (`headSaid`); the counts are in its checks.
+- Pins nearer than `GATHER` are one pin with a count. A chip stands off what it marks: at a part's or a pad's corner.
 - A tag stands clear of what it names and is tied to it by a leader. What lies over a view carries `data-tag-avoid`.
   The wheel zooms over chips, pins and tags as over the drawing: it is heard on the view's root.
 - At the foot of a view, one band at a time (`bandFor`): an older build, a failed build, a route under way, stale

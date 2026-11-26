@@ -157,6 +157,8 @@ export interface BuildState {
   lastGood: BuildResult | null
   history: BuildEntry[]
   route: RouteProgress | null
+  /** The number of the build the newest build's copper is from, current or stale: the first one seen with it current. */
+  copperFrom: number | null
   /** In plain words, why the views are not of the newest save. */
   problem: string | null
 }

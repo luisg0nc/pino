@@ -19,7 +19,7 @@ function count(marks: readonly Mark[]): string {
   return claude ? `${marks.length}, ${claude} of them Claude's` : String(marks.length)
 }
 
-/** Every open mark, two lines each: what it asks, and exactly what Claude gets. */
+/** Every open mark: what it asks, and the start of exactly what Claude gets (whole on hover, and in hand). */
 export function MarksBlock({ marks }: { marks: readonly Mark[] }) {
   const held = useStore((s) => s.heldMark)
   const hot = useStore((s) => s.hotMark)
@@ -35,6 +35,7 @@ export function MarksBlock({ marks }: { marks: readonly Mark[] }) {
               role="button"
               tabIndex={0}
               data-mark-row={mark.id}
+              title={mark.payload}
               data-author={mark.author}
               data-held={held === mark.id || undefined}
               data-lit={hot === mark.id || undefined}

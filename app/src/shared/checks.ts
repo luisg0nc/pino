@@ -123,6 +123,34 @@ export function clock(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
+export interface HeadSaid {
+  word: string
+  tone: 'ok' | 'warn' | 'fail'
+}
+
+const counted = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** How the newest build stands, beside its number at the head of the card: the counts in full are in the checks. */
+export function headSaid(r: BuildResult, routing: boolean): HeadSaid {
+  if (r.verdict === 'failed') return { word: 'failed', tone: 'fail' }
+  if (routing) return { word: 'routing', tone: 'ok' }
+  const { errors, warnings, unrouted } = r.counts
+  if (errors) return { word: counted(errors, 'error'), tone: 'fail' }
+  if (r.routing?.state === 'stale') return { word: 'copper stale', tone: 'warn' }
+  if (r.routing?.state === 'current') {
+    const left = r.routing.unrouted ?? unrouted
+    if (left) return { word: `routed, ${left} left`, tone: 'warn' }
+    return warnings ? { word: `routed, ${counted(warnings, 'warning')}`, tone: 'warn' } : { word: 'routed', tone: 'ok' }
+  }
+  return warnings ? { word: counted(warnings, 'warning'), tone: 'warn' } : { word: 'checks pass', tone: 'ok' }
+}
+
+/** The line under the head: what is not routed yet, else what the engine says waits. */
+export function underHead(r: BuildResult): string {
+  if (r.waiting.includes('routing: not started') && r.counts.unrouted) return `Not routed: ${counted(r.counts.unrouted, 'connection')}.`
+  return waitingWords(r.waiting)
+}
+
 export interface BoardFacts {
   size: string
   layers: number

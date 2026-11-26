@@ -78,6 +78,17 @@ export function bakeBatches(board: Board, stale: ReadonlySet<string> = new Set()
   return [...batches.values()]
 }
 
+/**
+ * The edges of a fill that are its outline. KiCad keeps a pour with holes as one polygon, joined to each hole by a slit
+ * that is walked out and back: filled, a slit is nothing, but stroked it would be a line across the pour.
+ */
+export function outlineEdges(pts: readonly Pt[]): Array<[Pt, Pt]> {
+  const key = (a: Pt, b: Pt) => `${a.x},${a.y} ${b.x},${b.y}`
+  const edges = pts.map((p, i): [Pt, Pt] => [p, pts[(i + 1) % pts.length]])
+  const walked = new Set(edges.map(([a, b]) => key(a, b)))
+  return edges.filter(([a, b]) => !walked.has(key(b, a)))
+}
+
 /** The edge cuts chained into closed loops: the outline, and any slot cut inside it. */
 export function edgeLoops(board: Board): Pt[][] {
   const runs: Pt[][] = []

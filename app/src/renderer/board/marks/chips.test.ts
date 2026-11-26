@@ -1,12 +1,15 @@
 import { expect, it } from 'vitest'
 import { toKicad } from '../../../shared/board/coords'
+import { padPolygons } from '../../../shared/board/outlines'
 import { arrow, point, region, stroke, tiny } from '../../../test/marks'
 import { chipAnchor, chipBoxes, stackChips } from './chips'
 
 it("puts a mark's chip on its point", () => {
   const near = (p: { x: number; y: number } | null, x: number, y: number) => expect([+p!.x.toFixed(3), +p!.y.toFixed(3)]).toEqual([toKicad({ x, y }).x, toKicad({ x, y }).y])
   near(chipAnchor(point(), tiny), 0.91, 0.46) // a part: the top right of its courtyard
-  near(chipAnchor(point({ target: { kind: 'pad', ref: 'R1', number: '1' }, at: { x: -0.48, y: 0 } }), tiny), -0.48, 0)
+  // a pad: the top right of its copper, so that the chip does not cover what was marked
+  const copper = padPolygons(tiny.footprints.find((f) => f.ref === 'R1')!.pads.find((p) => p.number === '1')!).flat()
+  expect(chipAnchor(point({ target: { kind: 'pad', ref: 'R1', number: '1' }, at: { x: -0.48, y: 0 } }), tiny)).toEqual({ x: Math.max(...copper.map((p) => p.x)), y: Math.min(...copper.map((p) => p.y)) })
   near(chipAnchor(arrow(), tiny), 0, -1.5)
   near(chipAnchor(stroke(), tiny), 6, 0)
   near(chipAnchor(region(), tiny), 2, 2)

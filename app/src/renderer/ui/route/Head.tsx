@@ -1,9 +1,9 @@
 import { verdictWords, type BuildState } from '../../../shared/build'
-import { buildSeconds, waitingWords } from '../../../shared/checks'
+import { buildSeconds, headSaid, underHead } from '../../../shared/checks'
 import type { ProjectInfo } from '../../../shared/project'
 import { numbered } from '../numbered'
 
-/** The head of the route card: `On h15` and the headline's rest, or the project's name while nothing is built. */
+/** The head of the route card: `On h15` and how it stands, or the project's name while nothing is built. */
 export function Head({ project, build }: { project: ProjectInfo; build: BuildState | null }) {
   if (build?.engine.state === 'failed') {
     const [what, ...why] = build.engine.reason.split(': ')
@@ -26,15 +26,16 @@ export function Head({ project, build }: { project: ProjectInfo; build: BuildSta
       </header>
     )
   }
-  const { rest } = verdictWords(latest)
+  const said = headSaid(latest, build!.route !== null)
   const failed = latest.verdict === 'failed'
-  const waits = failed ? '' : waitingWords(latest.waiting)
+  const waits = failed ? '' : underHead(latest)
   return (
     <header className="route-head">
       <h2 className="route-verdict" title={project.dir}>
         On <span className="num route-build">h{latest.number}</span>{' '}
-        <span className="route-rest" data-verdict={latest.verdict}>
-          {rest}
+        {/* The engine's headline in full is the title: the word is all that has to be read here. */}
+        <span className="route-rest" data-tone={said.tone} title={verdictWords(latest).rest}>
+          {numbered(said.word)}
         </span>
       </h2>
       <p className="route-sub">

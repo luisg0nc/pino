@@ -5,6 +5,8 @@
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
 
 .route-head {
@@ -38,8 +40,11 @@
   color: var(--ok);
 }
 
-.route-rest[data-verdict='errors'],
-.route-rest[data-verdict='failed'] {
+.route-rest[data-tone='warn'] {
+  color: var(--warn);
+}
+
+.route-rest[data-tone='fail'] {
   color: var(--fail);
 }
 

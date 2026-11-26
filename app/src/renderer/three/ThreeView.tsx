@@ -7,6 +7,7 @@ import type { Pt } from '../../shared/board/geom'
 import { pressed } from '../../shared/keys'
 import type { ViewName } from '../../shared/view'
 import { typingIn } from '../board/keysHeard'
+import { outlineOfPart } from '../board/marks/drawMarks'
 import { useSize } from '../board/useCanvas'
 import { actions, store, useStore } from '../state/store'
 import { registerView } from '../state/testHooks'
@@ -200,6 +201,12 @@ export function ThreeView({ model }: { model: ViewModel }) {
     [model.board, project]
   )
 
+  /** The rightmost corner of the target's part as it is seen, so that its tag stands beside the part and not on it. */
+  const edgeOf = (target: Target & { ref: string }): Pt | null => {
+    const corners = outlineOfPart(model.board, target.ref)?.flatMap((p) => project(p) ?? []) ?? []
+    return corners.length ? corners.reduce((right, p) => (p.x > right.x ? p : right)) : placeOf(target)
+  }
+
   useEffect(
     () =>
       registerView('3d', {
@@ -216,7 +223,7 @@ export function ThreeView({ model }: { model: ViewModel }) {
 
   const tied = selection && (selection.target.kind === 'part' || selection.target.kind === 'pad') ? selection.target : null
   // `moved` is read so that the tag follows the camera.
-  const subject = tied && moved >= 0 ? placeOf(tied) : null
+  const subject = tied && moved >= 0 ? edgeOf(tied) : null
   const part: Target | null = tied ? { kind: 'part', ref: tied.ref } : null
   const words = part ? describeTarget(model.board, model.circuit, part).split(' · ') : []
 

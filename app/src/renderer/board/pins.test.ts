@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { Finding } from '../../shared/build'
-import { clusterPins, positioned } from './pins'
+import { clusterPins, GATHER, positioned } from './pins'
 
 const finding = (x: number | null, y: number, severity: Finding['severity'] = 'warning', message = 'm'): Finding => ({
   source: 'drc',
@@ -26,4 +26,10 @@ it('gathers pins that would cover one another, under the worst severity among th
   expect(clusters[0].at).toEqual({ x: 0, y: 0 })
   // zoomed in, they part
   expect(clusterPins(pins, (p) => ({ x: p.x * 100, y: p.y * 100 }), 18)).toHaveLength(4)
+})
+
+// A pin is 18 px across, wider with a count: two a few pixels apart read as one blot.
+it('leaves a gap between any two pins on screen', () => {
+  const pins = positioned([finding(0, 0), finding(23, 0), finding(60, 0)], 'board')
+  expect(clusterPins(pins, (p) => ({ x: p.x, y: p.y }), GATHER).map((c) => c.members.length)).toEqual([2, 1])
 })

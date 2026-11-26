@@ -17,7 +17,7 @@ export function RoutingBlock({ model, build }: { model: ViewModel; build: BuildS
   const running = build.route
   const through = running ? cellsRouted(running, gauge.total) : 0
   const count = running ? (running.of ? `${running.index} of ${running.of} nets` : 'routing') : stale ? 'stale' : routed ? `${gauge.done} of ${gauge.total} nets` : `0 of ${gauge.total} nets`
-  const madeOn = build.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number
+  const madeOn = build.copperFrom ?? build.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number
   const copperFrom = routed ? `h${result.number}` : madeOn !== undefined ? `h${madeOn}` : routing?.number !== null && routing ? `r${routing.number}` : ''
   return (
     <Section title="Routing" count={count} lit={routed || running !== null}>

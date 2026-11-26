@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readBoard } from './board/board'
 import type { BuildResult, Finding, RoutingState } from './build'
 import { circuitOf, placementOf } from './circuit'
-import { boardFacts, buildSeconds, checkRows, checksSummary, netGauge, netVerdict, openNets, waitingWords, withRouteFindings, cellsRouted, clock } from './checks'
+import { boardFacts, buildSeconds, checkRows, checksSummary, netGauge, netVerdict, openNets, waitingWords, withRouteFindings, cellsRouted, clock, headSaid, underHead } from './checks'
 import { fx, read, readJson } from '../test/fixtures'
 
 const ref = readJson<BuildResult>(fx('result.json'))
@@ -159,5 +159,31 @@ describe('a route under way', () => {
     expect(clock(12_900)).toBe('0:12')
     expect(clock(83_000)).toBe('1:23')
     expect(clock(-5)).toBe('0:00')
+  })
+})
+
+describe("the card's head", () => {
+  const at = (over: Partial<BuildResult> = {}, counts: Partial<BuildResult['counts']> = {}): BuildResult => ({ ...ref, ...over, counts: { ...ref.counts, errors: 0, warnings: 0, unrouted: 80, ...counts } })
+  const routing = (state: RoutingState['state'], unrouted = 0) => ({ state, number: 1, unrouted }) as RoutingState
+
+  it('says how the build stands in a word or three, in the colour of the worst of it', () => {
+    expect(headSaid(at(), false)).toEqual({ word: 'checks pass', tone: 'ok' })
+    expect(headSaid(at({}, { warnings: 31 }), false)).toEqual({ word: '31 warnings', tone: 'warn' })
+    expect(headSaid(at({}, { errors: 1, warnings: 31 }), false)).toEqual({ word: '1 error', tone: 'fail' })
+    expect(headSaid(at({ verdict: 'failed' }), false)).toEqual({ word: 'failed', tone: 'fail' })
+  })
+
+  it('says where the copper stands once there is some', () => {
+    expect(headSaid(at({}, { warnings: 31 }), true)).toEqual({ word: 'routing', tone: 'ok' })
+    expect(headSaid(at({ routing: routing('stale') }, { warnings: 31 }), false)).toEqual({ word: 'copper stale', tone: 'warn' })
+    expect(headSaid(at({ routing: routing('current') }), false)).toEqual({ word: 'routed', tone: 'ok' })
+    expect(headSaid(at({ routing: routing('current') }, { warnings: 2 }), false)).toEqual({ word: 'routed, 2 warnings', tone: 'warn' })
+    expect(headSaid(at({ routing: routing('current', 7) }, { warnings: 2 }), false)).toEqual({ word: 'routed, 7 left', tone: 'warn' })
+  })
+
+  it('says under it what is not routed yet, and else what the engine says waits', () => {
+    expect(underHead(at({ waiting: ['routing: not started'] }))).toBe('Not routed: 80 connections.')
+    expect(underHead(at({ waiting: ['routing: stale (parts moved)'] }))).toBe('Routing: stale (parts moved).')
+    expect(underHead(at({ waiting: [] }, { unrouted: 0 }))).toBe('')
   })
 })

@@ -380,7 +380,7 @@ export function BoardView({ model }: { model: ViewModel }) {
         onPointerCancel={() => ((press.current = null), setDrawing(null), setPanning(false))}
       />
       <canvas ref={over} className="over" aria-hidden="true" />
-      <MarkReed tools={BOARD_TOOLS} />
+      <MarkReed tools={BOARD_TOOLS} drawing={drawing !== null} />
       {view && <ChipLayer marks={open} place={(m) => { const at = chipAnchor(m, board); return at && toScreen(view, at) }} />}
       {pen && view && (
         <p className="pen" style={{ transform: `translate(${Math.round(pen.x + 18)}px, ${Math.round(pen.y - 12)}px)` }}>

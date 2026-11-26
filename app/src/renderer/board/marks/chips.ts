@@ -3,6 +3,7 @@
 import type { Board } from '../../../shared/board/board'
 import { toKicad } from '../../../shared/board/coords'
 import type { Pt } from '../../../shared/board/geom'
+import { padPolygons } from '../../../shared/board/outlines'
 import { findTarget, hasTarget } from '../../../shared/board/refs'
 import type { Mark } from '../../../shared/marks'
 
@@ -18,7 +19,10 @@ export function chipAnchor(mark: Mark, board: Board): Pt | null {
   if (!hasTarget(board, mark.target)) return null
   const item = findTarget(board, mark.target)
   if (item?.type === 'footprint') return corner(item.outline.length ? item.outline : [item.pos])
-  if (item?.type === 'pad') return item.center
+  if (item?.type === 'pad') {
+    const copper = padPolygons(item).flat()
+    return copper.length ? corner(copper) : item.center
+  }
   return toKicad(mark.at)
 }
 

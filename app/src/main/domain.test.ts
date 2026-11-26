@@ -16,7 +16,7 @@ const m3stroke: StrokeMark = {
 }
 const padSel: Selection = { tab: 'board', target: { kind: 'pad', ref: 'U2', number: '1' }, text: 'pad U2.1 · VIN · net VBUS · top copper · at (1.00, 2.00) mm', label: 'U2.1' }
 
-const stateOf = (over: Partial<BuildState> = {}): BuildState => ({ projectId: 'p1', engine: { state: 'ready', kernel: 'x', serve: 1 }, building: false, latest: ref, lastGood: ref, history: [], route: null, problem: null, ...over })
+const stateOf = (over: Partial<BuildState> = {}): BuildState => ({ projectId: 'p1', engine: { state: 'ready', kernel: 'x', serve: 1 }, building: false, latest: ref, lastGood: ref, history: [], route: null, copperFrom: null, problem: null, ...over })
 
 function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open?: StrokeMark[]; view?: { tab: ViewTab; look: BoardLook; selection: Selection | null } | null } = {}) {
   let state = stateOf(opts.state)

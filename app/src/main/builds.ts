@@ -137,7 +137,7 @@ export class Builds {
     if (held) return held.state
     const entry: Entry = {
       project,
-      state: { projectId: project.id, engine: { state: 'starting' }, building: false, latest: null, lastGood: null, history: [], route: null, problem: null },
+      state: { projectId: project.id, engine: { state: 'starting' }, building: false, latest: null, lastGood: null, history: [], route: null, copperFrom: null, problem: null },
       unwatch: () => {},
       wanted: false,
       seen: false,
@@ -333,7 +333,10 @@ export class Builds {
       this.engineFailedAt = undefined
       const route = result.routing?.state === 'current' ? result.routing.route_key : null
       if (route && !entry.routes.has(route)) entry.routes.set(route, result.number)
+      const routing = result.routing
+      const copper = routing?.state === 'current' || routing?.state === 'stale' ? routing.route_key : null
       this.say(entry, {
+        ...(result.hash ? { copperFrom: (copper && entry.routes.get(copper)) || null } : {}),
         latest: result,
         lastGood: result.hash ? result : entry.state.lastGood,
         history,

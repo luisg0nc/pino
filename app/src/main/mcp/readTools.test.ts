@@ -13,7 +13,7 @@ const ref = referenceModel()
 
 const stateOf = (model: BuildModel, over: Partial<BuildState> = {}): BuildState => ({
   projectId: 'p1', engine: { state: 'ready', kernel: 'x', serve: 1 }, building: false, latest: model.result, lastGood: model.result,
-  history: [{ number: model.result.number, hash: model.result.hash, verdict: 'ok', at: '', kept: true }], route: null, problem: null, ...over
+  history: [{ number: model.result.number, hash: model.result.hash, verdict: 'ok', at: '', kept: true }], route: null, copperFrom: null, problem: null, ...over
 })
 
 async function tools(model: BuildModel | null = ref, over: Partial<ToolDeps> = {}) {

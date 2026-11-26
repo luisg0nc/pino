@@ -24,8 +24,9 @@ paths:
   marks them sent only once that context has reached the agent (`PromptContext.delivered`). Claude's are sent from
   the start. `resolve_mark` and the person resolve a sent mark; a draft cannot be resolved.
 - After every build that drew something, each open mark is looked for again by its ids (`reanchor.ts`): moved
-  (more than 0.01 mm) or stale (gone). A stale mark stays where it was, faded, with what it was. Resolved marks are
-  left as they are.
+  (more than 0.01 mm) or stale (gone). A stale mark stays where it was, faded, with what it was. Claude's arrow
+  across a gap keeps both things (`toward`) and is measured again: its ends, its chip and its line. Resolved marks
+  are left as they are.
 - A chip sits on its mark's point with no leader, moved up only to keep off another chip (`chips.ts`). The same chips
   are in the composer (what goes with the next prompt, removable), under the prompt they went with, and on the card of
   Claude's `point`.

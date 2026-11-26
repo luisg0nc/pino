@@ -105,3 +105,23 @@ describe('routing', () => {
     expect(l.builds.latest(l.info.id)!.number).toBe(1)
   })
 })
+
+describe('the build a route’s copper is said to be from', () => {
+  // One rule for the band, the card and what Claude is told: the first build that showed that copper as its own.
+  it('is the build that was routed, in the state the window is told', async () => {
+    const l = loop({ FAKE_KERNEL_MOVE: 'U2:1,0' })
+    await l.built()
+    expect(l.builds.state(l.info.id)!.copperFrom).toBeNull()
+    await l.routing.start(l.info)
+    await l.routing.whenDone(l.info.id)
+    await l.built()
+    expect(l.builds.state(l.info.id)!.copperFrom).toBe(2)
+    writeFileSync(join(project.dir, 'board.py'), 'second')
+    l.builds.rebuild(l.info.id)
+    await l.built()
+    const state = l.builds.state(l.info.id)!
+    expect(state.latest!.routing!.state).toBe('stale')
+    expect(state.copperFrom).toBe(2)
+    expect(l.builds.routedOn(l.info.id, state.latest!.routing!.route_key!)).toBe(2)
+  })
+})

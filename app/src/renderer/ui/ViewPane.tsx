@@ -66,7 +66,8 @@ export function ViewPane() {
       <div className="views-panel" role="tabpanel" id="view-panel" aria-labelledby={`view-tab-${chosen}`} data-view={chosen}>
         {model ? <Drawn tab={chosen} model={model} /> : <Empty />}
       </div>
-      {model && <ViewBand from={build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
+      {/* Which build the copper is from, as Claude is told it; else (a run begun with it stale) the build the route names. */}
+      {model && <ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
     </main>
   )
 }

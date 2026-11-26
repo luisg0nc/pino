@@ -9,7 +9,7 @@ export const MAX_SCALE = 400
 /** A pointer that moves further than this between press and release drags, and selects nothing. */
 export const DRAG_SLOP = 4
 /** The room the view's furniture takes: the reed at the left, the layer stack at the right, the tabs and the hint. */
-export const INSET = { l: 64, r: 240, t: 56, b: 56 }
+export const INSET = { l: 64, r: 256, t: 56, b: 56 }
 
 export interface Inset {
   l: number

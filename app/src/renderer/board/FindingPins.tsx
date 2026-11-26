@@ -3,10 +3,8 @@ import type { Pt } from '../../shared/board/geom'
 import { actions, useStore } from '../state/store'
 import { numbered } from '../ui/numbered'
 import { Tag } from '../ui/view/Tag'
-import { clusterPins, positioned, type Pinned } from './pins'
+import { clusterPins, GATHER, positioned, type Pinned } from './pins'
 
-/** Pins nearer than this on screen are gathered into one, in px. */
-const GATHER = 18
 const MOST_SAID = 3
 const WORD = { error: 'fail', warning: 'warn', info: 'note' } as const
 

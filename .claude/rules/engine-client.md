@@ -23,10 +23,13 @@ paths:
   (`engineMayWrite`). A build's files are read only from its own folder, through no link.
 - The build loop (`builds.ts`): one build at a time for each project, wanted by a save (debounced), ignoring `.pino`
   and the like. A folder with no `board.py` is neither built nor written in. A failed build keeps the last drawing.
-  An engine that stops is started again at most once in 10 s.
+  An engine that has not answered its first ping in 2 minutes is ended. A failed or stopped engine is started again
+  at most once in 10 s.
 - The engine's `routing` field in a build's result is the one account of where copper stands. A route is a job
   (`routing.ts`) with progress told in the build state; when it ends, main asks for a build. Its findings are kept
-  apart by the engine: `withRouteFindings` joins them, once, while the route is current.
+  apart by the engine: `withRouteFindings` joins them, once, while the route is current. Which build copper is "from"
+  has one rule (`Builds.routedOn`, `BuildState.copperFrom`): the first build seen with it current. A build the engine
+  had cached is numbered anew with the same hash, and its `changes` are since another board: compare hashes.
 - An engine that speaks protocol 1 does not route: the route tools answer `ROUTING_UNAVAILABLE`.
 - Every test runs the stand-in, `app/test/fake-kernel.mjs`, whose header lists its switches. It writes only under
   `.pino/`, in the engine's shapes: change it with the protocol. `e2e/real-kernel.spec.ts` alone runs the real one.

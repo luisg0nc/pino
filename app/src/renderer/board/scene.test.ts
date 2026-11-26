@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { readBoard } from '../../shared/board/board'
 import { fx, read, tinyBoard } from '../../test/fixtures'
-import { bakeBatches, edgeLoops, revealOrder } from './scene'
+import { bakeBatches, edgeLoops, outlineEdges, revealOrder } from './scene'
 
 const reference = readBoard(read(fx('filled/board.kicad_pcb')))
 const tiny = readBoard(tinyBoard())
@@ -50,4 +50,21 @@ it('chains the edge cuts into the loops the board is filled by', () => {
   expect(loops).toHaveLength(1)
   const xs = loops[0].map((p) => p.x)
   expect([Math.min(...xs), Math.max(...xs)].map((v) => Math.round(v))).toEqual([72, 128])
+})
+
+// KiCad keeps a pour with holes in it as one outline, joined to each hole by a slit: out along it and back.
+it("leaves a fill's slits out of its outline", () => {
+  const at = (x: number, y: number) => ({ x, y })
+  const holed = [at(0, 0), at(4, 4), at(4, 6), at(6, 6), at(6, 4), at(4, 4), at(0, 0), at(10, 0), at(10, 10), at(0, 10)]
+  const edges = outlineEdges(holed)
+  expect(edges).toHaveLength(8)
+  expect(edges.some(([a, b]) => (a.x === 0 && b.x === 4) || (a.x === 4 && b.x === 0))).toBe(false)
+})
+
+it("keeps of the reference board's pour only its outline: no line crosses it", () => {
+  const fills = reference.zones.flatMap((z) => z.fills)
+  const drawn = fills.flatMap((f) => outlineEdges(f.pts))
+  // the long level edges left are the pour's own top and bottom; its slits ran across it between them
+  const level = drawn.filter(([a, b]) => Math.abs(a.y - b.y) < 1e-4 && Math.abs(a.x - b.x) > 4).map(([a]) => a.y)
+  expect(level.sort((a, b) => a - b)).toEqual([78.3005, 121.6995])
 })
