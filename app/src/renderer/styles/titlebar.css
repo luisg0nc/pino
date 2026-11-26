@@ -317,3 +317,19 @@ button.crumb[aria-expanded='true'] {
   z-index: 5;
   -webkit-app-region: no-drag;
 }
+
+/* The logo's placeholder: the name, set in the interface face. The mark comes from the design mocks. */
+.logo-word {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.title-vise .logo-word {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.plate-headline .logo-word {
+  font-size: inherit;
+}

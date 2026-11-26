@@ -190,3 +190,10 @@
   font-size: 12.5px;
   text-wrap: balance;
 }
+
+/* Under the way in: what this version does not do yet. */
+.welcome-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}

@@ -8,6 +8,12 @@
   box-sizing: border-box;
 }
 
+/* Every scroller of the window follows the theme: a thin bar in --scroll-thumb, never the native light one in the dark. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
 html,
 body,
 #root {

@@ -753,6 +753,16 @@ git add -A && git commit -m "Copy torno's design tokens and sheets with a solder
 
 ### Task 11: First screen and title bar
 
+> **Note from the build:** `shared/keys.ts` and its test come in here, not in Task 12: `useMenu.ts`, copied as-is, imports them.
+>
+> **Note from the build:** The recent list has no thumbnail and no Remove button: there is no drawing yet, and the bridge has nothing to forget a folder with.
+>
+> **Note from the build:** `layout.css` and `welcome.css` are adapted: the thin themed scrollbar and `.welcome-note` come from torno's `late.css`, which pino does not copy.
+>
+> **Note from the build:** The first screen also says that this version has no engine.
+>
+> **Note from the build:** A refusal of main's already names the folder, so it is shown as it is; other failures go through `openProblem`.
+
 **Files:**
 - Copy adapted:
   - `app/src/renderer/ui/Welcome.tsx`: drop `Readiness` and the example; one way in, "Open folder"; the recent list (`RecentFolder`, a missing one shown as missing and not clickable); the error line through `openProblem`.
@@ -780,7 +790,7 @@ export function useStore<T>(pick: (s: PinoState) => T): T
 // window.__pinoTest (PINO_TEST only): { state(): PinoState }
 ```
 
-- [ ] **Step 1: Write the failing specs**
+- [x] **Step 1: Write the failing specs**
 
 ```ts
 // welcome.spec.ts
@@ -799,19 +809,19 @@ test('the accent is solder-mask green in light and in dark', async () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm test:e2e`
 Expected: FAIL, no first screen.
 
-- [ ] **Step 3: Copy and adapt the components and the rule; write `store.ts`; make `App.tsx` show the first screen or the project page**
+- [x] **Step 3: Copy and adapt the components and the rule; write `store.ts`; make `App.tsx` show the first screen or the project page**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the first screen and title bar in torno's language, with pino's placeholder wordmark"
