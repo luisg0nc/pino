@@ -846,7 +846,7 @@
   "complete": null,
   "copper_errors": null,
   "drc_errors": null,
-  "key": "bd9204cd8c3f",
+  "key": "b4eb688c664f",
   "number": null,
   "route": null,
   "route_key": null,
@@ -864,19 +864,19 @@
    "step": "libraries"
   },
   {
-   "seconds": 0.01,
+   "seconds": 0.011,
    "step": "fetch parts"
   },
   {
-   "seconds": 0.493,
+   "seconds": 0.492,
    "step": "run board.py"
   },
   {
-   "seconds": 0.423,
+   "seconds": 0.427,
    "step": "hash"
   },
   {
-   "seconds": 3.144,
+   "seconds": 3.116,
    "step": "place"
   },
   {
@@ -888,27 +888,27 @@
    "step": "write board"
   },
   {
-   "seconds": 0.801,
+   "seconds": 0.783,
    "step": "erc"
   },
   {
-   "seconds": 0.474,
+   "seconds": 0.454,
    "step": "netlist"
   },
   {
-   "seconds": 0.472,
+   "seconds": 0.458,
    "step": "schematic svg"
   },
   {
-   "seconds": 0.603,
+   "seconds": 0.593,
    "step": "drc"
   },
   {
-   "seconds": 0.626,
+   "seconds": 0.612,
    "step": "svg"
   },
   {
-   "seconds": 1.288,
+   "seconds": 1.29,
    "step": "glb"
   },
   {
