@@ -692,7 +692,7 @@ git commit -m "kernel: run board.py in a child process with a timeout and errors
   - `writer.write_schematic(circuit: Circuit, symbols: SymbolLibrary) -> SchematicFiles`; `writer.DrawingError(Exception)`; `writer.symbol_boxes(canvas: Canvas) -> list[dict]` (`{ref, x0, y0, x1, y1, pins: [{number, x, y}]}` in sheet mm, for the views stage).
   - `checks.netlist.Netlist(comps: dict, nets: dict[str, frozenset[tuple[str, str]]])`, `read_netlist(path: Path) -> Netlist`, `compare(circuit: Circuit, netlist: Netlist) -> list[Finding]` (source `netlist`, code `netlist_mismatch`, error), `net_names(circuit, netlist) -> list[Finding]` (source `netlist`, code `net_name`, warning: "net LED_A exports as Net-(D1-A)").
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_same_bytes_in_two_processes(fixture_libs, tmp_path):
@@ -750,12 +750,12 @@ def test_probe_pin_positions(kicad, tmp_path): ...   # port of spike probe.py: 1
 def test_kicad_resave_keeps_uuids(kicad, tmp_path): ...  # sch_upgrade; every symbol and pin uuid survives; netlist still matches
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_writer.py tests/test_netlist_check.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.schematic'`
 
-- [ ] **Step 3: Port the spike's layout and writer onto `Circuit`**
+- [x] **Step 3: Port the spike's layout and writer onto `Circuit`**
 
 - The layout reads `Circuit` (parts, blocks, `net_of`) and `SymbolLibrary`, not the spike's `model.Board`. Every S-expression uses `Sym`/`str` from Task 1.
 - UUIDs: symbol `ids.symbol_uuid(part.key)`, pins `ids.uid("pin", key, number)`, sheet `ids.sheet_uuid()`, power symbols, labels, wires, junctions, no-connects and frames `ids.uid("sch", <kind>, <spike key parts>)`. The board name appears only in the title block.
@@ -763,12 +763,12 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.schematic
 - Net names: every signal net gets at least one global label. Where the layout drew a net only as wire, add a global label on a two-grid stub from the net's first wire end that has room; the drawing check (`connect`) must still pass. Power nets keep power symbols.
 - Keep the spike's field-justify rule, its geometry check (`connect`), and `nc_rest` behaviour.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_writer.py tests/test_netlist_check.py -v`
 Expected: PASS (kicad tests pass, or skip with the marker messages)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/schematic kernel/src/pino_kernel/checks kernel/tests/test_schematic_writer.py kernel/tests/test_netlist_check.py kernel/tests/schematic_cases.py kernel/tests/fixtures

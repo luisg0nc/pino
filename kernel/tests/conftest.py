@@ -67,3 +67,23 @@ def make_project(tmp_path):
         return project
 
     return make
+
+
+@pytest.fixture
+def kicad(tmp_path):
+    """The real kicad-cli, with KiCad's own libraries and an isolated KiCad home in tmp_path."""
+    from pino_kernel.kicad_cli import KicadCli
+    from pino_kernel.libraries import discover
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PINO_KICAD_")}
+    return KicadCli(discover(env), tmp_path / "kicad-home", KicadCli.find())
+
+
+@pytest.fixture
+def real_libs(monkeypatch):
+    """KiCad's own libraries, for board.py code that discovers libraries itself."""
+    from pino_kernel.libraries import discover
+
+    for k in ("PINO_KICAD_SYMBOL_DIR", "PINO_KICAD_FOOTPRINT_DIR", "PINO_KICAD_3DMODEL_DIR"):
+        monkeypatch.delenv(k, raising=False)
+    return discover()

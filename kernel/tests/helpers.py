@@ -62,3 +62,26 @@ def small_board(**kw):
 
 def small_board_without_led_nets():
     return small_board(led_nets=False)
+
+
+def usb_circuit():
+    """A hand-built circuit (no libraries needed): USB-C CC pull-downs and the data pair to an MCU."""
+    from pino_kernel.circuit import (SCHEMA, BlockSpec, Circuit, NetSpec, OutlineSpec, PartSpec, PinInfo, PinRef)
+
+    def part(ref, value, footprint, pins):
+        return PartSpec(ref, ref, "pino_test:X", footprint, value, "", False, "usb", "path",
+                        [PinInfo(n, name, "passive") for n, name in pins], None)
+
+    parts = [part("J1", "USB-C", "pino_test:USB_Edge", [("1", "CC1"), ("2", "CC2"), ("3", "GND"), ("4", "D+"), ("5", "D-")]),
+             part("R1", "5.1k", "pino_test:R_0603", [("1", "~"), ("2", "~")]),
+             part("R2", "5.1k", "pino_test:R_0603", [("1", "~"), ("2", "~")]),
+             part("U1", "MCU", "pino_test:SOIC6", [("1", "DP"), ("2", "DN"), ("3", "GND")])]
+    P = PinRef
+    nets = [NetSpec("CC1", "signal", False, "", [P("J1", "1"), P("R1", "1")]),
+            NetSpec("CC2", "signal", False, "", [P("J1", "2"), P("R2", "1")]),
+            NetSpec("USB_DP", "signal", False, "", [P("J1", "4"), P("U1", "1")]),
+            NetSpec("USB_DN", "signal", False, "", [P("J1", "5"), P("U1", "2")]),
+            NetSpec("GND", "gnd", False, "power:GND", [P("J1", "3"), P("R1", "2"), P("R2", "2"), P("U1", "3")])]
+    return Circuit(SCHEMA, "usb", 2, "jlc-standard-2layer", OutlineSpec(20.0, 20.0, [], [], None, "board.py"),
+                   [BlockSpec("usb", "USB", [p.ref for p in parts])], parts, nets, [], {}, [], [], [], [], [], [],
+                   "board.py")
