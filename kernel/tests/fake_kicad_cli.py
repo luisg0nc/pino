@@ -1,7 +1,8 @@
 """A stand-in for kicad-cli in tests: prints what it was called with and never writes a file, except that
 `pcb drc` copies the JSON file named by $FAKE_KICAD_DRC to its -o path when that is set (with --save-board the
 board is left as it is), and `pcb export gerbers` and `pcb export drill` write one small dated file per layer and two
-drill files, each carrying a digest of the board (FAKE_KICAD_EXPORT_FAIL=<message> fails them, and
+drill files, each carrying a digest of the board, and `pcb export glb` writes a dated stand-in model with its flags and
+the digest of the board it was given (FAKE_KICAD_GLB_FAIL=<message> fails that one; FAKE_KICAD_EXPORT_FAIL=<message> fails them, and
 FAKE_KICAD_EXPORT_SKIP=<layer> leaves one file out). FAKE_KICAD_DRC=auto writes a report whose unconnected items come from the board's copper
 (pads of a net that pino's contact rule does not join), with no violations."""
 
@@ -89,6 +90,22 @@ def export(kind):
                 f"M48\n; DRILL file KiCad 10.0.6 date {stamp}\n; #@! TF.CreationDate,{stamp}\n; {digest}\nM30\n")
 
 
+def export_glb():
+    """Not a real GLB: enough to tell which board it came from, with which flags, and whether its date was taken out."""
+    import hashlib
+    from pathlib import Path
+
+    if os.environ.get("FAKE_KICAD_GLB_FAIL"):
+        print(os.environ["FAKE_KICAD_GLB_FAIL"], file=sys.stderr)
+        sys.exit(1)
+    board = Path(args[-1])
+    Path(args[args.index("-o") + 1]).write_text(json.dumps({
+        "generated_at": f"{time.time_ns()}", "board": hashlib.sha256(board.read_bytes()).hexdigest(),
+        "flags": [a for a in args if a.startswith("--") and a != "--define-var"]}))
+
+
+if args[:3] == ["pcb", "export", "glb"] and os.path.isfile(args[-1]):
+    export_glb()
 if args[:3] in (["pcb", "export", "gerbers"], ["pcb", "export", "drill"]):
     export(args[2])
 if args[:2] == ["pcb", "drc"] and os.environ.get("FAKE_KICAD_SLOW"):

@@ -175,6 +175,47 @@ test('routing runs in the background, and its copper goes stale after a move', a
   }
 })
 
+test("the 3D view takes the routed board's model while the copper is a route's", async () => {
+  const dir = referenceProject()
+  const { app, page } = await launch({ project: dir, env: { FAKE_KERNEL_SERVE: '2', FAKE_KERNEL_MOVE: 'U2:2.5,0' } })
+  const three = async () => (await drawn(page)).three
+  const note = page.locator('.three-copper')
+  try {
+    await waitForBuild(page, 1)
+    await tab(page, '3D').click()
+    await expect.poll(async () => (await three())?.loaded ?? false, { timeout: 20_000 }).toBe(true)
+    expect((await three())!.source).toBe('build')
+    expect((await three())!.boardMeshes).not.toContain('board_via')
+    await startRoute(page)
+    // Only the stand-in's routed model has a via mesh: these are the route file's own bytes.
+    await expect.poll(async () => (await three())?.boardMeshes ?? [], { timeout: 20_000 }).toContain('board_via')
+    expect((await three())!.source).toBe('route')
+    await expect(note).toHaveCount(0)
+    // A part moved: the copper is stale, still the route's on both views, and the 3D view says whose board it shows.
+    save(dir)
+    await expect(band(page)).toContainText('Parts moved since.', { timeout: 20_000 })
+    await expect(note).toHaveText('3D is the board as route r1 had it: its parts may stand elsewhere on the Board view.')
+    await expect.poll(async () => (await three())?.loaded ?? false, { timeout: 20_000 }).toBe(true)
+    expect((await three())!.source).toBe('route')
+  } finally {
+    await app.close()
+  }
+})
+
+test('a route with no model leaves the 3D view on the build, and it says so', async () => {
+  const { app, page } = await launch({ project: referenceProject(), env: { FAKE_KERNEL_SERVE: '2', FAKE_KERNEL_NO_ROUTE_GLB: '1' } })
+  try {
+    await waitForBuild(page, 1)
+    await tab(page, '3D').click()
+    await startRoute(page)
+    await expect(page.locator('.three-copper')).toHaveText('This route has no 3D model, so 3D lacks its tracks. Ask Claude to route again.', { timeout: 20_000 })
+    await expect.poll(async () => (await drawn(page)).three?.loaded ?? false, { timeout: 20_000 }).toBe(true)
+    expect((await drawn(page)).three!.source).toBe('build')
+  } finally {
+    await app.close()
+  }
+})
+
 test('the wheel zooms the board and the sheet over a chip or a pin as it does over the drawing', async () => {
   const { app, page } = await launch({ project: referenceProject() })
   try {

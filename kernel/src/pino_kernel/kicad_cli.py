@@ -196,10 +196,10 @@ class KicadCli:
             self._takes_define[key] = flag in self.run("help", *words, "--help", timeout=30.0).output
         return self._takes_define[key]
 
-    def glb(self, pcb: Path, out: Path) -> CliRun:
+    def glb(self, pcb: Path, out: Path, *, cancel=None) -> CliRun:
         flags = ["--include-tracks", "--include-pads", "--include-zones", "--include-silkscreen",
                  "--include-soldermask"]
-        return self._call("glb", ("pcb", "export", "glb"), flags, out, pcb)
+        return self._call("glb", ("pcb", "export", "glb"), flags, out, pcb, cancel=cancel)
 
     def render(self, pcb: Path, out: Path, *, side: str = "top", width: int = 1600, height: int = 1200) -> CliRun:
         flags = ["--side", side, "--width", str(width), "--height", str(height), "--quality", "basic"]

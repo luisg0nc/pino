@@ -3,6 +3,7 @@
 
 import * as THREE from 'three'
 import { lookSaid, lookSize } from '../../shared/look'
+import { modelNote } from '../../shared/model3d'
 import type { LookRequest, LookResult } from '../../shared/view'
 import { pictureOf } from '../board/look'
 import type { ViewModel } from '../state/viewModel'
@@ -45,7 +46,9 @@ export async function threeLook(model: ViewModel, request: LookRequest, size: nu
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--board-paper').trim()
     ctx.fillRect(0, 0, width, height)
     ctx.drawImage(renderer.domElement, 0, 0, width, height)
-    return pictureOf(canvas, lookSaid({ tab: '3d', build: model.result.number, marks: null }))
+    // What the 3D view would say under its switches, Claude is told too.
+    const said = [lookSaid({ tab: '3d', build: model.result.number, marks: null }), modelNote(model.model3d, model.route, model.result.routing)]
+    return pictureOf(canvas, said.filter(Boolean).join(' '))
   } finally {
     dispose(scene)
     renderer.dispose()

@@ -88,13 +88,15 @@ has pads 0.5 mm apart or closer, else 0.1 mm.
 After the chain, pino takes only the copper back into its own board, gives it UUIDs hashed from its geometry,
 refills the zones, removes stubs, duplicates and dead ends, and runs DRC with schematic parity. Then come its own
 checks: floating copper, stubs, loops, pours that reach one pad, tracks thinner than their class, and pairs off
-their gap or not coupled. The route lands in `.pino/routes/<key>/` (`board.kicad_pcb`, `filled/`, `copper.json`,
-`drc.json`, `plan.json`, `key.json`, `route.json`, `log.txt`). The key is a hash of what the copper depends on:
-nets by pad, placement, footprints, outline, zones, kept copper, rules, routing instructions, and the router and
+their gap or not coupled. Last it exports `board.glb` from the routed, zone-filled board, as a build exports its
+own (a build's model has no routed tracks, so the app's 3D view takes this one while the copper is a route's); if
+that export fails, the route stands, with a warning. The route lands in `.pino/routes/<key>/` (`board.kicad_pcb`,
+`filled/`, `board.glb`, `copper.json`, `drc.json`, `plan.json`, `key.json`, `route.json`, `log.txt`). The key is a
+hash of what the copper depends on: nets by pad, placement, footprints, outline, zones, kept copper, rules, routing instructions, and the router and
 kernel versions. A value change keeps the key; moving a part does not. The fast build reports routing as `none`,
 `running`, `current` or `stale` (with the reasons), and stale copper is never reused. One route runs per project.
-Routes are cached by key, can be cancelled (SIGTERM, or `route_cancel` in serve) and stop after 300 s per step and
-900 s in all.
+Routes are cached by key (a kept one with no `board.glb` is routed again), can be cancelled (SIGTERM, or
+`route_cancel` in serve) and stop after 300 s per step and 900 s in all.
 
 Claude finishes a route with three trial tools. Each works in `.pino/trials/<n>/` and returns `board.py` lines; pino
 never edits `board.py` itself.

@@ -6,6 +6,7 @@ import { toKicad } from '../../shared/board/coords'
 import type { Pt } from '../../shared/board/geom'
 import { pressed } from '../../shared/keys'
 import type { ViewName } from '../../shared/view'
+import { modelNote } from '../../shared/model3d'
 import { typingIn } from '../board/keysHeard'
 import { outlineOfPart } from '../board/marks/drawMarks'
 import { useSize } from '../board/useCanvas'
@@ -16,7 +17,7 @@ import { numbered } from '../ui/numbered'
 import { Compass } from '../ui/view/Compass'
 import { Tag } from '../ui/view/Tag'
 import { aimKeyLight } from '../viewport/lights'
-import { dispose, FOV, framing, FROM, kept, type Loaded, loadModel, makeScene, type Options, place, show } from './stage'
+import { dispose, FOV, framing, FROM, kept, type Loaded, loadModel, makeScene, modelId, type Options, place, show } from './stage'
 
 /** The one scene of a mounted view: what three draws with. Nothing is drawn unless something changed. */
 interface Stage {
@@ -35,6 +36,8 @@ export function ThreeView({ model }: { model: ViewModel }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const stage = useRef<Stage | null>(null)
   const size = useSize(root)
+  const id = modelId(model)
+  const note = modelNote(model.model3d, model.route, model.result.routing)
   const selection = useStore((s) => s.selection)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
@@ -104,8 +107,8 @@ export function ThreeView({ model }: { model: ViewModel }) {
         dispose(held.root)
       }
     }
-    // One file for a build: its hash says which.
-  }, [model.hash, model.projectId])
+    // The id says which file: the build's, or a route's. The hash too, which the loaded model is told.
+  }, [id, model.hash, model.projectId])
 
   /** The camera put to look at the whole board from a direction, filling most of the view. */
   const frameBoard = useCallback(
@@ -226,9 +229,16 @@ export function ThreeView({ model }: { model: ViewModel }) {
           const r = canvas.current!.getBoundingClientRect()
           return { x: at.x + r.left, y: at.y + r.top }
         },
-        drawn: () => ({ hash: loaded?.hash ?? null, loaded: loaded !== null && loaded.hash === model.hash, meshes: loaded?.meshes ?? 0, board: loaded?.board ?? false })
+        drawn: () => ({
+          hash: loaded?.hash ?? null,
+          loaded: loaded !== null && loaded.hash === model.hash && loaded.id === id,
+          source: loaded?.source ?? null,
+          boardMeshes: loaded?.boardMeshes ?? [],
+          meshes: loaded?.meshes ?? 0,
+          board: loaded?.board ?? false
+        })
       }),
-    [loaded, placeOf, model.hash]
+    [loaded, placeOf, model.hash, id]
   )
 
   const tied = selection && (selection.target.kind === 'part' || selection.target.kind === 'pad') ? selection.target : null
@@ -260,6 +270,11 @@ export function ThreeView({ model }: { model: ViewModel }) {
           </div>
           <Compass on={view} go={go} ortho={ortho} setOrtho={setOrtho} fit={() => frameBoard(camera().position.clone().sub(stage.current!.controls.target))} />
         </>
+      )}
+      {note && !noGl && (
+        <p className="three-copper selectable" role="status" data-tag-avoid="">
+          {numbered(note)}
+        </p>
       )}
       {subject && part && (
         <Tag id="selection" subject={subject} prefer="right">

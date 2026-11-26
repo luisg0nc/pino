@@ -2,7 +2,9 @@
 router's share and time recorded. Runs the real kicad-cli and the installed KiCadRoutingTools."""
 
 import hashlib
+import json
 import shutil
+import struct
 import threading
 from pathlib import Path
 
@@ -33,6 +35,12 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def mesh_names(glb: Path) -> list[str]:
+    data = glb.read_bytes()
+    length = struct.unpack_from("<I", data, 12)[0]
+    return [m.get("name", "") for m in json.loads(data[20:20 + length])["meshes"]]
+
+
 def errors(result):
     return [f.to_json() for f in result.findings if f.severity == "error"]
 
@@ -54,6 +62,8 @@ def test_reference_board_fully_routed_and_clean(ref, record_property):
     assert r.state == "done" and r.complete and r.counts["unrouted"] == 0, errors(r)
     assert r.counts["drc_errors"] == 0 and r.counts["copper_errors"] == 0, errors(r)
     assert r.share["router"]["seconds"] < 300
+    meshes = mesh_names(ref / r.artifacts["glb"])
+    assert any(n.startswith("board_copper") for n in meshes) and any(n.startswith("board_via") for n in meshes), meshes
     record_property("reference_share_with_finish", r.share)
     record_property("reference_route_seconds", sum(t.seconds for t in r.timings))
     print(f"reference with finish: {r.headline}; {sum(t.seconds for t in r.timings):.1f} s in all")

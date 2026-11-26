@@ -8,6 +8,7 @@
     cleanup   stubs, duplicates and dead ends off the router's copper
     drc       the cleaned board refilled with DRC and schematic parity, with pino's own project files
     checks    DRC the routing added, nets left, copper checks, failed steps
+    glb       the 3D model of the routed, filled board, exported as a build exports its own
 
 A route runs in `<key>.tmp-<pid>-<thread>/` and is renamed into place when it is done, so a half-written folder is
 never read. One route runs per project (`.pino/routes/job.lock`).
@@ -346,7 +347,8 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
         final = routes / key.key
         build_number = _build_number(project, build_hash)
 
-        if options.cache and (final / "route.json").is_file():
+        # A kept route with no model (made before routes had one, or its export failed) is routed again.
+        if options.cache and (final / "route.json").is_file() and (final / "board.glb").is_file():
             try:
                 stored = RouteResult.from_json((final / "route.json").read_text(encoding="utf-8"))
             except (ValueError, KeyError, json.JSONDecodeError):
@@ -400,6 +402,21 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
                            "timed_out": f"timed out after {seconds:.0f} s"}.get(outcome.stopped, outcome.problem)
                 return failed(outcome.stopped, problem or "the route failed", outcome.findings, key.key, build_hash,
                               outcome.steps)
+            shutil.copytree(tmp / "work" / "filled", tmp / "filled")
+            glb = clock.run("glb", kicad.glb, tmp / "filled" / "board.kicad_pcb", tmp / "board.glb", cancel=cancel)
+            for extra in (tmp / "filled").glob("*.kicad_prl"):
+                extra.unlink()
+            if cancel.is_set():
+                return failed("cancelled", f"cancelled after {time.monotonic() - started:.0f} s", outcome.findings,
+                              key.key, build_hash, outcome.steps)
+            if glb.ok and (tmp / "board.glb").is_file():
+                normalize(tmp / "board.glb")
+            else:
+                # The copper is good without it: a warning, so that the route's verdict stays about the board.
+                (tmp / "board.glb").unlink(missing_ok=True)
+                outcome.findings.append(Finding(
+                    "kernel", "kicad_cli_failed", "warning",
+                    f"kicad-cli glb failed: {glb.last_line() or f'exit code {glb.returncode}'}"[:300]))
             drc_found = [f for f in outcome.findings if f.source == "drc"]
             copper_found = [f for f in outcome.findings if f.source == "copper"]
             counts = _counts(outcome, drc_found, copper_found)
@@ -411,6 +428,8 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
             artifacts = {"folder": final.relative_to(project).as_posix(), "board": rel("board.kicad_pcb"),
                          "filled": rel("filled/board.kicad_pcb"), "copper": rel("copper.json"), "drc": rel("drc.json"),
                          "plan": rel("plan.json"), "key": rel("key.json"), "log": rel("log.txt")}
+            if (tmp / "board.glb").is_file():
+                artifacts["glb"] = rel("board.glb")
             headline = route_headline(number, build_number, "done", counts, share, None)
             result = RouteResult(SCHEMA, __version__, dict(ROUTER), key.key, build_hash, number, "done", verdict, headline,
                                  complete, counts, share, kept, truncated, outcome.steps, timings, artifacts, False)
@@ -418,7 +437,6 @@ def _route_locked(project: Path, lock, build: str | None, options: RouteOptions,
             (tmp / "plan.json").write_text(plan.to_json(), encoding="utf-8")
             (tmp / "board.kicad_pcb").write_text(outcome.board_text, encoding="utf-8")
             (tmp / "copper.json").write_text(copper_json(outcome.copper), encoding="utf-8")
-            shutil.copytree(tmp / "work" / "filled", tmp / "filled")
             shutil.copy(tmp / "work" / "drc.json", tmp / "drc.json")
             normalize(tmp / "drc.json")
             _write_log(tmp, outcome.steps, tmp / "work")
