@@ -1155,7 +1155,7 @@ git commit -m "kernel: serve mode runs route jobs with streamed progress and can
   - CLI: `pino-kernel route-net <project> --net N [--region x0,y0,x1,y1] [--layers L …] [--corridor x,y …] [--rip P …] [--events]`; `pino-kernel nudge <project> --part REF [--by dx,dy] [--rot DEG] [--back | --front] [--route] [--events]`; `pino-kernel keep <project> --net N`. Exit 0 `ok`, 1 not ok, 2 failed.
   - Serve: `{"op": "route_net", "project", "net", "region", "layers", "corridor", "rip"}` (job op); `{"op": "nudge", "project", "part", "by", "rot", "back", "route"}` (job op when `route`, else ordered); `{"op": "keep", "project", "net"}` (ordered).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_route_net_trial_reports_and_snippet(routed_project, monkeypatch):
@@ -1198,26 +1198,34 @@ def test_trial_result_schema(routed_project): ...
 def test_serve_route_net_and_keep(routed_project): ...    # route_net streams events and one result; keep answers in order
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_trials.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.trials'`
 
-- [ ] **Step 3: Write `trials.py`, `snippets.py`, the CLI subcommands and the serve ops**
+- [x] **Step 3: Write `trials.py`, `snippets.py`, the CLI subcommands and the serve ops**
 
 The trials never write `board.py`; they read it only for `board_var` and use `Intent.line` from `circuit.json`. A hint appended last replays after every earlier hint, so a trial on the current route's board is what the next route gives.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_trials.py tests/test_serve_jobs.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/routing kernel/src/pino_kernel/cli.py kernel/src/pino_kernel/serve.py kernel/schema/trial-result-1.schema.json kernel/tests/test_trials.py
 git commit -m "kernel: finishing tools: route one net, nudge a part, keep a route, as board.py lines"
 ```
+
+**Plan fixes (implementation):**
+- The small test board has no SDA net, so the trial tests use STATUS. The fake router joins only a net's first two pads, so the tests compare counts relative to each other (one net fewer after the trial; the same unrouted count after a nudge in place).
+- The fake kicad-cli gains `FAKE_KICAD_DRC=auto`: its report lists the pads that pino's contact rule does not join. The trial tests need DRC that sees the copper.
+- The placer turns R1 by 90 degrees, so the nudge snippet test reads the rotation from `placement.json`; moving R1 right lands on U2, so the route test nudges in place.
+- argparse reads `-5,...` as an option: the CLI takes `--region=x0,y0,x1,y1`, `--by=dx,dy` and `--corridor=x,y` (once per point), and serve builds its argv that way.
+- A trial that cannot start (no build, no router, no kicad-cli, unknown part) returns a not-ok `TrialResult` with number 0 and the reason as headline. The nudge headline counts placement problems only; route errors stay in its findings.
+- `keep` starts each path at the lowest pin (ref, then pad), compares segments without direction in the round trip, and always writes `width=`.
 
 ---
 
