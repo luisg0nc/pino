@@ -3,7 +3,7 @@ import math
 
 import pytest
 
-from copper_boards import R0603, board, fp
+from copper_boards import R0603, board, fp, pad
 from pino_kernel.circuit import PairSpec, RouteHint
 from pino_kernel.geometry import point_in_polygon
 from pino_kernel.pcb.copper import read_copper
@@ -123,3 +123,31 @@ def test_fine_grid_for_any_fine_pitch_row():
     # a USB-C receptacle's pads are 0.5 mm apart: off the 0.1 mm grid, so the router needs 0.05 mm
     p = plan_route(board_with(USB, SOT), PRO_2L, DRU_2L)
     assert p.fanout == [] and p.grid_step == 0.05
+
+
+def antenna_board():
+    """A footprint with no-net copper drawn on F.Cu: one rectangle touching its feed pad, one apart."""
+    from pino_kernel.sexpr import dump, parse
+
+    text = board(footprints=[fp("AE1", (10, 5, 0), [pad("1", (0, 0), (0.5, 0.5), net="FEED")], nets={"1": "FEED"}),
+                             fp("R1", (0, 0, 0), R0603, nets={"1": "FEED"})])
+    root = parse(text)
+    ae = next(n for n in root[1:] if isinstance(n, list) and n[0] == "footprint" and "AE1" in dump(n))
+    ae.append(parse('(fp_poly (pts (xy -0.25 -4) (xy 0.25 -4) (xy 0.25 0) (xy -0.25 0)) (stroke (width 0) (type solid)) (fill yes) (layer "F.Cu") (uuid "g1"))'))
+    ae.append(parse('(fp_poly (pts (xy 2 -4) (xy 3 -4) (xy 3 -3) (xy 2 -3)) (stroke (width 0) (type solid)) (fill yes) (layer "F.Cu") (uuid "g2"))'))
+    return dump(root) + "\n"
+
+
+def test_no_net_footprint_copper_gets_router_keepouts():
+    from copper_boards import pad
+    p = plan_route(antenna_board(), PRO_2L, DRU_2L)
+    ks = {k.name: k for k in p.keepouts if k.name.startswith("pino-router:graphic:")}
+    assert sorted(ks) == ["pino-router:graphic:AE1#1", "pino-router:graphic:AE1#2"]
+    touching, apart = ks["pino-router:graphic:AE1#1"], ks["pino-router:graphic:AE1#2"]
+    assert touching.forbid_tracks is False and apart.forbid_tracks is True and touching.layers == ["F.Cu"]
+    # grown by the clearance and half a via: the apart rectangle spans x 12..13, y 8..9 in board mm (AE1 at (10, 5))
+    assert min(x for x, _ in apart.polygon) == pytest.approx(12 - 0.2 - 0.3) and max(y for _, y in apart.polygon) == pytest.approx(9 + 0.5)
+    text = add_router_items(antenna_board(), p.keepouts)
+    zones = {str(find(z, "name")[1]): z for z in find_all(parse(text), "zone")}
+    assert find(find(zones["pino-router:graphic:AE1#1"], "keepout"), "tracks")[1] == "allowed"
+    assert find(find(zones["pino-router:graphic:AE1#1"], "keepout"), "vias")[1] == "not_allowed"

@@ -98,7 +98,9 @@ def chain_steps(plan: RoutePlan, krt: Krt) -> list[ChainStep]:
     steps = []
     for p in plan.planes:
         s = "route_planes.py"
-        steps.append(ChainStep(f"planes {p.net}", s, ["{IN}", "{OUT}", "--nets", p.net, "--plane-layers", *p.layers,
+        # KiCadRoutingTools takes one net per plane layer
+        steps.append(ChainStep(f"planes {p.net}", s, ["{IN}", "{OUT}", "--nets", *[p.net] * len(p.layers),
+                                                      "--plane-layers", *p.layers,
                                                       "--track-width", _n(r.track_width), "--hole-to-hole-clearance",
                                                       _n(r.hole_to_hole), *R, *_fn(krt, s)]))
     for f in plan.fanout:
@@ -125,8 +127,9 @@ def chain_steps(plan: RoutePlan, krt: Krt) -> list[ChainStep]:
     if plan.planes:
         s = "route_disconnected_planes.py"
         layers = [n for n in plan.layers if any(n in p.layers for p in plan.planes)]
-        steps.append(ChainStep("planes repair", s, ["{IN}", "{OUT}", "--nets", *[p.net for p in plan.planes],
-                                                    "--plane-layers", *layers, *R, *_fn(krt, s)]))
+        nets = ["|".join(sorted(p.net for p in plan.planes if n in p.layers)) for n in layers]
+        steps.append(ChainStep("planes repair", s, ["{IN}", "{OUT}", "--nets", *nets, "--plane-layers", *layers,
+                                                    *R, *_fn(krt, s)]))
     return steps
 
 

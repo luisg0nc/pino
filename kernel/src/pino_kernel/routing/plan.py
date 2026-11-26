@@ -106,6 +106,7 @@ class RouterKeepout:
     name: str
     polygon: list[tuple[float, float]]
     layers: list[str]
+    forbid_tracks: bool = True  # vias are always forbidden
 
 
 @dataclass
@@ -358,6 +359,52 @@ def hole_keepouts(copper: Copper, rules: RouterRules) -> list[RouterKeepout]:
     return out
 
 
+def graphic_keepouts(board_text: str, rules: RouterRules) -> list[RouterKeepout]:
+    """Router keep-outs over copper drawn in a footprint with no net (an antenna, a shield outline): the router does
+    not see it, and a via there would short it. Vias are kept out always; tracks too, unless the drawing touches one of
+    the footprint's own pads (a feed must reach it). Each drawing's box is grown by the clearance and half a via."""
+    from ..geometry import polygons_overlap
+    from ..pcb.copper import footprint_ref, read_copper
+    from ..pcb.footprint import rotate
+
+    root = parse(board_text)
+    layers = board_layers(root)
+    pads = read_copper(board_text).pads
+    grow = rules.clearance + rules.via_diameter / 2
+    out = []
+    for fp in find_all(root, "footprint"):
+        ref = footprint_ref(fp)
+        at = find(fp, "at")
+        X, Y = float(at[1]), float(at[2])
+        A = float(at[3]) if len(at) > 3 else 0.0
+        k = 0
+        for g in fp[1:]:
+            if not (isinstance(g, list) and g and str(g[0]) in ("fp_poly", "fp_rect")):
+                continue
+            lay = find(g, "layer")
+            if lay is None or str(lay[1]) not in layers or find(g, "net") is not None:
+                continue
+            fill = find(g, "fill")
+            if fill is None or str(fill[1]) not in ("yes", "solid"):
+                continue
+            if str(g[0]) == "fp_rect":
+                (sx, sy), (ex, ey) = (float(v) for v in find(g, "start")[1:3]), (float(v) for v in find(g, "end")[1:3])
+                local = [(sx, sy), (ex, sy), (ex, ey), (sx, ey)]
+            else:
+                local = [(float(p[1]), float(p[2])) for p in find(g, "pts")[1:] if p[0] == "xy"]
+            world = [from_kicad(X + dx, Y + dy) for dx, dy in (rotate(px, py, A) for px, py in local)]
+            if len(world) < 3:
+                continue
+            k += 1
+            own = [p.polygon for p in pads if p.ref == ref and p.polygon]
+            touches = any(polygons_overlap(world, q) for q in own)
+            x0, x1 = min(p[0] for p in world) - grow, max(p[0] for p in world) + grow
+            y0, y1 = min(p[1] for p in world) - grow, max(p[1] for p in world) + grow
+            poly = [(_r(x0), _r(y0)), (_r(x1), _r(y0)), (_r(x1), _r(y1)), (_r(x0), _r(y1))]
+            out.append(RouterKeepout(f"{ROUTER_PREFIX}graphic:{ref}#{k}", poly, [str(lay[1])], not touches))
+    return out
+
+
 def region_keepouts(region: tuple[float, float, float, float], board_box: tuple[float, float, float, float],
                     layers: list[str]) -> list[RouterKeepout]:
     """Keep-outs over the whole board but `region`: up to four rectangles round it."""
@@ -380,7 +427,8 @@ def _rule_area(k: RouterKeepout) -> list:
     return [S("zone"), lay, [S("uuid"), ids.uid("router", k.name)], [S("name"), k.name],
             [S("hatch"), S("full"), num(0.5)], [S("connect_pads"), [S("clearance"), num(0)]],
             [S("min_thickness"), num(0.25)],
-            [S("keepout"), [S("tracks"), S("not_allowed")], [S("vias"), S("not_allowed")], [S("pads"), S("allowed")],
+            [S("keepout"), [S("tracks"), S("not_allowed" if k.forbid_tracks else "allowed")],
+             [S("vias"), S("not_allowed")], [S("pads"), S("allowed")],
              [S("copperpour"), S("allowed")], [S("footprints"), S("allowed")]],
             [S("placement"), [S("enabled"), S("no")], [S("sheetname"), ""]],
             [S("fill"), [S("thermal_gap"), num(0.5)], [S("thermal_bridge_width"), num(0.5)]],
@@ -494,7 +542,7 @@ def plan_route(board_text: str, pro_text: str, dru_text: str | None, *, pairs: S
                                    None if h.corridor is None else [(_r(x), _r(y)) for x, y in h.corridor],
                                    rip, h.line))
     return RoutePlan(layers, rules, grid, fanout, pair_steps, plane_steps, power, signals, hint_steps,
-                     hole_keepouts(copper, rules), warnings)
+                     hole_keepouts(copper, rules) + graphic_keepouts(board_text, rules), warnings)
 
 
 def plan_for_build(build_dir: Path) -> RoutePlan:

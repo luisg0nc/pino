@@ -162,3 +162,23 @@ def test_only_a_pair_still_gets_a_signals_step(fake_krt, tmp_path, monkeypatch, 
     monkeypatch.delenv("FAKE_KRT_PAIR_DEFER")
     r = run_chain_for(pair_only, tmp_path / "work2", pairs=[USB_PAIR])
     assert [s.step for s in r.steps] == ["pair USB_D", "signals"] and "nothing left" in r.steps[1].note
+
+
+def test_plane_on_two_layers_names_the_net_per_layer(fake_krt, tmp_path, argv_log):
+    from copper_boards import rect, zone
+    from route_cases import PULLS, QFN, SOT, USB, board_with
+
+    two = board_with(QFN, USB, SOT, *PULLS, layers=4, zones=[zone("GND", "In1.Cu", rect(-20, -15, 20, 15)),
+                                                             zone("GND", "In2.Cu", rect(-20, -15, 20, 15)),
+                                                             zone("+3V3", "In2.Cu", rect(-20, -15, 0, 15))])
+    run_chain_for(two, tmp_path / "work")
+    calls = {c["script"]: c["argv"] for c in argv_log() if c["script"] != "route_planes.py"}
+    planes = [c["argv"] for c in argv_log() if c["script"] == "route_planes.py"]
+
+    def after(argv, flag, n):
+        return argv[argv.index(flag) + 1:argv.index(flag) + 1 + n]
+
+    gnd = next(a for a in planes if "GND" in after(a, "--nets", 1))
+    assert after(gnd, "--nets", 2) == ["GND", "GND"] and after(gnd, "--plane-layers", 2) == ["In1.Cu", "In2.Cu"]
+    rep = calls["route_disconnected_planes.py"]
+    assert after(rep, "--nets", 2) == ["GND", "+3V3|GND"] and after(rep, "--plane-layers", 2) == ["In1.Cu", "In2.Cu"]

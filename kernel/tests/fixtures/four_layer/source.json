@@ -1,0 +1,10 @@
+{
+ "repo": "https://github.com/sqfmi/watchy-hardware",
+ "commit": "5f147972aa2148d4971f3c41fc3ce39ff8c48131",
+ "files": ["Watchy.kicad_pcb", "Watchy.kicad_pro"],
+ "license": "MIT",
+ "sha256": {
+  "Watchy.kicad_pcb": "d7f8eb56613968aa061cd612a8679a034430fd9a1fcb08f83690b92c167db217",
+  "Watchy.kicad_pro": "fde508c4b521db58712bde8e91120fb30bfeef0eefab5fe502737074bcc671aa"
+ }
+}
