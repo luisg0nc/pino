@@ -212,6 +212,42 @@ describe('Sessions', () => {
     await expect.poll(() => delivered).toEqual(['M1'])
   })
 
+  it('turnNow names the prompt the session is answering, and none between turns', async () => {
+    const sessions = manager()
+    const id = await started(sessions)
+    expect(sessions.turnNow(project.id)).toBeUndefined()
+    await sessions.send(id, { text: 'ask Bash {"command":"ls"}' })
+    const ask = await until(() => {
+      const [open] = of(sessions, id, 'ask')
+      expect(open?.state).toBe('open')
+      return open
+    })
+    // Waiting for the person is still the turn of that prompt.
+    expect(sessions.turnNow(project.id)).toEqual({ prompt: of(sessions, id, 'user')[0].id, conversation: expect.any(String) })
+    expect(sessions.turnNow('p-other')).toBeUndefined()
+    sessions.answer(id, ask.requestId, { allow: true })
+    await until(() => expect(sessions.current(project.id)?.status).toBe('idle'))
+    expect(sessions.turnNow(project.id)).toBeUndefined()
+  })
+
+  it('sendBlocks sends text and pictures as one prompt', async () => {
+    const sessions = manager()
+    const id = await started(sessions)
+    // A PNG's header, which is all the stand-in reads of a picture: 4 wide, 4 high.
+    const png = Buffer.alloc(24)
+    png.writeUInt32BE(4, 16)
+    png.writeUInt32BE(4, 20)
+    await sessions.sendBlocks(id, [
+      { type: 'text', text: 'images' },
+      { type: 'text', text: 'reference/photo-1.png:' },
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: png.toString('base64') } }
+    ])
+    await until(() => expect(of(sessions, id, 'turn')).toHaveLength(1))
+    expect(of(sessions, id, 'user')).toMatchObject([{ text: 'images', images: [expect.anything()] }])
+    // The stand-in reads each line of a prompt as its script, so the caption is said back after its answer.
+    expect(of(sessions, id, 'text').map((t) => t.text)).toContain('images: 1 4x4')
+  })
+
   it('lets a prompt and a turn go on when the domain throws', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const throws = async (): Promise<never> => {

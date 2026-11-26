@@ -47,7 +47,7 @@ const THICKNESS = [0.8, 1.0, 1.2, 1.6, 2.0] as const
 const ASSEMBLY = ['jlc', 'hand', 'mix'] as const
 
 /** What a fab card asks, whole; undefined when it is not. */
-function fabOf(value: unknown): FabAsk | undefined {
+export function fabOf(value: unknown): FabAsk | undefined {
   if (!isRecord(value)) return undefined
   const layers = LAYERS.find((n) => n === value.layers)
   const thickness = THICKNESS.find((n) => n === value.thickness)

@@ -37,6 +37,17 @@ export type ChatItem =
   /** Something pino says about the conversation: the model changed, pino's tools are not connected, the session ended. */
   | { kind: 'note'; id: string; text: string; tone: 'quiet' | 'warn' }
 
+/** One prompt of the project (`main/sessions/prompts.ts`). `number` counts from 1 across every conversation, by the time it was said. */
+export interface PromptRow {
+  conversation: string
+  /** The `id` of the chat's `user` item. */
+  id: string
+  number: number
+  text: string
+  /** When it was said, ms. */
+  at: number
+}
+
 /** The tokens of one kind of request, as the CLI counts them. */
 export interface TokenCount {
   input: number

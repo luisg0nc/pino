@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { join } from 'node:path'
 import { APP, envName } from '../../shared/app'
 import type { SessionStatus, StartResult } from '../../shared/bridge'
+import type { CardTurn } from '../../shared/cards'
 import { agentChoiceOf, type ChatAnswer, type ChatCommand, type ChatHistory, type ChatItem, type ChatMeta, type ChatModel, type Effort, isEffort, isMode, type Mode, MODEL_NAME } from '../../shared/chat'
 import type { ProjectInfo } from '../../shared/project'
 import { BodyTooLarge, type HttpRouter, readBody, sendJson } from '../http'
@@ -19,7 +20,7 @@ import { sessionRules } from './permissions'
 import { deniedAnswer, refusalOf } from './reach'
 import { SESSION_FILE, storeConversation, storedConversation, UUID } from './resume'
 import { HOOK_EVENTS, reduceStatus } from './status'
-import type { AgentAsk, AgentTransport, AskAnswer } from './transport'
+import type { AgentAsk, AgentTransport, AskAnswer, PromptBlock } from './transport'
 import { Transcript } from './transcript'
 
 const HOOK_BODY_LIMIT = 1024 * 1024
@@ -279,12 +280,31 @@ export class Sessions {
     return storedConversation(project.dir) !== null
   }
 
+  /**
+   * The prompt the project's session is answering now, as a card of Claude's names it (#336). None between turns, and
+   * none before the first prompt's hook was answered.
+   */
+  turnNow(projectId: string): CardTurn | undefined {
+    for (const s of this.sessions.values()) {
+      if (s.project.id !== projectId || s.killTimer) continue
+      if (s.status !== 'working' && s.status !== 'needs_input') return undefined
+      const taken = s.chat.transcript.taken()
+      return taken ? { prompt: taken.item, conversation: s.conversationId } : undefined
+    }
+    return undefined
+  }
+
   /** A prompt for a session's agent, which queues it if it is at work. Rejects for a session that has ended. */
   async send(sessionId: string, prompt: { text: string }): Promise<void> {
+    if (!this.live(sessionId)) throw new Error('This session has ended')
+    if (typeof prompt?.text !== 'string' || prompt.text.trim() === '') return
+    return this.sendBlocks(sessionId, [{ type: 'text', text: prompt.text }])
+  }
+
+  /** `send` for a prompt of text and pictures, as given: the transcript shows its first text and its pictures. */
+  async sendBlocks(sessionId: string, content: PromptBlock[]): Promise<void> {
     const s = this.live(sessionId)
     if (!s) throw new Error('This session has ended')
-    if (typeof prompt?.text !== 'string' || prompt.text.trim() === '') return
-    const content = [{ type: 'text' as const, text: prompt.text }]
     // It waits when the agent is at work, or has been sent a prompt it has not taken up yet (its hook has not moved the status).
     const queued = s.status === 'working' || s.status === 'needs_input' || s.chat.transcript.untakenCount() > 0
     // Its own id: the CLI says in `command_lifecycle` when it queues, begins and ends the prompt it names.

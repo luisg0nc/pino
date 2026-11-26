@@ -523,7 +523,7 @@ git commit -m "The Brief's cards file in .pino/brief/: PCB card kinds, read whol
   - `Sessions.sendBlocks(sessionId: string, blocks: PromptBlock[]): Promise<void>`: `send` for text and pictures (Task 12 uses it).
   - `cards/watch.ts`: `watchBrief(dir: string, onChange: (what: { brief: boolean; cards: boolean }) => void, debounceMs?: number): () => void`.
 
-- [ ] **Step 1: Copy the files and tests, cut torno's arrows, places, pictures and ties out of them, then write the failing tests**
+- [x] **Step 1: Copy the files and tests, cut torno's arrows, places, pictures and ties out of them, then write the failing tests**
 
 ```ts
 // main/cards/store.test.ts
@@ -561,21 +561,21 @@ it('sendBlocks sends text and pictures as one prompt', async () => { /* stand-in
 it('calls once per burst when brief.md or cards.json changes, and not for anything else', async () => { /* write brief.md twice in 100 ms -> once { brief: true, cards: false }; board.py change -> no call */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/cards src/main/sessions/prompts.test.ts src/main/sessions/manager.test.ts src/shared/brief.test.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Adapt the store, the prompts and the watch; add `turnNow` and `sendBlocks` to `Sessions`**
+- [x] **Step 3: Adapt the store, the prompts and the watch; add `turnNow` and `sendBlocks` to `Sessions`**
 
 One change at a time per project (torno's queue). An agent `add` of `part` with a `reading` in the stamp keeps it; its `text` holds Claude's words and reasons. `adopt` takes a card of `by: 'agent'` only. A person may not `edit` the text of a card of Claude's that is not adopted (refused: `C4 is Claude's: make it yours first.`). `seenHash` leaves out `part.reading`. `sendBlocks` is `send` with the blocks as given (the transcript already shows the first text and keeps captions).
 
-- [ ] **Step 4: Run them to verify they pass**
+- [x] **Step 4: Run them to verify they pass**
 
 Run: `pnpm -C app exec vitest run src/main/cards src/main/sessions src/shared/brief.test.ts src/manifest.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/main/cards app/src/main/sessions app/src/shared/chat.ts app/src/shared/brief.ts app/src/shared/brief.test.ts shared-from-torno.json
