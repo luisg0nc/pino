@@ -633,6 +633,10 @@ git add -A && git commit -m "Add pino's Electron main, preload and bridge, and p
 
 ### Task 9: The e2e harness in a hidden window
 
+> **Note from the build:** Every launch also gets a `HOME` and XDG folders of its own, and a run with no stand-in asked for gets an agent command that is not there, so no spec can reach the real `claude`. `src/e2e.test.ts` holds both.
+>
+> **Note from the build:** The Electron binary of this version downloads on first use (`pnpm -C app exec install-electron`).
+
 **Files:**
 - Copy adapted:
   - `app/playwright.config.ts`: drop `TORNO_KEEP_BUILDS` and the evals ignore; keep one worker, CI retries and timeouts, `outputDir: './e2e/.results'`.
@@ -648,7 +652,7 @@ git add -A && git commit -m "Add pino's Electron main, preload and bridge, and p
   - `tempProject(name?: string): string` makes a temp project under `realpathSync(tmpdir())`.
   - `agentsIn(dir)`, `cwdOf(pid)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // app/src/e2e.test.ts: the hidden-window rule, held by reading the specs
@@ -660,19 +664,19 @@ test('starts with its window hidden', async () => { expect(await app.evaluate(({
 test('keeps its profile in a temp folder, not under the person\'s config', async () => { expect(await app.evaluate(({ app }) => app.getPath('userData'))).toMatch(/\/pino-test-\d+-/) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/e2e.test.ts && pnpm test:e2e`
 Expected: FAIL, harness missing.
 
-- [ ] **Step 3: Copy and adapt the config, `terminal.ts` and the rule; write `launch.ts` and `boot.spec.ts`**
+- [x] **Step 3: Copy and adapt the config, `terminal.ts` and the rule; write `launch.ts` and `boot.spec.ts`**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS, and no window appears on the desktop.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the hidden-window e2e harness"

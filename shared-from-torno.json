@@ -71,6 +71,9 @@
     { "pino": "app/src/main/testProfile.ts", "torno": "app/src/main/testProfile.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the folder's prefix from APP.name" },
     { "pino": "app/src/main/testProfile.test.ts", "torno": "app/src/main/testProfile.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's prefix" },
     { "pino": "app/src/renderer/index.html", "torno": "app/src/renderer/index.html", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "title pino" },
-    { "pino": "app/src/renderer/main.tsx", "torno": "app/src/renderer/main.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's App; no platform attribute" }
+    { "pino": "app/src/renderer/main.tsx", "torno": "app/src/renderer/main.tsx", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's App; no platform attribute" },
+    { "pino": "app/playwright.config.ts", "torno": "app/playwright.config.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "no kernel switch and no evals" },
+    { "pino": "app/e2e/terminal.ts", "torno": "app/e2e/terminal.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "cwdOf and agentsIn only, Linux /proc" },
+    { "pino": ".claude/rules/e2e-hidden-window.md", "torno": ".claude/rules/e2e-hidden-window.md", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's hooks and names; no kernel, scans, exports or terminal" }
   ]
 }

@@ -83,5 +83,6 @@ The detail is in `.claude/rules/*.md`. Claude Code loads a rule when a file its 
 read one by hand before work its globs miss. Paths in a rule are written from `app/` (`src/main/...`), or short under
 `app/src/` (`main/`, `shared/`) and under `app/src/renderer/` (`ui/`, `state/`, `styles/`).
 
-- The agent: `agent-launch-and-tokens`, `sessions`, `chat-transcript`. Tests: `e2e-stand-in-agent` (the stand-in, the recordings).
+- The agent: `agent-launch-and-tokens`, `sessions`, `chat-transcript`. Tests: `e2e-hidden-window` (every launch of Electron),
+  `e2e-stand-in-agent` (the stand-in, the recordings).
 - Files: `workspace-writes` (what pino writes in a project).
