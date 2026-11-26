@@ -774,7 +774,7 @@ git commit -m "kernel: router chain of planes, fanout, pairs, signals, plane rep
   - `copper_findings(copper: Copper, plan: RoutePlan, widths: Mapping[str, float]) -> list[Finding]`; source `copper`; codes: `copper_floating` (warning: a connected group of a net with no pad; counts, mm of track, area of fill), `copper_stub` (warning: a free track end walked back to what it hangs off; length in mm), `copper_loop` (info: one-layer loops on a net without fills), `pour_one_pad` (warning: fill islands of a net reach only one of its pads), `track_too_thin` (error: a segment narrower than its net's class width by more than 0.001 mm, unless it lies wholly within `NECK_LENGTH` of a pad of that net whose smaller side is narrower than the class width), `pair_gap` (error: parallel runs of a pair on one layer whose edge gap differs from the plan's gap by more than `PAIR_TOLERANCE`, outside the neck zone), `pair_uncoupled` (warning: coupled length below `PAIR_MIN_COUPLED` of the positive net's length). Every finding has `at` in board space and `nets`.
   - `unrouted_findings(report: dict, copper: Copper) -> list[Finding]`: one error `net_unrouted` (source `route`) per net: "net SDA: 2 connections left (U4.10 to U6.3, …)", `at` the first item's position.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_unrouted_nets_by_the_name_in_brackets():
@@ -816,26 +816,31 @@ def test_unrouted_findings_name_the_pins():
     assert [x.nets for x in f] == [("GPIO4",), ("SDA",)] and "U4.10" in f[1].message and f[1].at.space == "board"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_route_checks.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.checks'`
 
-- [ ] **Step 3: Write `checks.py`**
+- [x] **Step 3: Write `checks.py`**
 
 Groups per net come from the ported union-find over tracks, arcs, vias, pads and fill islands with Task 4's contact rule. Stubs walk as pcb-kit's do: from each free end, back while the run has exactly one way on. Two segments of a pair are parallel within 1 degree with overlapping projections and a centre distance below `width + gap + 0.5`; their edge gap is the centre distance minus the width.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_route_checks.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add NOTICE kernel/src/pino_kernel/routing/checks.py kernel/tests/fixtures/route_reports kernel/tests/test_route_checks.py kernel/tests/copper_boards.py
 git commit -m "kernel: router DRC against the unrouted board, router share and copper checks (groups ported from pcb-kit, MIT)"
 ```
+
+**Plan fixes (implementation):**
+- The build's `drc.json` holds unconnected items as positions only (the engine's `normalize`), so `unrouted_nets(report, copper=None)` and `unrouted_findings` name a net and its pins from the pad (or track or via) under each position when the report has no description. `complete_nets(report, copper)` gives (nets with two or more pads, complete ones) for `Share`.
+- `TOUCH` is `pcb.copper.TOUCH` (one contact rule for cleanup and these checks). Locked tracks are never `track_too_thin` (a kept route's width is board.py's call).
+- `pair_gap` is one finding per pair, naming how many coupled runs are off and their gap range. Test boards build their own pads; the pair tests filter the `pair_` codes.
 
 ---
 
