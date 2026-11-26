@@ -28,9 +28,10 @@ something changed. A sheet copied from torno keeps its rules; pino's own areas h
   field (`--dye`, `--scribe`, `--on-dye`, `--on-dye-muted`) is solder mask over a bare board: the first screen and the
   empty views, never a screen with a board on it. `--dye` equals `--accent` in light.
 - **Marks:** `--agent-mark` is Claude Code's orange (`#D97757` in dark; `#C0502B` in light, darkened to the first
-  shade that passes). `--user-mark` is a placeholder violet until the design mocks. A verdict (`--ok`, `--fail`) is no
-  mark's colour to the eye: 1.5:1 at least apart, darker in light and lighter in dark. The dark `--warn` is an ochre,
-  not an amber.
+  shade that passes). `--user-mark` is the violet of the design mocks: `#6440C4` in light, `#A88BFA` in dark. A verdict
+  (`--ok`, `--fail`) is no mark's colour to the eye: `--ok` is 1.5:1 at least from Claude's orange, and `--fail` 60
+  degrees of hue at least from the person's violet (in light the two are close in lightness). The dark `--warn` is an
+  ochre, not an amber.
 - An edit drawn as a diff has its own two washes (`--diff-removed-wash`, a grey between the panel and the hairline;
   `--diff-added-wash`, the value of `--accent-wash`): `--ink` 7:1 and `--muted` 4.5:1 on both. The added wash is 60
   degrees of hue at least from both marks and from `--fail`, but not from `--ok`: pino's accent is green.

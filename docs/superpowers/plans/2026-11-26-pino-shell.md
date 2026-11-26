@@ -691,6 +691,11 @@ git add -A && git commit -m "Add the hidden-window e2e harness"
 > **Note from the build:** The undefined-variable check accepts a `var()` with a fallback: `controls.css` reads `--stem` that way, set from `Popover.tsx`.
 >
 > **Note from the build:** Every pino colour passed torno's contrast thresholds unchanged.
+>
+> **Note from the build:** The design mocks then picked the person's mark: `#6440C4` in light and `#A88BFA` in dark,
+> in place of the placeholder violet above. In light it is 1.11:1 from `--fail`, so the check that `--fail` and the
+> mark are 1.5:1 apart is now a check of hue (60 degrees at least). torno's mark is red, a failure's hue, so there only
+> lightness could tell them apart.
 
 **Files:**
 - Copy adapted:
@@ -1139,5 +1144,6 @@ git add -A && git commit -m "Add CI for unit, typecheck, guard and e2e; finish t
 - **Type names checked across tasks:** `ProjectInfo`, `RecentFolder`, `StartResult`, `SessionDomain`, `NO_DOMAIN`, `ownFolder`, `isAppTool`, `TOOL_PREFIX`, `envName`, `PinoBridge`, `ViewTab`, `launch`, `tempProject`, `agentsIn`.
 - **Open calls for Luis**, also in the final report:
   - The diff "added" wash keeps the accent wash and drops one hue check against `--ok`, since green accent and green verdict now share a hue.
-  - The person's mark is a placeholder violet.
+  - The person's mark is the violet of the design mocks. In light it is close to `--fail` in lightness, and the two
+    are told apart by hue.
   - Stage 2 has no terminal view.

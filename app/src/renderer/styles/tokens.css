@@ -28,11 +28,11 @@
      for those added. No red, which is a failure's; a "−" and a "+" and the strike say which. */
   --diff-removed-wash: #EAE8E2;
   --diff-added-wash: #E0EEE4;
-  --user-mark: #865AD3;    /* marks made by the person: a placeholder violet, chosen in the design mocks */
+  --user-mark: #6440C4;    /* marks made by the person: the violet of the design mocks */
   --agent-mark: #C0502B;   /* marks made by Claude: Claude Code's orange, darkened to read on the panel and under --on-mark */
   --on-mark: #FFFFFF;      /* text on a mark's chip */
-  /* Verdicts are read as text, and are no mark's colour to the eye: darker than the two mark colours by 1.5:1
-     at least (lighter, in the dark theme), 4.5:1 on both grounds and on the wash (shared/contrast.test.ts). */
+  /* Verdicts are read as text, and are no mark's colour to the eye: --ok 1.5:1 at least from Claude's orange, --fail
+     60 degrees of hue at least from the person's violet; 4.5:1 on both grounds and on the wash (shared/contrast.test.ts). */
   --ok: #1B5B3C;
   --warn: #8C5C16;
   --fail: #9B2B1D;
@@ -114,7 +114,7 @@
     --on-dye-muted: #A8D4B5;
     --diff-removed-wash: #2B2E33;
     --diff-added-wash: #1F3A2A;
-    --user-mark: #A173EF;
+    --user-mark: #A88BFA;
     --agent-mark: #D97757;
     --on-mark: #1A1C1F;
     --ok: #A9E6C8;

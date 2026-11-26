@@ -88,8 +88,9 @@ describe.each([['light', tokens(css.slice(0, dark))], ['dark', { ...tokens(css.s
   })
   it('keeps the two mark colours for marks: a verdict is a colour of its own, to the eye, in both themes', () => {
     // Not by name only: a failing dimension of the person's has a cross beside a chip in their colour, and the
-    // two are told apart (1.5:1 at least between a verdict and the mark colour of its hue).
-    expect(contrast(t['--fail'], t['--user-mark'])).toBeGreaterThanOrEqual(1.5)
+    // two are told apart. The person's violet is no verdict's hue, so hue does it (60 degrees at least from a
+    // failure's red); a verdict near a mark's hue is held in lightness, 1.5:1 at least.
+    expect(hueApart(t['--fail'], t['--user-mark'])).toBeGreaterThanOrEqual(60)
     expect(contrast(t['--ok'], t['--agent-mark'])).toBeGreaterThanOrEqual(1.5)
     expect(t['--user-mark']).not.toBe(t['--agent-mark'])
     // Nor is an axis a mark's colour: X is no red pencil, Y no agent's green.
@@ -150,11 +151,11 @@ it('has the light tokens written out where no stylesheet is read, as the stylesh
   expect(css).toMatch(/--text-leading:\s*1\.42/)
 })
 
-it("has pino's colours: solder-mask green, Claude Code's orange for Claude's marks, a placeholder violet for the person's", () => {
+it("has pino's colours: solder-mask green, Claude Code's orange for Claude's marks, violet for the person's", () => {
   const light = tokens(css.slice(0, dark))
   const night = { ...light, ...tokens(css.slice(dark)) }
-  expect([light['--accent'], light['--dye'], light['--agent-mark'], light['--user-mark']]).toEqual(['#17663A', '#17663A', '#C0502B', '#865AD3'])
-  expect([night['--accent'], night['--dye'], night['--agent-mark'], night['--user-mark']]).toEqual(['#5CC489', '#123D25', '#D97757', '#A173EF'])
+  expect([light['--accent'], light['--dye'], light['--agent-mark'], light['--user-mark']]).toEqual(['#17663A', '#17663A', '#C0502B', '#6440C4'])
+  expect([night['--accent'], night['--dye'], night['--agent-mark'], night['--user-mark']]).toEqual(['#5CC489', '#123D25', '#D97757', '#A88BFA'])
   const rest = ['--accent-wash', '--on-accent', '--scribe', '--on-dye', '--on-dye-muted', '--diff-added-wash']
   expect(rest.map((name) => light[name])).toEqual(['#E0EEE4', '#FFFFFF', '#7DB892', '#F1F8F3', '#C4E0CC', '#E0EEE4'])
   expect(rest.map((name) => night[name])).toEqual(['#1F3A2A', '#0B1F13', '#4C9A6A', '#E6F4EA', '#A8D4B5', '#1F3A2A'])
