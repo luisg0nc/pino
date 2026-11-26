@@ -1,6 +1,6 @@
 """pino-kernel: build a project once, or serve builds over JSON lines.
 
-    pino-kernel build <project> [--timeout S] [--render] [--no-kicad] [--no-cache]
+    pino-kernel build <project> [--timeout S] [--render] [--no-kicad] [--no-cache] [--offline]
     pino-kernel version
     pino-kernel serve
     pino-kernel router status|install
@@ -198,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--render", action="store_true", help="also render a picture of the board's top")
     b.add_argument("--no-kicad", action="store_true", help="skip every kicad-cli step")
     b.add_argument("--no-cache", action="store_true", help="build again even when this input was built before")
+    b.add_argument("--offline", action="store_true", help="look no parts up; use what the parts cache holds")
     sub.add_parser("version", help="print versions and where the libraries are")
     sub.add_parser("serve", help="answer JSON-line requests on stdin")
     r = sub.add_parser("router", help="show or install the router (KiCadRoutingTools)")
@@ -264,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"pino-kernel: no project folder at {args.project}", file=sys.stderr)
         return 2
     result = build(args.project, BuildOptions(timeout=args.timeout, render=args.render, kicad=not args.no_kicad,
-                                              cache=not args.no_cache))
+                                              cache=not args.no_cache, parts_network=not args.offline))
     sys.stdout.write(result.to_json())
     sys.stdout.flush()
     return EXIT[result.verdict]

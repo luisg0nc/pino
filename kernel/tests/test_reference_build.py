@@ -54,7 +54,7 @@ def test_reference_builds_clean(ref):
     for path in flatten(r.artifacts):
         assert (ref / path).is_file()
     assert {"F.Cu", "B.Cu", "Edge.Cuts"} <= set(r.artifacts["svg"]) and (ref / r.artifacts["glb"]).stat().st_size > 0
-    assert [t.step for t in r.timings][:3] == ["libraries", "run board.py", "hash"]
+    assert [t.step for t in r.timings][:4] == ["libraries", "fetch parts", "run board.py", "hash"]
     assert sum(t.seconds for t in r.timings) < 60
     assert r.kicad_cli.startswith("10.")
 

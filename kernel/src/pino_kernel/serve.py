@@ -41,12 +41,13 @@ def _options(raw) -> BuildOptions:
     raw = raw or {}
     if not isinstance(raw, dict):
         raise ValueError("options must be an object")
-    known = {"timeout", "render", "kicad", "cache"}
+    known = {"timeout", "render", "kicad", "cache", "parts_network"}
     extra = sorted(set(raw) - known)
     if extra:
         raise ValueError(f"unknown option {extra[0]!r}")
     return BuildOptions(timeout=float(raw.get("timeout", 30.0)), render=bool(raw.get("render", False)),
-                        kicad=bool(raw.get("kicad", True)), cache=bool(raw.get("cache", True)))
+                        kicad=bool(raw.get("kicad", True)), cache=bool(raw.get("cache", True)),
+                        parts_network=bool(raw.get("parts_network", True)))
 
 
 class Output:

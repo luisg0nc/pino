@@ -2,10 +2,14 @@
 
 Steps, in this order in `timings` whatever order they finish in:
 
-    libraries, run board.py, hash, place, write schematic, write board,
+    libraries, fetch parts, run board.py, hash, place, write schematic, write board,
     erc, netlist, schematic svg   (one worker)
     drc, svg, glb, render         (another worker; drc refills a copy in filled/ and checks parity)
-    checks, diff
+    checks, parts, diff
+
+"fetch parts" looks up the LCSC numbers board.py names that the parts cache lacks, since board.py's own process
+only reads the cache. Parts findings (stock, class) change by the day, so they are never stored with the build:
+they are added to every result as it is returned, like routing.
 
 The build folder is written under a temporary name and renamed into place when complete, so a
 half-written build is never seen. The engine writes only under <project>/.pino/.
@@ -30,8 +34,9 @@ from .checks.expect import check_expects
 from .checks.fit import fit_findings
 from .checks.kept import kept_findings, pair_findings
 from .checks.netlist import Netlist, compare, net_names, read_netlist
+from .checks.parts import assembled, lcsc_of, parts_findings
 from .checks.reports import drc_findings, erc_findings
-from .circuit import Circuit, placement_to_json
+from .circuit import Circuit, placement_from_json, placement_to_json
 from .diff import changes as diff_changes
 from .findings import At, Finding
 from .history import History
@@ -40,6 +45,10 @@ from .normalize import normalize
 from .libraries import Libraries, LibrariesNotFound, discover
 from .pcb.footprint import FootprintLibrary, FootprintNotFound, model_findings, pad_world, pin_pad_findings
 from .pcb.writer import copper_layers, fab_of, write_board
+from .parts.cache import PartsCache, parts_root
+from .parts.jlcsearch import Jlcsearch, JlcSearchError
+from .parts.resolve import needs, prefetch_numbers
+from .parts.transport import OfflineError, transport_from_env
 from .placement.placer import place
 from .placement.ratsnest import PadPoint, ratsnest
 from .result import (SCHEMA, BuildResult, Timing, cap_changes, headline, sort_and_cap)
@@ -51,6 +60,9 @@ from .sexpr import find, find_all, parse
 from .symbols import SymbolLibrary
 
 KEEP_BUILDS = 20
+FETCH_BUDGET = 20.0  # seconds to look up the numbers board.py needs before it can run
+PARTS_BUDGET = 6.0  # seconds to refresh stock for the parts checks
+MAX_REFETCH = 2  # runs of board.py again for numbers its source does not spell out
 SVG_LAYERS_EXTRA = ["F.SilkS", "B.SilkS", "F.Mask", "B.Mask", "Edge.Cuts"]
 USER_NAMES = {"F.SilkS": "F.Silkscreen", "B.SilkS": "B.Silkscreen", "F.CrtYd": "F.Courtyard", "B.CrtYd": "B.Courtyard",
               "F.Adhes": "F.Adhesive", "B.Adhes": "B.Adhesive"}
@@ -63,6 +75,16 @@ class BuildOptions:
     render: bool = False
     kicad: bool = True
     cache: bool = True
+    parts_network: bool = True  # False: look nothing up; use what the parts cache holds
+
+
+def _no_lookups(url: str, timeout: float):
+    raise OfflineError("parts lookups are off for this build")
+
+
+def _parts_client(options: BuildOptions) -> Jlcsearch:
+    transport = transport_from_env() if options.parts_network else _no_lookups
+    return Jlcsearch(transport, PartsCache(parts_root()))
 
 
 class _Clock:
@@ -76,11 +98,12 @@ class _Clock:
             return fn(*args, **kw)
         finally:
             with self.lock:
-                self.times[step] = Timing(step, time.perf_counter() - t)
+                before = self.times[step].seconds if step in self.times else 0.0  # a step run again adds up
+                self.times[step] = Timing(step, before + time.perf_counter() - t)
 
 
-ORDER = ["libraries", "run board.py", "hash", "place", "write schematic", "write board", "erc", "netlist",
-         "schematic svg", "drc", "svg", "glb", "render", "checks", "diff", "routing"]
+ORDER = ["libraries", "fetch parts", "run board.py", "hash", "place", "write schematic", "write board", "erc",
+         "netlist", "schematic svg", "drc", "svg", "glb", "render", "checks", "parts", "diff", "routing"]
 
 
 def _rel(project: Path, path: Path) -> str:
@@ -182,6 +205,60 @@ def _svg_files(out_dir: Path, layers: list[str]) -> dict[str, Path]:
     return found
 
 
+def _fetch(client: Jlcsearch, numbers: list[str]) -> None:
+    """Look the numbers up into the cache, within FETCH_BUDGET. A failure shows up when board.py asks for one."""
+    wanted = [n for n in numbers if needs(n, client.cache) is not None]
+    if wanted:
+        try:
+            client.parts(wanted, budget=FETCH_BUDGET)
+        except (JlcSearchError, OSError) as e:
+            print(f"pino-kernel: parts could not be looked up: {e}", file=sys.stderr)
+
+
+def _run_board(project: Path, libs: Libraries, options: BuildOptions, client: Jlcsearch, clock: "_Clock"):
+    """Fetch the numbers board.py spells out, run it, and run it again for numbers it only names as it runs."""
+    def prefetch():
+        board = project / "board.py"
+        if options.parts_network and board.is_file():
+            _fetch(client, prefetch_numbers(board.read_text(encoding="utf-8", errors="replace")))
+
+    clock.run("fetch parts", prefetch)
+    run = clock.run("run board.py", run_board, project, libraries=libs, timeout=options.timeout)
+    for _ in range(MAX_REFETCH if options.parts_network else 0):
+        if not run.missing_parts:
+            break
+        clock.run("fetch parts", _fetch, client, run.missing_parts)
+        if all(needs(n, client.cache) is not None for n in run.missing_parts):
+            break  # nothing new was learnt: running again would say the same
+        run = clock.run("run board.py", run_board, project, libraries=libs, timeout=options.timeout)
+    return run
+
+
+def _check_parts(circuit: Circuit, poses, client: Jlcsearch) -> list[Finding]:
+    numbers = [n for n in (lcsc_of(p) for p in circuit.parts if assembled(p)) if n]
+    try:
+        lookups = client.parts(numbers, budget=PARTS_BUDGET)
+    except OSError as e:  # the cache folder cannot be read or written
+        print(f"pino-kernel: parts could not be checked: {e}", file=sys.stderr)
+        lookups = {}
+    return parts_findings(circuit, poses, lookups)
+
+
+def _with_parts(result: BuildResult, found: list[Finding]) -> BuildResult:
+    """The result with this moment's parts findings on top of the stored build's own."""
+    kept, cut_more = sort_and_cap(result.findings + found)
+    result.truncated += cut_more
+    result.findings = kept
+    counts = dict(result.counts)
+    for key, severity in (("errors", "error"), ("warnings", "warning"), ("infos", "info")):
+        counts[key] += sum(f.severity == severity for f in found)
+    result.counts = counts
+    if result.verdict != "failed":
+        result.verdict = "errors" if counts["errors"] else "ok"
+        result.headline = headline(result.number, result.verdict, counts, None)
+    return result
+
+
 def _routing(project: Path, build_folder: Path) -> dict | None:
     from .routing.state import build_routing
 
@@ -207,6 +284,14 @@ def _with_routing(result: BuildResult, routing: dict | None, project: Path) -> B
     result.headline = with_headline(headline(result.number, result.verdict, counts, None), routing)
     result.waiting = waiting(routing, nets_left(project, routing))
     return result
+
+
+def _stored_poses(build_folder: Path) -> dict:
+    try:
+        doc = json.loads((build_folder / "placement.json").read_text(encoding="utf-8"))
+        return placement_from_json(json.dumps(doc["poses"]))
+    except (OSError, ValueError, KeyError):
+        return {}
 
 
 def _remove(path: Path) -> None:
@@ -248,10 +333,11 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
     if cli and not kicad_version:
         cli, kicad_version = None, None
 
-    # -- run board.py
-    run = clock.run("run board.py", run_board, project, libraries=libs, timeout=options.timeout)
+    # -- run board.py, with the parts it names looked up first
+    client = _parts_client(options)
+    run = _run_board(project, libs, options, client, clock)
     if run.circuit is None:
-        findings = [Finding("board.py", "board_py", "error", p.message,
+        findings = [Finding("board.py", p.code, "error", p.message,
                             At("source", file=p.file or "board.py", line=p.line)) for p in run.problems]
         first = run.problems[0] if run.problems else None
         where = f" at line {first.line}" if first and first.line else ""
@@ -286,11 +372,19 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
             stored.changes = cap_changes(diff_changes(prev_pcb, pcb)) if pcb else stored.changes
             stored.headline = headline(number, stored.verdict, stored.counts, None if stored.verdict != "failed" else
                                        stored.headline.split(": ", 1)[-1])
+            found: list[Finding] = []
+            if stored.verdict != "failed":
+                poses = _stored_poses(final)
+                found = clock.run("parts", _check_parts, circuit, poses, client)
             routing = clock.run("routing", _routing, project, final) if stored.verdict != "failed" else None
-            fresh = [t for t in timings() if t.step != "routing"]
+            last = ("parts", "routing")
+            fresh = [t for t in timings() if t.step not in last]
             stored.timings = fresh + [Timing(t.step, t.seconds, True) for t in stored.timings
-                                      if t.step not in {f.step for f in fresh} | {"routing"}]
-            stored.timings += [clock.times[s] for s in ("routing",) if s in clock.times]
+                                      if t.step not in {f.step for f in fresh} | set(last)]
+            stored.timings.sort(key=lambda t: ORDER.index(t.step) if t.step in ORDER else len(ORDER))
+            stored.timings = [t for t in stored.timings if t.step not in last]
+            stored.timings += [clock.times[s] for s in last if s in clock.times]
+            stored = _with_parts(stored, found)
             history.record(number, digest, stored.verdict)
             return _with_routing(stored, routing, project)
 
@@ -299,13 +393,13 @@ def build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult:
     tmp.mkdir(parents=True)
     try:
         return _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs, symbols, footprints,
-                           cli, kicad_version, options, clock, timings, history, prev, prev_pcb, run.log)
+                           cli, kicad_version, options, clock, timings, history, prev, prev_pcb, run.log, client)
     finally:
         _remove(tmp)
 
 
 def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs, symbols, footprints, cli,
-                kicad_version, options, clock, timings, history, prev, prev_pcb, log) -> BuildResult:
+                kicad_version, options, clock, timings, history, prev, prev_pcb, log, client) -> BuildResult:
     findings: list[Finding] = []
 
     def fail(text, more):
@@ -444,6 +538,7 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
         return out
 
     findings += clock.run("checks", checks)
+    parts_found = clock.run("parts", _check_parts, circuit, placed_result.placement, client)
     changes = clock.run("diff", lambda: cap_changes(diff_changes(prev_pcb, files.kicad_pcb)))
 
     kept, truncated = sort_and_cap(findings)
@@ -469,6 +564,8 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
                          {"score": round(score.total, 3), "crossings": score.crossings, "length_mm": round(score.length, 3)},
                          list(WAITING), False, routing)
     _write(tmp / "result.json", result.to_json())
+    result = _with_parts(result, parts_found)  # after the write: the stored build never depends on stock
+    verdict = result.verdict
     history.mark(number, digest)
 
     # -- into place: rename the finished folder; if another build of the same input won, use that one
