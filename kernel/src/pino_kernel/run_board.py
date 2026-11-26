@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import signal
 import subprocess
@@ -36,9 +37,10 @@ def _relative(file: str | None, project: Path) -> str | None:
         return file
 
 
-def _env(libraries: Libraries) -> dict[str, str]:
+def _env(libraries: Libraries, timeout: float) -> dict[str, str]:
     env = {k: os.environ[k] for k in ("PATH", "HOME", "LANG") if k in os.environ}
     env["PYTHONHASHSEED"] = "0"
+    env["PINO_RUNNER_CPU_SECONDS"] = str(int(math.ceil(timeout)) + 1)
     env["PINO_KICAD_SYMBOL_DIR"] = str(libraries.symbols)
     env["PINO_KICAD_FOOTPRINT_DIR"] = str(libraries.footprints)
     env["PINO_KICAD_3DMODEL_DIR"] = str(libraries.models)
@@ -52,7 +54,7 @@ def run_board(project: Path, *, libraries: Libraries, timeout: float = 30.0, pyt
         return RunResult(None, [Problem("no board.py in the project folder", "board.py", None)])
     argv = [python, "-I", "-m", "pino_kernel.runner", str(board)]
     start = time.perf_counter()
-    proc = subprocess.Popen(argv, cwd=str(project), env=_env(libraries), stdin=subprocess.DEVNULL,
+    proc = subprocess.Popen(argv, cwd=str(project), env=_env(libraries, timeout), stdin=subprocess.DEVNULL,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
     try:
         out, err = proc.communicate(timeout=timeout)

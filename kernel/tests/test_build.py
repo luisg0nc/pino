@@ -151,3 +151,42 @@ def test_kicad_build_of_the_small_board(make_project, fixture_libs):
     assert r.verdict == "ok", errors
     assert [t.step for t in r.timings][6:12] == ["erc", "netlist", "schematic svg", "drc", "svg", "glb"]
     assert r.counts["unrouted"] > 0 and set(r.artifacts["svg"]) >= {"F.Cu", "B.Cu", "Edge.Cuts", "F.SilkS"}
+
+
+@pytest.mark.kicad_cli
+def test_kicad_build_in_a_non_ascii_path_keeps_out_of_home(tmp_path, fixture_libs, monkeypatch):
+    home = tmp_path / "fakehome"; home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    for k in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
+        monkeypatch.delenv(k, raising=False)
+    p = write_project(tmp_path / "placa ação", SMALL_BOARD_PY)
+    r = build(p)
+    assert r.verdict == "ok", [f.to_json() for f in r.findings if f.severity == "error"]
+    assert [f for f in home.rglob("*")] == []
+    assert any((p / ".pino/kicad/config").rglob("*.json"))
+
+
+def test_a_model_file_added_later_is_seen(make_project, tmp_path, monkeypatch):
+    import shutil
+    from helpers import FIXTURES
+    libs = shutil.copytree(FIXTURES / "libs", tmp_path / "libs")
+    for kind, d in (("SYMBOL", "symbols"), ("FOOTPRINT", "footprints"), ("3DMODEL", "3dmodels")):
+        monkeypatch.setenv(f"PINO_KICAD_{kind}_DIR", str(libs / d))
+    p = make_project(SMALL_BOARD_PY)
+    first = build(p, NO_KICAD)
+    assert any(f.code == "model3d_missing" for f in first.findings)
+    (libs / "3dmodels/pino_test.3dshapes/LED_0603_missing.step").write_text("placeholder")
+    second = build(p, NO_KICAD)
+    assert not second.cached and second.hash != first.hash and not any(f.code == "model3d_missing" for f in second.findings)
+
+
+def test_prune_spares_a_build_that_is_still_finishing(tmp_path):
+    from pino_kernel.build import _prune
+    from pino_kernel.history import History
+    h = History(tmp_path)
+    done = h.next_number(); h.record(done, "aaaaaaaaaaaa", "ok")
+    running = h.next_number(); h.mark(running, "bbbbbbbbbbbb")       # renamed into place, not yet recorded
+    for name in ("aaaaaaaaaaaa", "bbbbbbbbbbbb", "cccccccccccc"):
+        (tmp_path / ".pino/build" / name).mkdir(parents=True)
+    _prune(h, tmp_path / ".pino/build", 1, None, None)
+    assert sorted(d.name for d in (tmp_path / ".pino/build").iterdir()) == ["aaaaaaaaaaaa", "bbbbbbbbbbbb"]

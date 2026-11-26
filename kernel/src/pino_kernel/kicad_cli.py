@@ -9,11 +9,13 @@ run cannot leave the last build's report behind.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shlex
 import shutil
 import signal
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,13 +72,32 @@ class KicadCli:
         found = shutil.which("kicad-cli", path=env.get("PATH"))
         return [found] if found else None
 
+    def _ascii_home(self) -> Path:
+        """kicad-cli 10 ignores KICAD_CONFIG_HOME when it holds non-ASCII letters and falls back to the user's
+        own ~/.config/kicad. Such a home is reached through an ASCII-named link in the temp folder instead."""
+        self.home.mkdir(parents=True, exist_ok=True)
+        if str(self.home).isascii():
+            return self.home
+        target = self.home.resolve()
+        name = "pino-kicad-" + hashlib.sha256(str(target).encode("utf-8")).hexdigest()[:16]
+        link = Path(tempfile.gettempdir()) / name
+        try:
+            if link.is_symlink() and Path(os.readlink(link)) != target:
+                link.unlink()
+            if not link.is_symlink():
+                link.symlink_to(target, target_is_directory=True)
+        except FileExistsError:
+            pass
+        return link if link.is_symlink() and link.resolve() == target else self.home
+
     def env(self) -> dict[str, str]:
         env = {k: v for k, v in os.environ.items() if k not in ("DISPLAY", "WAYLAND_DISPLAY")}
-        config, cache = self.home / "config", self.home / "cache"
-        config.mkdir(parents=True, exist_ok=True)
-        cache.mkdir(parents=True, exist_ok=True)
-        env["KICAD_CONFIG_HOME"] = str(config)
-        env["XDG_CACHE_HOME"] = str(cache)
+        home = self._ascii_home()
+        dirs = {"KICAD_CONFIG_HOME": "config", "XDG_CACHE_HOME": "cache", "XDG_DATA_HOME": "data",
+                "XDG_STATE_HOME": "state", "XDG_CONFIG_HOME": "xdg-config"}
+        for var, name in dirs.items():
+            (self.home / name).mkdir(parents=True, exist_ok=True)
+            env[var] = str(home / name)
         env.update(self.libraries.path_vars())
         return env
 

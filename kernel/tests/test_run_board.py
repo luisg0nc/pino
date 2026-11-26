@@ -66,3 +66,15 @@ def test_board_py_imports_a_sibling_module(make_project, fixture_libs):
     project = make_project("from helpers_here import VALUE\nopen('note.txt').read()\n" + SMALL_BOARD_PY.replace('"10k"', "VALUE"),
                            extra={"helpers_here.py": 'VALUE = "4.7k"\n', "note.txt": "x"})
     assert run_board(project, libraries=fixture_libs).circuit.part("R1").value == "4.7k"
+
+
+def test_a_hung_board_py_stops_itself_without_the_parent(make_project, fixture_libs):
+    import os
+    import subprocess
+    import sys
+    project = make_project("while True:\n    pass\n")
+    env = {**os.environ, "PINO_RUNNER_CPU_SECONDS": "1"}
+    t = time.monotonic()
+    p = subprocess.run([sys.executable, "-I", "-m", "pino_kernel.runner", str(project / "board.py")], env=env,
+                       capture_output=True, timeout=30)
+    assert p.returncode != 0 and time.monotonic() - t < 10

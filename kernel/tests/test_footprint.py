@@ -135,3 +135,24 @@ def test_missing_footprint(fp_lib):
 def test_footprint_angle_is_written_as_kicad_saves_it(placed):
     at = find(place(placed("R1", x=0, y=0, rot=270), copper_layers=CU2), "at")
     assert str(at[3]) == "-90"
+
+
+def test_back_side_flips_bare_layer_names(fp_lib, tmp_path):
+    from pino_kernel.pcb.footprint import _flip_tree
+    from pino_kernel.sexpr import Sym, parse
+    pad = _flip_tree(parse('(pad "1" smd rect (at 1 0) (size 1 1) (layers F.Cu F.Paste F.Mask))'), True)
+    line = _flip_tree(parse('(fp_line (start 0 0) (end 1 0) (layer F.SilkS))'), True)
+    assert [str(s) for s in find(pad, "layers")[1:]] == ["B.Cu", "B.Paste", "B.Mask"]
+    assert all(isinstance(s, Sym) for s in find(pad, "layers")[1:]) and str(find(line, "layer")[1]) == "B.SilkS"
+    quoted = _flip_tree(parse('(pad "1" thru_hole circle (at 0 0) (size 1 1) (layers "*.Cu" "F.Mask"))'), True)
+    assert [str(s) for s in find(quoted, "layers")[1:]] == ["*.Cu", "B.Mask"]
+
+
+def test_footprint_zone_layer_forms(placed):
+    from pino_kernel.pcb.footprint import _zone_item
+    from pino_kernel.sexpr import parse
+    p = placed("U3", lib_id="pino_test:MODULE_ANT", x=0, y=0)
+    zone = lambda layers: parse(f'(zone (layers {layers}) (keepout (tracks not_allowed)) (polygon (pts (xy 0 0) (xy 1 0) (xy 1 1))))')
+    assert _zone_item(zone('"In1.Cu" "In2.Cu"'), p, CU2, "u") is None           # nothing left on a 2-layer board
+    both = _zone_item(zone('"F&B.Cu"'), p, CU2, "u")
+    assert [str(s) for s in find(both, "layers")[1:]] == ["F.Cu", "B.Cu"]

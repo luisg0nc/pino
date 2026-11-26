@@ -59,6 +59,15 @@ class History:
             self._write(builds)
             return number
 
+    def mark(self, number: int, hash: str) -> None:
+        """Say which build folder a running build is about to put in place, so no other build prunes it."""
+        with self._locked():
+            builds = self._read()
+            for b in builds:
+                if b.get("number") == number:
+                    b["hash"] = hash
+            self._write(builds)
+
     def record(self, number: int, hash: str | None, verdict: str) -> None:
         with self._locked():
             builds = [b for b in self._read() if b.get("number") != number]
@@ -79,11 +88,16 @@ class History:
         return None
 
     def recent_hashes(self, n: int) -> list[str]:
+        """The newest n finished builds' hashes, plus every running build's."""
         out: list[str] = []
+        finished = 0
         for b in reversed(self.entries()):
             h = b.get("hash")
-            if h and h not in out:
+            if not h or h in out:
+                continue
+            if b.get("verdict") == "running":
                 out.append(h)
-            if len(out) >= n:
-                break
+            elif finished < n:
+                out.append(h)
+                finished += 1
         return out

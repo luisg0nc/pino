@@ -328,8 +328,9 @@ def _flip_tree(node, back: bool):
     for c in node[1:]:
         if isinstance(c, list):
             out.append(_flip_tree(c, back))
-        elif head in ("layer", "layers") and isinstance(c, str) and not isinstance(c, Sym):
-            out.append(flip_layer(c))
+        elif head in ("layer", "layers") and isinstance(c, str):
+            # quoted ("F.Cu") as KiCad 10 writes it, or bare (F.Cu) as older and converted libraries do
+            out.append(Sym(flip_layer(c)) if isinstance(c, Sym) else flip_layer(c))
         else:
             out.append(c)
     if head in _POINT_KEYS and len(out) >= 3:
@@ -389,12 +390,15 @@ def _zone_item(c, p: Placed, copper_layers: list[str], item_uuid: str):
     for cc in item:
         if isinstance(cc, list) and cc and cc[0] in ("layers", "layer"):
             names = [str(s) for s in cc[1:]]
+            names = [n for name in names for n in (("F.Cu", "B.Cu") if name == "F&B.Cu" else (name,))]
             if p.back:
                 names = [flip_layer(n) for n in names]
             keep = [n for n in names if n in copper_layers or n == "*.Cu"]
             if "*.Cu" in keep:
                 keep = list(copper_layers)
             keep = [n for n in copper_layers if n in keep]  # board order
+            if not keep:
+                return None  # the zone is on none of this board's layers
             out.append([Sym("layers"), *keep] if len(keep) != 1 else [Sym("layer"), keep[0]])
             out.append([Sym("uuid"), item_uuid])
         elif isinstance(cc, list) and cc and cc[0] == "polygon":
@@ -443,7 +447,9 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
             c = [*c, Sym("dnp")]
         item_uuid = ids.uid("footprint", key, str(i), kind)
         if kind == "zone":
-            zones.append(_zone_item(c, p, copper_layers, item_uuid))
+            z = _zone_item(c, p, copper_layers, item_uuid)
+            if z is not None:
+                zones.append(z)
             continue
         if kind in ("model", "embedded_fonts"):
             out.append(c)

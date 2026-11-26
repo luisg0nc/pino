@@ -73,7 +73,19 @@ def run(board_path: str) -> dict:
     return {"ok": True, "circuit": json.loads(circuit.to_json())}
 
 
+def _limit_cpu() -> None:
+    """The parent stops a hung board.py at its timeout; this limit stops it too if the parent is gone
+    (the app quit mid-build), so it never spins on a core with no one waiting."""
+    seconds = os.environ.get("PINO_RUNNER_CPU_SECONDS")
+    if seconds:
+        import resource
+
+        n = max(1, int(float(seconds)))
+        resource.setrlimit(resource.RLIMIT_CPU, (n, n + 1))
+
+
 def main() -> None:
+    _limit_cpu()
     real = os.fdopen(os.dup(1), "w", encoding="utf-8")
     os.dup2(2, 1)  # anything board.py prints, even from C code, goes to stderr
     sys.stdout = sys.stderr

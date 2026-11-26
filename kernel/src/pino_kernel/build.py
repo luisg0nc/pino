@@ -122,9 +122,11 @@ def _digest(circuit_json: str, kicad_version: str | None, symbols: SymbolLibrary
     for lib_id in sorted({p.footprint for p in circuit.parts}):
         try:
             d = footprints.source_digest(lib_id)
+            # whether each 3D model is there changes the findings and the GLB
+            models = [f"{m}={'yes' if footprints.model_exists(m) else 'no'}" for m in footprints.load(lib_id).models]
         except (FootprintNotFound, OSError):
-            d = "missing"
-        h.update(f"fp {lib_id} {d}\0".encode())
+            d, models = "missing", []
+        h.update(f"fp {lib_id} {d} {' '.join(models)}\0".encode())
     return h.hexdigest()[:12]
 
 
@@ -434,6 +436,7 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
                          {"score": round(score.total, 3), "crossings": score.crossings, "length_mm": round(score.length, 3)},
                          list(WAITING), False)
     _write(tmp / "result.json", result.to_json())
+    history.mark(number, digest)
 
     # -- into place: rename the finished folder; if another build of the same input won, use that one
     if final.exists():
