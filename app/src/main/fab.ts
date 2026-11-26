@@ -3,16 +3,18 @@
 // nothing else outside .pino/; main only reads it.
 
 import type { EngineState } from '../shared/build'
-import { FAB_UNAVAILABLE, type FabProfile, type FabState, type PartsQuery, type PartsResult, type Readiness, type ReleaseResult } from '../shared/fab'
+import { engineDidNotStart, engineTooOld, NO_BUILT_BOARD, type FabProfile, type FabState, type PartsQuery, type PartsResult, type Readiness, type ReleaseResult } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
-import { engineMayWrite, type Builds } from './builds'
-import type { KernelClient } from './kernel/client'
+import { answered, engineMayWrite, PING_TIMEOUT_MS, type Builds } from './builds'
+import type { KernelClient, Pong } from './kernel/client'
 
 export interface FabDeps {
   kernel: () => KernelClient
   builds: Pick<Builds, 'state'>
   engine: () => EngineState
   onState: (s: FabState) => void
+  /** How long an engine a parts lookup started has to answer. */
+  pingTimeoutMs?: number
 }
 
 interface Job {
@@ -31,6 +33,9 @@ export class Fab {
   private known: FabProfile[] = []
   private asked: { client: KernelClient; list: Promise<FabProfile[]> } | null = null
 
+  /** What each engine a parts lookup asked has answered to its ping. */
+  private readonly pongs = new WeakMap<KernelClient, Promise<Pong>>()
+
   constructor(private readonly deps: FabDeps) {}
 
   /** Whether the engine that answers makes fab files: serve protocol 3. */
@@ -39,8 +44,32 @@ export class Fab {
     return engine.state === 'ready' && engine.serve >= 3
   }
 
-  private need(): void {
-    if (!this.available()) throw new Error(FAB_UNAVAILABLE)
+  /** A release is of a built board, by an engine that makes fab files; else it says which is missing. */
+  private need(p: ProjectInfo): void {
+    const engine = this.deps.engine()
+    if (engine.state === 'failed') throw new Error(engine.reason)
+    if (engine.state === 'ready' && engine.serve < 3) throw new Error(engineTooOld(engine.serve))
+    if (engine.state !== 'ready' || !this.deps.builds.state(p.id)?.latest) throw new Error(NO_BUILT_BOARD)
+  }
+
+  /**
+   * The engine for a parts lookup, which needs no board and no build: started if none runs, and asked what it speaks.
+   * A new project has had no build to start one.
+   */
+  private async partsEngine(): Promise<KernelClient> {
+    const client = this.deps.kernel()
+    let pong = this.pongs.get(client)
+    if (!pong) {
+      pong = answered(client, this.deps.pingTimeoutMs ?? PING_TIMEOUT_MS)
+      this.pongs.set(client, pong)
+      // One that did not answer is asked again the next time.
+      pong.catch(() => this.pongs.delete(client))
+    }
+    const { serve } = await pong.catch((e: Error) => {
+      throw new Error(engineDidNotStart(e.message))
+    })
+    if (serve < 3) throw new Error(engineTooOld(serve))
+    return client
   }
 
   /** The engine's fab profiles, asked once for each engine that runs. */
@@ -73,7 +102,7 @@ export class Fab {
   }
 
   async readiness(p: ProjectInfo): Promise<Readiness> {
-    this.need()
+    this.need(p)
     await engineMayWrite(p.dir)
     const { status } = await this.deps.kernel().request<{ status: Readiness }>('release_status', { project: p.dir })
     this.patch(p.id, { readiness: status })
@@ -85,7 +114,7 @@ export class Fab {
     const held = this.jobs.get(p.id)
     if (held) return held.done
     try {
-      this.need()
+      this.need(p)
     } catch (e) {
       return Promise.reject(e as Error)
     }
@@ -129,10 +158,10 @@ export class Fab {
 
   /** One part by its LCSC number, or a search. */
   async parts(p: ProjectInfo, q: PartsQuery): Promise<PartsResult> {
-    this.need()
+    const client = await this.partsEngine()
     await engineMayWrite(p.dir)
     const asked = q.lcsc ? { action: 'get', lcsc: q.lcsc } : { action: 'search', q: q.search, package: q.package, basic: q.basic, limit: q.limit }
-    return this.deps.kernel().job<PartsResult>('parts', asked, () => {}).done
+    return client.job<PartsResult>('parts', asked, () => {}).done
   }
 
   /** A new build: what a release would be is asked again when someone wants to know. */

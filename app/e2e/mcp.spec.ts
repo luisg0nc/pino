@@ -1,4 +1,6 @@
+import { existsSync } from 'node:fs'
 import { request } from 'node:http'
+import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { launch, tempProject } from './launch'
 
@@ -28,6 +30,23 @@ test('the MCP address answers 404 without the token, 403 to a request from a web
     const listed = await post(url, { 'X-Pino-Session': token }, list)
     expect(listed.status).toBe(200)
     expect(listed.body).toContain('"name":"project"')
+  } finally {
+    await app.close()
+  }
+})
+
+// A new project: Claude looks parts up before it writes board.py, so no build has started an engine.
+test('parts answers in a project with no board', async () => {
+  const dir = tempProject()
+  const { app, page } = await launch({ project: dir, env: { FAKE_KERNEL_SERVE: '3' } })
+  try {
+    await expect.poll(() => page.evaluate(() => window.__pinoTest!.state().project?.id ?? '')).not.toBe('')
+    const id = await page.evaluate(() => window.__pinoTest!.state().project!.id)
+    const { url, token } = await app.evaluate((_main, projectId) => (globalThis as unknown as { __pinoMain: { mcpFor(i: string): { url: string; token: string } } }).__pinoMain.mcpFor(projectId), id)
+    const said = await post(url, { 'X-Pino-Session': token }, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'parts', arguments: { lcsc: 'C25804' } } })
+    expect(said.body).toContain('C25804 · basic')
+    expect(said.body).not.toContain('"isError":true')
+    expect(existsSync(join(dir, '.pino'))).toBe(false)
   } finally {
     await app.close()
   }

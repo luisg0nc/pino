@@ -41,7 +41,7 @@ export interface ToolDeps {
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
   /** Parts at JLC, and the release's state. */
-  fab: Pick<Fab, 'available' | 'parts' | 'state'>
+  fab: Pick<Fab, 'parts' | 'state'>
   /** The limits of the fab the newest drawn board is built for. */
   fabProfile(project: ProjectInfo): Promise<FabProfile | null>
 }

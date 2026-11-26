@@ -118,7 +118,10 @@ export interface FabState {
   error: string | null
 }
 
-export const FAB_UNAVAILABLE = 'Fab files are not available in this engine yet: it comes with the fab stage.'
+// Why parts or fab files are refused, in words that say what is missing: Claude reads them and acts on them.
+export const engineTooOld = (serve: number): string => `The engine is too old for parts and fab files: it speaks protocol ${serve}, and they need 3. Update pino's engine (its kernel/ folder).`
+export const engineDidNotStart = (reason: string): string => `The engine did not start: ${reason}`
+export const NO_BUILT_BOARD = 'No built board yet: fab files are made from a build. Save board.py and wait for it to build.'
 
 /** Two decimals at least, as the capability page writes small widths: 0.1 is 0.10, 0.125 stays. */
 const fine = (v: number): string => (Math.abs(v * 100 - Math.round(v * 100)) < 1e-9 ? v.toFixed(2) : String(v))

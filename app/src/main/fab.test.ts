@@ -1,12 +1,13 @@
 // The Fab holder over the engine's stand-in: availability, profiles, readiness, and a release as a job.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { tempProject } from '../test/fixtures'
 import { routedLoop } from '../test/routing'
 import type { FabState } from '../shared/fab'
 import { Fab } from './fab'
+import type { KernelClient } from './kernel/client'
 
 let project: ReturnType<typeof tempProject>
 const done: Array<() => Promise<unknown> | void> = []
@@ -35,8 +36,34 @@ describe('the fab holder', () => {
   it('says fab files are not there on serve 2', async () => {
     const { fab, loop } = await fabOn({ FAKE_KERNEL_SERVE: '2' })
     expect(fab.available()).toBe(false)
-    await expect(fab.release(loop.info)).rejects.toThrow('Fab files are not available in this engine yet')
+    await expect(fab.release(loop.info)).rejects.toThrow('The engine is too old for parts and fab files: it speaks protocol 2')
+    await expect(fab.readiness(loop.info)).rejects.toThrow('The engine is too old')
     expect(await fab.profiles()).toEqual([])
+  })
+
+  it('says there is no built board yet, to a release of a project with no board', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const { fab, loop } = await fabOn()
+    const why = 'No built board yet: fab files are made from a build. Save board.py and wait for it to build.'
+    await expect(fab.release(loop.info)).rejects.toThrow(why)
+    await expect(fab.readiness(loop.info)).rejects.toThrow(why)
+  })
+
+  it('says the engine did not start, to a release', async () => {
+    const { fab, loop } = await fabOn({ FAKE_KERNEL_DIE: 'start' })
+    await expect(fab.release(loop.info)).rejects.toThrow('The engine did not start: fake kernel died at start')
+    await expect(fab.readiness(loop.info)).rejects.toThrow('The engine did not start: fake kernel died at start')
+  })
+
+  it('ends an engine that never answers a parts lookup, and says so', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const loop = routedLoop(project)
+    done.push(loop.dispose)
+    let killed = 0
+    const silent = { ping: () => new Promise<never>(() => {}), kill: () => void (killed += 1) } as unknown as KernelClient
+    const fab = new Fab({ kernel: () => silent, builds: loop.builds, engine: () => ({ state: 'starting' }), onState: () => {}, pingTimeoutMs: 20 })
+    await expect(fab.parts(loop.info, { lcsc: 'C25804' })).rejects.toThrow('The engine did not start: it did not answer within 0 s')
+    expect(killed).toBe(1)
   })
 
   it('asks for the fab profiles once an engine', async () => {

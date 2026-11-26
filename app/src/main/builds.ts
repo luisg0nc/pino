@@ -8,6 +8,7 @@ import { join, relative, sep } from 'node:path'
 import { watch as chokidarWatch } from 'chokidar'
 import { APP } from '../shared/app'
 import type { BuildEntry, BuildResult, BuildState, EngineState, Verdict } from '../shared/build'
+import { engineDidNotStart } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
 import { BUILD_HASH } from './artifacts'
 import { KernelError, type KernelClient, type Pong } from './kernel/client'
@@ -17,7 +18,7 @@ export const DEBOUNCE_MS = 300
 /** The engine is started again at most this often: a start that fails at once must not become a loop. */
 const RESTART_MS = 10_000
 /** How long a new engine has to answer: its first run under uv may have its environment to make. */
-const PING_TIMEOUT_MS = 120_000
+export const PING_TIMEOUT_MS = 120_000
 /** Where the engine, tools and the person keep what is no part of the board. */
 const IGNORED_FOLDERS = new Set([APP.folder, '__pycache__', '.venv', 'node_modules', '.git', 'fab', 'reference'])
 /** The folders of .pino the engine writes: each must be the project's own before it is asked to build. */
@@ -301,7 +302,7 @@ export class Builds {
       this.say(entry, { engine: { state: 'starting' } })
       pong = answered(client, this.pingTimeoutMs).then(
         (p): EngineState => ({ state: 'ready', kernel: p.kernel, serve: p.serve }),
-        (e: Error): EngineState => ({ state: 'failed', reason: `The engine did not start: ${e.message}` })
+        (e: Error): EngineState => ({ state: 'failed', reason: engineDidNotStart(e.message) })
       )
       this.pongs.set(client, pong)
     }
@@ -362,7 +363,7 @@ export class Builds {
  * The engine's first answer. One that has said nothing in `ms` is ended, so that nothing waits on it for ever and the
  * next build starts another.
  */
-function answered(client: KernelClient, ms: number): Promise<Pong> {
+export function answered(client: KernelClient, ms: number): Promise<Pong> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`it did not answer within ${Math.round(ms / 1000)} s`))

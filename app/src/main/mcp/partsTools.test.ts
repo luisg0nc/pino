@@ -1,11 +1,10 @@
-import { writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { readJson, tempProject } from '../../test/fixtures'
 import { toolsOver } from '../../test/mcp'
 import { routedLoop } from '../../test/routing'
 import type { FabProfile } from '../../shared/fab'
-import { FAB_UNAVAILABLE } from '../../shared/fab'
 import { Fab } from '../fab'
 import type { ToolDeps } from './tools'
 
@@ -69,9 +68,33 @@ describe('parts', () => {
     }
   })
 
-  it('says it is not there on an engine of protocol 2', async () => {
+  // A new project: Claude looks parts up before it writes board.py, so nothing has been built and no engine runs yet.
+  it('answers in a project with no board, and writes nothing in it', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const log = join(project.root, 'kernel-log.jsonl')
+    const t = await tools({ FAKE_KERNEL_LOG: log })
+    expect(t.loop.builds.state(t.loop.info.id)!.engine.state).toBe('starting')
+    // Several at once, as Claude asks them: one engine, pinged once.
+    const said = await Promise.all(['C25804', 'C51118', 'C25804'].map((lcsc) => t.call('parts', { lcsc })))
+    expect(said[0]).toContain('C25804 · basic')
+    expect(said[1]).toContain('C51118 · extended')
+    const ops = readFileSync(log, 'utf8').trim().split('\n').map((line) => (JSON.parse(line) as { op: string }).op)
+    expect(ops.filter((op) => op === 'ping')).toHaveLength(1)
+    expect(ops).not.toContain('build')
+    expect(existsSync(join(project.dir, '.pino'))).toBe(false)
+  })
+
+  it('says the engine is too old, on an engine of protocol 2', async () => {
     const t = await tools({ FAKE_KERNEL_SERVE: '2' })
-    expect(await t.call('parts', { lcsc: 'C25804' })).toBe(FAB_UNAVAILABLE)
+    expect(await t.call('parts', { lcsc: 'C25804' })).toBe("The engine is too old for parts and fab files: it speaks protocol 2, and they need 3. Update pino's engine (its kernel/ folder).")
+  })
+
+  it('says the engine did not start, and why', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    const t = await tools({ FAKE_KERNEL_DIE: 'start' })
+    expect(await t.call('parts', { lcsc: 'C25804' })).toBe('The engine did not start: fake kernel died at start')
+    // The next lookup asks again, with a new engine, and says why again.
+    expect(await t.call('parts', { lcsc: 'C25804' })).toBe('The engine did not start: fake kernel died at start')
   })
 
   it('puts the fab limits in the project answer', async () => {
