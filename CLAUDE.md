@@ -51,8 +51,11 @@ changed.
   `globalThis.__pinoMain`, MCP server `pino` (tools `mcp__pino__<tool>`). A file that cannot import it holds the name
   in one variable, and a test holds that equal to `APP.name`.
 - Code says "project", never "object" (`app/src/names.test.ts`).
-- Never write inside a project folder except under `<project>/.pino/`, through `ownFolder`. This stage has no
-  exceptions.
+- Never write inside a project folder except under `<project>/.pino/`, through `ownFolder`. Two exceptions. The
+  engine writes a new `<project>/fab/v<version>/` on release. Making a new project (`main/projects/create.ts`) writes
+  one new folder `<workspace>/<name>/` with `brief.md`, `reference/` and `.pino/brief/cards.json`, made in a hidden
+  `.<name>.pino-new-<12 hex>` and renamed into place last; it never writes into or replaces a folder that is there.
+  Nothing is written in the workspace before Start.
 - The HTTP server binds `127.0.0.1` only. Every request carries its session's token in `X-Pino-Session`. The token is
   only in the agent's environment (`PINO_SESSION`), never in an argument, a file or a log.
 - Renderer: `contextIsolation: true`, `nodeIntegration: false`, `backgroundThrottling: false`.

@@ -24,6 +24,7 @@ import { onNotOwn } from './own'
 import { resultOfBuild } from './artifacts'
 import type { LookResult } from '../shared/view'
 import { type Opened, openedHolder, SUGGESTED } from './opened'
+import { sweepStaleNew } from './projects/create'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
 import { readEngine, versionCommand } from './engineInfo'
@@ -171,10 +172,29 @@ async function pickWorkspaceFolder(): Promise<string | null> {
   return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
 }
 
-/** What a test needs of main that it cannot reach through the window. `pickFolder` is what the folder dialog answers. */
+/** The dialog for the photos or the PDF of a new project; under test, what a test said it answers. */
+async function pickProjectFiles(kind: 'photos' | 'pdf'): Promise<string[]> {
+  if (isTest) {
+    const said = testHooks.pickFiles ?? []
+    return kind === 'pdf' ? said.filter((path) => path.toLowerCase().endsWith('.pdf')).slice(0, 1) : said.filter((path) => !path.toLowerCase().endsWith('.pdf'))
+  }
+  const win = BrowserWindow.getAllWindows()[0]
+  const options: Electron.OpenDialogOptions =
+    kind === 'pdf'
+      ? { title: 'Add a PDF', properties: ['openFile'], filters: [{ name: 'PDF files', extensions: ['pdf'] }] }
+      : { title: 'Add photos', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] }
+  const chosen = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+  return chosen.canceled ? [] : chosen.filePaths
+}
+
+/**
+ * What a test needs of main that it cannot reach through the window. `pickFolder` is what the folder dialog answers,
+ * `pickFiles` what the photo and PDF dialogs do.
+ */
 const testHooks = {
   pickFolder: null as string | null,
   picks: 0,
+  pickFiles: null as string[] | null,
   mcpFor: (_projectId: string): { url: string; token: string } => ({ url: '', token: '' }),
   /** The engine's process id, when one runs: a spec checks that it does not outlive pino. */
   kernelPid: (): number | null => kernel.current()?.pid ?? null,
@@ -288,6 +308,8 @@ void app.whenReady().then(async () => {
     },
     changeConfig,
     pickFolder: pickWorkspaceFolder,
+    // What a create left half made in a crash, in a workspace that is opened.
+    sweep: (root) => sweepStaleNew(root, Date.now()),
     stopAll: () => sessions!.stopAll(),
     // No start is taken for a project that has been left, and `stopAll` waits for one under way.
     closed: (project) => {
@@ -377,7 +399,7 @@ void app.whenReady().then(async () => {
       ...said,
       claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
     })))
-  registerIpc({ opened: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path), cards, openExternal: isTest ? () => {} : (url) => void shell.openExternal(url) })
+  registerIpc({ opened: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path), cards, openExternal: isTest ? () => {} : (url) => void shell.openExternal(url), pickFiles: pickProjectFiles })
   // Every build that drew something has the marks found again on it.
   builds.onResult((projectId, result) => {
     fab.buildLanded(projectId)

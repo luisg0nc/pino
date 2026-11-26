@@ -1,7 +1,9 @@
 // Everything the renderer may ask of main, and the types both sides share for it.
 
 import type { ArtifactName, BuildResult, BuildState } from './build'
-import type { CardsFile, PersonChange } from './cards'
+import type { CardsFile, FabAsk, PartReading, PersonChange } from './cards'
+import type { SizeFact } from './size'
+import type { ConnectionRow, PartHad, PowerRow } from './slots'
 import type { Seen } from './brief'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode, PromptRow } from './chat'
 import type { FabProfile, FabState, Readiness } from './fab'
@@ -20,6 +22,35 @@ export type SessionStatus = 'starting' | 'idle' | 'working' | 'needs_input' | 'e
 export type StartResult =
   | { sessionId: string; status: SessionStatus }
   | { refused: string; question?: { kind: 'trust'; files: string[] } }
+
+/** What the New project page asks for at Start or "Make it without starting Claude": the new project and everything given. */
+export interface CreateRequest {
+  name: string
+  description: string
+  /**
+   * Files on the disk (from a drop or main's dialog), copied into `reference/` as `photo-<n>.<ext>`. Or, for a
+   * picture that has no file (a screenshot pasted from the clipboard), the PNG the window scaled.
+   */
+  photos: Array<{ path: string; note: string } | { png: Uint8Array; note: string }>
+  /** Drawings as PNG bytes: `reference/doodle-<n>.png`. `over` is the index into `photos` of the photo it is drawn over. */
+  doodles: Array<{ png: Uint8Array; note: string; over?: number; /** The photo it was drawn over is no longer among the photos: the picture still has it under the ink. */ onPhoto?: true }>
+  /** PDF files (at most 6, 25 MB each, starting `%PDF-`), copied into `reference/` under their own names (`referenceFiles`). */
+  pdfs: Array<{ path: string; note: string }>
+  /** The PCB slots and the rest become cards of the person's, never written into `brief.md`. */
+  power: PowerRow[]
+  connections: ConnectionRow[]
+  sizes: SizeFact[]
+  /** "Fits an enclosure" and the edge a connector must sit on; empty when not said. */
+  enclosure: string
+  edges: string
+  /** The parts the person has. A part's stock reading is main's, never given here. */
+  parts: PartHad[]
+  /** What the person asks of the fab; null when the slot was not opened. */
+  fab: FabAsk | null
+  rules: string
+  /** Links (`http`, `https`; at most 20), never opened by pino on its own. */
+  links: Array<{ url: string; note: string }>
+}
 
 /** `window.pino`, as the preload script exposes it. The channels are those of `main/ipc.ts`. */
 export interface PinoBridge {
@@ -45,10 +76,26 @@ export interface PinoBridge {
     open(name: string): Promise<ProjectInfo>
     /** Ends the project's session and leaves the page of projects. */
     close(): Promise<void>
+    /** Makes a new project in the open workspace, whole or not at all, and opens it. Rejects with why it could not. */
+    create(req: CreateRequest): Promise<ProjectInfo>
+    /** The photo dialog (several images); [] when cancelled. Under test, what the `pickFiles` hook holds. */
+    pickPhotos(): Promise<string[]>
+    /** The dialog for a PDF; null when cancelled. Under test, the first PDF of `pickFiles`. */
+    pickPdf(): Promise<string | null>
+    /** The bytes of an image the dialog gave, for its thumbnail and the copy the first prompt carries. No other path. */
+    readPhoto(path: string): Promise<Uint8Array>
+    /** The path of a dropped file; empty for one that is no file on the disk. */
+    pathOf(file: File): string
+    /** Every name in the open workspace's folder, which a new project's name is checked against. */
+    taken(): Promise<string[]>
     /** The picture on file of a project the open workspace lists, as a PNG's bytes; null when there is none. */
     thumb(name: string): Promise<Uint8Array | null>
     /** A picture of the open project's newest good build, by its hash, which main keeps. Anything else is dropped. */
     saveThumb(projectId: string, hash: string, png: Uint8Array): Promise<void>
+  }
+  parts: {
+    /** A part's stock as JLC has it, checked through the engine as the `parts` tool does; or why it was not checked. */
+    lookup(lcsc: string): Promise<{ reading: PartReading } | { refused: string }>
   }
   window: {
     minimize(): void

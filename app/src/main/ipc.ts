@@ -15,7 +15,12 @@ import type { EngineInfo } from '../shared/ready'
 import type { MarkStore } from './marks/store'
 import type { Routing } from './routing'
 import type { Fab } from './fab'
+import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { CreateRequest } from '../shared/bridge'
+import { createProject, readPhoto } from './projects/create'
+import { Offered } from './projects/offered'
+import { lookupPart, makeReadings } from './projects/readings'
 import { lastConversation } from './sessions/chatlog'
 import type { Sessions } from './sessions/manager'
 import type { KnownModels } from './sessions/models'
@@ -33,7 +38,8 @@ import { takeAnswer, type ViewHolder } from './view'
 //            route:start, route:cancel, marks:list, marks:add, marks:update, marks:remove, marks:resolve,
 //            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder, cards:read, cards:change,
 //            cards:brief, cards:references, cards:reference, cards:openLink, cards:seen, cards:markSeen,
-//            cards:restock, chat:prompts
+//            cards:restock, chat:prompts, project:create, project:pickPhotos, project:pickPdf, project:readPhoto,
+//            project:taken, parts:lookup
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
 //            fab:state, cards:changed, cards:briefChanged (index.ts),
@@ -57,6 +63,8 @@ export interface IpcDeps {
   cards: CardStore
   /** Opens a web address in the browser; does nothing under test. */
   openExternal: (url: string) => void
+  /** The dialog for photos or for a PDF of a new project; under test, what a test said it answers. */
+  pickFiles: (kind: 'photos' | 'pdf') => Promise<string[]>
   /** Whether what pino needs is on this machine. */
   engineInfo: () => Promise<EngineInfo>
 }
@@ -68,7 +76,15 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ opened, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo, cards, openExternal }: IpcDeps): void {
+export function registerIpc({ opened, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo, cards, openExternal, pickFiles }: IpcDeps): void {
+  /** The stock readings of this run, and the files the dialogs handed the window. */
+  const readings = makeReadings()
+  const offered = new Offered()
+  const openWorkspace = () => {
+    const workspace = opened.workspace()
+    if (!workspace) throw new Error('No folder of boards is open.')
+    return workspace
+  }
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -112,6 +128,28 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
     if (thumbnailRefusal(png as Uint8Array) !== null) return
     await saveThumbnail(project.dir, png as Uint8Array, { hash }, new Date())
   })
+
+  // The one place pino makes a folder in a workspace (`createProject`, which checks the whole request again).
+  handle('project:create', async (req: unknown) => {
+    const { root } = openWorkspace()
+    const made = await createProject(req as CreateRequest, { root, readings })
+    if (opened.workspace()?.root !== root) throw new Error(`${made.name} was made, but its folder of boards was left before it could be opened.`)
+    return opened.openProject(made.name)
+  })
+  handle('project:taken', () => readdir(openWorkspace().root))
+  const picked = async (kind: 'photos' | 'pdf'): Promise<string[]> => {
+    const paths = await pickFiles(kind)
+    offered.add(paths)
+    return paths
+  }
+  handle('project:pickPhotos', () => picked('photos'))
+  handle('project:pickPdf', async () => (await picked('pdf'))[0] ?? null)
+  // Only what the dialog gave: a file dropped on the window is read by the window itself.
+  handle('project:readPhoto', (path: unknown) => {
+    if (!offered.has(path)) throw new Error('That file was not chosen in this window.')
+    return readPhoto(path)
+  })
+  handle('parts:lookup', (lcsc: unknown) => lookupPart(lcsc, (q) => fab.lookup(q), readings))
 
   handle('session:current', (id: unknown) => {
     const project = projectOf(id)

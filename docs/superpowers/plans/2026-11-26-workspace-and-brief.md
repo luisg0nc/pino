@@ -865,7 +865,7 @@ git commit -m "What Claude wrote down: its cards by prompt, Make it yours, new s
 - Produces, `main/projects/readings.ts`: `Readings { put(lcsc: string, reading: PartReading): void; get(lcsc: string): PartReading | undefined }` (the newest reading main gave this run, an hour at most).
 - IPC: invoked `project:create(req) -> ProjectInfo` (made, listed, then opened), `project:pickPhotos() -> string[]`, `project:pickPdf() -> string | null`, `project:readPhoto(path) -> Uint8Array` (only paths the dialog or a drop offered), `project:taken() -> string[]`, `parts:lookup(lcsc) -> { reading: PartReading } | { refused: string }` (puts the reading in `Readings`); `PinoBridge.project` gains `create`, `pickPhotos`, `pickPdf`, `readPhoto`, `pathOf(file: File): string`, `taken`; `PinoBridge.parts { lookup(lcsc: string) }`. Test hooks: `pickFiles: string[] | null` answers both pickers.
 
-- [ ] **Step 1: Copy the files and tests, then write the failing tests**
+- [x] **Step 1: Copy the files and tests, then write the failing tests**
 
 ```ts
 // main/projects/create.test.ts (torno's cases for the hidden folder, links, caps and PDFs kept, renamed; then)
@@ -911,25 +911,25 @@ it('holds each row to its caps', () => {
 })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/projects src/main/cards/start.test.ts src/shared/slots.test.ts src/shared/projectName.test.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Adapt `create.ts` and `start.ts`, write `slots.ts` and `readings.ts`, wire the channels and the sweep**
+- [x] **Step 3: Adapt `create.ts` and `start.ts`, write `slots.ts` and `readings.ts`, wire the channels and the sweep**
 
 `brief.md` is `# <name>`, the description, and `## References` with one line per photo, doodle and PDF (`- reference/photo-1.jpg: <note>`; a doodle over a photo says `drawn over reference/photo-1.jpg`), as torno writes it. The cards are written in the temp folder before the rename, through `writeFileAtomic` (the one write under `.pino/` there); the `.gitignore` lines are the store's, later. `opened.ts` calls `sweepStaleNew(root, Date.now())` when a workspace is opened (`deps.sweep`). `project:create` lists the workspace again, opens the new project and answers it.
 
-- [ ] **Step 4: Write the exception into `CLAUDE.md` and `workspace-writes.md`**
+- [x] **Step 4: Write the exception into `CLAUDE.md` and `workspace-writes.md`**
 
 `CLAUDE.md`'s invariant becomes: "Never write inside a project folder except under `<project>/.pino/`. One exception: making a new project (`main/projects/create.ts`) writes one new folder `<workspace>/<name>/` with `brief.md`, `reference/` and `.pino/brief/cards.json`, made in a hidden `.<name>.pino-new-<12 hex>` and renamed into place last; it never writes into or replaces a folder that is there. Nothing is written in the workspace before Start." `workspace-writes.md` says the same with torno's detail (links never followed, files read as plain files and capped, the sweep) and adds `.pino/brief/` to "what is written, and by whom". Add `main/projects/**` and `main/cards/**` to its paths.
 
-- [ ] **Step 5: Run them to verify they pass**
+- [x] **Step 5: Run them to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A app/src CLAUDE.md .claude/rules/workspace-writes.md shared-from-torno.json

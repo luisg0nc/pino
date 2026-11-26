@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { APP } from '../shared/app'
 import type { PinoBridge } from '../shared/bridge'
 
@@ -36,7 +36,16 @@ const bridge: PinoBridge = {
     open: (name) => invoke('project:open', name),
     close: () => invoke('project:close'),
     thumb: (name) => invoke('project:thumb', name),
-    saveThumb: (projectId, hash, png) => invoke('project:saveThumb', projectId, hash, png)
+    saveThumb: (projectId, hash, png) => invoke('project:saveThumb', projectId, hash, png),
+    create: (req) => invoke('project:create', req),
+    pickPhotos: () => invoke('project:pickPhotos'),
+    pickPdf: () => invoke('project:pickPdf'),
+    readPhoto: (path) => invoke('project:readPhoto', path),
+    pathOf: (file) => webUtils.getPathForFile(file),
+    taken: () => invoke('project:taken')
+  },
+  parts: {
+    lookup: (lcsc) => invoke('parts:lookup', lcsc)
   },
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
