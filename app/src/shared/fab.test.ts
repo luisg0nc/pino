@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readJson } from '../test/fixtures'
-import { fabLine, fabRows, readinessWords, type FabProfile, type Readiness } from './fab'
+import { defaultFabNote, fabLine, fabRows, readinessWords, type FabProfile, type Readiness } from './fab'
 import type { Finding } from './build'
 
 const [TWO_LAYER, FOUR_LAYER] = readJson<FabProfile[]>('test/fixtures/fab-profiles.json')
@@ -36,6 +36,22 @@ describe("the fab's limits in plain words", () => {
       'Fab: JLC standard 2-layer. Tracks and gaps 0.10 mm or more (2 oz copper: 0.16 mm); vias 0.2 mm hole in 0.45 mm; holes 0.2 mm or more; copper 0.2 mm from the edge; silkscreen text 1.0 mm high. Board 1.6 mm (0.4 to 2.0), 1 oz copper (up to 4.5). Assembly: economic, one side, 0402 and up, pitch 0.4 mm and up, board 10 x 10 to 470 x 500 mm.'
     )
     expect(fabLine(FOUR_LAYER).length).toBeLessThan(400)
+  })
+})
+
+describe("what is said before the default fab's limits", () => {
+  const [two, four] = readJson<FabProfile[]>('test/fixtures/fab-profiles.json')
+  const start = "No board.py yet, so these are the default fab's limits: what a board that names no fab gets."
+
+  it("names, for each other number of layers, the profile the engine gives it: its first of those", () => {
+    expect(defaultFabNote(two, [two, four])).toBe(`${start} That is for 2 layers; with layers=4 it gets JLC standard 4-layer.`)
+    const six = { ...four, name: 'six', title: 'Another 6-layer', layers: 6 }
+    const alsoFour = { ...four, name: 'dear', title: 'A dearer 4-layer' }
+    expect(defaultFabNote(two, [two, four, alsoFour, six])).toBe(`${start} That is for 2 layers; with layers=4 it gets JLC standard 4-layer, with layers=6 it gets Another 6-layer.`)
+  })
+
+  it('says only its own layers where the engine has no other', () => {
+    expect(defaultFabNote(two, [two])).toBe(`${start} That is for 2 layers.`)
   })
 })
 

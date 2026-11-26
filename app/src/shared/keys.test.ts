@@ -82,3 +82,8 @@ it('has the keys of the views in a scope of their own, with no clash', () => {
   expect(which({ key: '2' }, 'board.layer')).toBe(1)
   expect([pressed({ key: 'f' }, 'board.fit'), pressed({ key: 'n' }, 'board.nets'), pressed({ key: 'Escape' }, 'view.drop')]).toEqual([true, true, true])
 })
+
+it("has Left and Right on the session dock's edge, in a scope of its own", () => {
+  expect(KEYS.filter((r) => r.scope === 'separator').map((r) => r.id)).toEqual(['dock.resize'])
+  expect([which({ key: 'ArrowLeft' }, 'dock.resize'), which({ key: 'ArrowRight' }, 'dock.resize'), which({ key: 'x' }, 'dock.resize')]).toEqual([0, 1, -1])
+})

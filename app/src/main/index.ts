@@ -44,6 +44,8 @@ import { askWindow, NoAnswer, ViewHolder } from './view'
 //   PINO_AGENT_CMD=<cmd>   command to run for a session instead of `claude`, split on spaces
 //   PINO_KERNEL_CMD=<cmd>  command to run as the engine's serve mode instead of `uv run ... pino-kernel serve`
 //   PINO_KERNEL_DIR=<dir>  the engine's folder, instead of `kernel` beside the app
+//   PINO_TEST_PROFILE=<dir> under test, the profile in this folder, kept after the run: two launches share what the
+//                          window keeps (the dock's width)
 //   PINO_DEBUG=1           print where the MCP server is, and the command line and the hooks of every session
 // Whose window this is, said outright: the desktop finds pino's entry and icon by it (the Wayland app id, the
 // X11 class).
@@ -58,11 +60,12 @@ const isDebug = env('DEBUG') === '1'
 // dumps) is a folder of this run in the temporary folder (`testProfile.ts`), set before the app is ready and
 // removed once the process has gone.
 if (isTest) {
-  const profile = makeTestProfile()
+  const named = env('TEST_PROFILE')
+  const profile = named ?? makeTestProfile()
   app.setPath('userData', profile)
   app.setPath('sessionData', profile)
   app.setPath('crashDumps', join(profile, 'crashes'))
-  app.on('quit', () => removeTestProfileAfterExit(profile))
+  if (!named) app.on('quit', () => removeTestProfileAfterExit(profile))
 }
 
 // A hidden window stops getting frame callbacks from the compositor. Once a repaint coincides with input, Chromium
@@ -127,6 +130,7 @@ const routing = new Routing({ kernel: () => kernel.get(), builds })
 let openProjectId: () => string | undefined = () => undefined
 const fab = new Fab({
   kernel: () => kernel.get(),
+  running: () => kernel.current(),
   builds,
   engine: () => {
     const id = openProjectId()

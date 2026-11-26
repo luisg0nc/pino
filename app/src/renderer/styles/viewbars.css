@@ -1,0 +1,29 @@
+/* ---- The menu that hangs from a button, and its rows (`.menu`, `.menu-item`): the folder menu, the dock's More, the view cube's ---- */
+
+.menu {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 7px);
+  left: 0;
+  display: grid;
+  min-width: 96px;
+  padding: 3px;
+  border: var(--divider);
+  border-radius: var(--radius-float);
+  background: var(--panel);
+  box-shadow: var(--float-shadow);
+}
+
+.menu-item {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  text-align: left;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--accent-wash);
+}

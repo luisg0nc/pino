@@ -43,7 +43,8 @@ beforeEach(async () => {
   mkdirSync(dir, { recursive: true })
   project = { id: 'p0123456789ab', dir, name: 'blinky board' }
   http = await startHttp()
-  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined } as unknown as ToolDeps)
+  const fab = { defaultFab: () => Promise.reject(new Error('there is no engine in this test')) }
+  mountMcp(http, { project: (id: string) => (id === project.id ? project : undefined), state: () => undefined, fab } as unknown as ToolDeps)
   const grant = http.grant.bind(http)
   tokens = []
   http.grant = (paths) => {

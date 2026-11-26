@@ -118,7 +118,24 @@ export interface FabState {
   error: string | null
 }
 
-export const FAB_UNAVAILABLE = 'Fab files are not available in this engine yet: it comes with the fab stage.'
+// Why parts or fab files are refused, in words that say what is missing: Claude reads them and acts on them.
+export const engineTooOld = (serve: number): string => `The engine is too old for parts and fab files: it speaks protocol ${serve}, and they need 3. Update pino's engine (its kernel/ folder).`
+export const engineDidNotStart = (reason: string): string => `The engine did not start: ${reason}`
+export const ENGINE_STARTING = 'The engine is starting. Try again in a moment.'
+export const NO_BUILT_BOARD = 'No built board yet: fab files are made from a build. Save board.py and wait for it to build.'
+
+/**
+ * Said before the default fab's limits, which are given while there is no board.py to name one: which layers they are
+ * for, and what a board of each other number the engine has a profile for gets (its first of those, as the engine
+ * picks it).
+ */
+export function defaultFabNote(profile: FabProfile, profiles: readonly FabProfile[]): string {
+  const others = profiles.filter((p, i) => p.layers !== profile.layers && profiles.findIndex((q) => q.layers === p.layers) === i)
+  const gets = others.map((p) => `with layers=${p.layers} it gets ${p.title}`).join(', ')
+  return `No board.py yet, so these are the default fab's limits: what a board that names no fab gets. That is for ${profile.layers} layers${gets ? `; ${gets}` : ''}.`
+}
+export const FAB_STILL_FETCHING = "The fab's limits are still being fetched, as the engine is slow to answer: call project again in a moment, before you offer any choice about layers, copper, holes or tracks."
+export const fabUnknown = (why: string): string => `The fab's limits are not known: ${why}`
 
 /** Two decimals at least, as the capability page writes small widths: 0.1 is 0.10, 0.125 stays. */
 const fine = (v: number): string => (Math.abs(v * 100 - Math.round(v * 100)) < 1e-9 ? v.toFixed(2) : String(v))
