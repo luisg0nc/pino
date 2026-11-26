@@ -24,8 +24,11 @@ const ENGINE_FOLDERS = ['build', 'routes', 'trials', 'kicad']
 /** Told the files that changed in a burst, as absolute paths. */
 export type OnChange = (paths: string[]) => void
 
-/** Calls `onChange` once per burst of saves of the project's Python or outline, with what changed. */
-export function watchProject(dir: string, onChange: OnChange, debounceMs: number = DEBOUNCE_MS): () => void {
+/**
+ * Calls `onChange` once per burst of saves of the project's Python or outline, with what changed, and `onSeen` at the
+ * first save of a burst, as soon as it is heard of: a build is on its way from then.
+ */
+export function watchProject(dir: string, onChange: OnChange, debounceMs: number = DEBOUNCE_MS, onSeen?: () => void): () => void {
   let timer: NodeJS.Timeout | undefined
   let changed = new Set<string>()
   // Only what lies under the project counts: the project's own folder may be named like an ignored one.
@@ -34,6 +37,7 @@ export function watchProject(dir: string, onChange: OnChange, debounceMs: number
   watcher.on('all', (event, path) => {
     if (event === 'addDir' || event === 'unlinkDir' || isIgnored(path)) return
     if (!path.endsWith('.py') && relative(dir, path) !== 'outline.json') return
+    if (!changed.size) onSeen?.()
     changed.add(path)
     clearTimeout(timer)
     timer = setTimeout(() => {
@@ -82,6 +86,8 @@ interface Entry {
   unwatch: () => void
   /** A save came that no build has started for yet. */
   wanted: boolean
+  /** A save has been heard of whose burst has not settled. */
+  seen: boolean
   running: boolean
   /** Waiting out the rest of RESTART_MS before another start of the engine. */
   retry?: NodeJS.Timeout
@@ -119,12 +125,21 @@ export class Builds {
       state: { projectId: project.id, engine: { state: 'starting' }, building: false, latest: null, lastGood: null, history: [], route: null, problem: null },
       unwatch: () => {},
       wanted: false,
+      seen: false,
       running: false,
       routes: new Map(),
       settled: []
     }
     this.entries.set(project.id, entry)
-    entry.unwatch = this.watch(project.dir, () => this.want(entry))
+    entry.unwatch = this.watch(
+      project.dir,
+      () => {
+        entry.seen = false
+        this.want(entry)
+      },
+      DEBOUNCE_MS,
+      () => (entry.seen = true)
+    )
     void this.readHistory(project.dir).then((history) => {
       if (this.entries.get(project.id) === entry && !entry.running) this.say(entry, { history })
     })
@@ -156,6 +171,12 @@ export class Builds {
 
   lastGood(projectId: string): BuildResult | null {
     return this.entries.get(projectId)?.state.lastGood ?? null
+  }
+
+  /** Whether a save has been heard of that no build has started for yet. */
+  pending(projectId: string): boolean {
+    const entry = this.entries.get(projectId)
+    return entry !== undefined && (entry.seen || (entry.wanted && entry.retry === undefined && !entry.running))
   }
 
   /** When the newest build began, and when the newest one ended. */
@@ -205,7 +226,7 @@ export class Builds {
   }
 
   private busy(entry: Entry): boolean {
-    return entry.running || (entry.wanted && entry.retry === undefined)
+    return entry.running || entry.seen || (entry.wanted && entry.retry === undefined)
   }
 
   private say(entry: Entry, change: Partial<BuildState>): void {

@@ -7,7 +7,7 @@ import type { Mark } from '../shared/marks'
 import type { ProjectInfo } from '../shared/project'
 import { TAB_NAMES, type BoardLook, type Selection, type ViewTab } from '../shared/view'
 import { layerWords } from '../shared/board/refs'
-import { DEBOUNCE_MS, type Builds } from './builds'
+import type { Builds } from './builds'
 import type { PromptContext, SessionDomain } from './sessions/domain'
 
 /** The most a prompt's added context may be, in characters, and the build's verdict within it. */
@@ -21,7 +21,7 @@ const MOST_FINDINGS = 5
 const STOP_LIMIT = 1200
 
 export interface DomainDeps {
-  builds: Pick<Builds, 'state' | 'startedAt' | 'endedAt' | 'whenSettled' | 'routedOn'>
+  builds: Pick<Builds, 'state' | 'startedAt' | 'endedAt' | 'whenSettled' | 'routedOn' | 'pending'>
   marks: {
     /** The person's marks not yet sent, oldest first. */
     drafts(project: ProjectInfo): Promise<Mark[]>
@@ -33,8 +33,6 @@ export interface DomainDeps {
   view(): { tab: ViewTab; look: BoardLook; selection: Selection | null } | null
   toolName: (tool: string) => string
   now?: () => number
-  /** How long a Stop waits for a save just made to start its build: the watcher's debounce and a little more. */
-  debounceMs?: number
 }
 
 const cut = (text: string, most: number): string => (text.length <= most ? text : `${text.slice(0, most - 6)} (cut)`)
@@ -142,13 +140,12 @@ export class PinoDomain implements SessionDomain {
   async stopAnswer(project: ProjectInfo): Promise<{ decision: 'block'; reason: string } | null> {
     const turn = this.turns.get(project.id)
     if (!turn || turn.holds >= MOST_HOLDS) return null
-    // A save just made has not started its build yet.
-    const wait = this.deps.debounceMs ?? DEBOUNCE_MS + 200
-    if (wait) await new Promise((r) => setTimeout(r, wait))
     const ofTurn = () => (this.deps.builds.startedAt(project.id) ?? -Infinity) >= turn.startedAt
     let state = this.deps.builds.state(project.id)
     if (!state) return null
-    if (state.building && ofTurn()) state = await this.deps.builds.whenSettled(project.id, this.now() + STOP_WAIT_MS)
+    // A save just made may not have started its build yet: it is waited for as a build of the turn at work is. With
+    // neither there is nothing to wait for, and the answer is given at once.
+    if (this.deps.builds.pending(project.id) || (state.building && ofTurn())) state = await this.deps.builds.whenSettled(project.id, this.now() + STOP_WAIT_MS)
     if (!ofTurn()) return null
 
     const hold = (kind: string, reason: string) => {

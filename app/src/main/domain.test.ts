@@ -21,6 +21,7 @@ const stateOf = (over: Partial<BuildState> = {}): BuildState => ({ projectId: 'p
 function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open?: StrokeMark[]; view?: { tab: ViewTab; look: BoardLook; selection: Selection | null } | null } = {}) {
   let state = stateOf(opts.state)
   let time = 1000
+  let pending = false
   let startedAt: number | undefined
   let endedAt: number | undefined
   const markSent = vi.fn(async () => {})
@@ -30,6 +31,7 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
       state: () => state,
       startedAt: () => startedAt,
       endedAt: () => endedAt,
+      pending: () => pending,
       whenSettled: async () => {
         await settle()
         return state
@@ -39,8 +41,7 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
     marks: { drafts: async () => opts.drafts ?? [], open: async () => opts.open ?? [], markSent },
     view: () => opts.view ?? null,
     toolName,
-    now: () => time,
-    debounceMs: 0
+    now: () => time
   }
   const d = new PinoDomain(deps)
   return {
@@ -55,6 +56,12 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
     lands(result: BuildResult, over: Partial<BuildState> = {}) {
       endedAt = time
       state = { ...state, building: false, latest: result, lastGood: result.hash ? result : state.lastGood, history: state.history.filter((e) => e.verdict !== 'running'), ...over }
+    },
+    saveSeen() {
+      pending = true
+    },
+    saveSettled() {
+      pending = false
     },
     onSettle(fn: () => Promise<void>) {
       settle = fn
@@ -160,6 +167,30 @@ describe('holding a Stop', () => {
       t.lands(changed(2))
     })
     expect((await t.d.stopAnswer(project))!.reason).toBe('h2 was built in this turn and you have not looked at it. Call mcp__pino__look or mcp__pino__check before finishing.')
+  })
+
+  it('waits for a save that has not started its build yet', async () => {
+    const t = domain()
+    await turn(t)
+    t.saveSeen()
+    t.onSettle(async () => {
+      t.saveSettled()
+      t.begins()
+      t.later(5)
+      t.lands(changed(2))
+    })
+    expect((await t.d.stopAnswer(project))!.reason).toContain('h2 was built in this turn')
+  })
+
+  it('answers at once when no save waits and nothing builds', async () => {
+    const t = domain()
+    await turn(t)
+    const waited = vi.fn(async () => {})
+    t.onSettle(waited)
+    const from = Date.now()
+    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(waited).not.toHaveBeenCalled()
+    expect(Date.now() - from).toBeLessThan(50)
   })
 
   it('holds a Stop for a failed build of the turn with its line', async () => {

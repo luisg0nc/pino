@@ -20,6 +20,7 @@ const info = () => ({ id: 'p000000000001', dir: project.dir, name: 'board' })
 /** The loop over the stand-in, with a watcher the test works by hand and a clock it moves. */
 function loop(env: () => Record<string, string> = () => ({})) {
   let tell: OnChange = () => {}
+  let seen: () => void = () => {}
   let time = 1_000_000
   const asked: string[] = []
   let starts = 0
@@ -35,8 +36,9 @@ function loop(env: () => Record<string, string> = () => ({})) {
   })
   const builds = new Builds({
     kernel: () => holder.get(),
-    watch: (_dir, cb) => {
+    watch: (_dir, cb, _debounce, onSeen) => {
       tell = cb
+      seen = onSeen ?? (() => {})
       return () => {}
     },
     now: () => time
@@ -56,6 +58,7 @@ function loop(env: () => Record<string, string> = () => ({})) {
     asked,
     starts: () => starts,
     save: (names = ['board.py']) => tell(names.map((n) => join(project.dir, n))),
+    seen: () => seen(),
     later: (ms: number) => (time += ms),
     settled: () => builds.whenSettled(info().id, time + 60_000)
   }
@@ -220,6 +223,23 @@ describe('the build loop', () => {
     expect((await l.builds.whenSettled(info().id, 1_000_000 + 50)).building).toBe(true)
   })
 
+  it('counts a save seen but not settled as one to wait for', async () => {
+    const l = loop()
+    l.builds.open(info())
+    await l.settled()
+    expect(l.builds.pending(info().id)).toBe(false)
+    l.seen()
+    expect(l.builds.pending(info().id)).toBe(true)
+    let settled: BuildState | null = null
+    const waiting = l.builds.whenSettled(info().id, 1_000_000 + 60_000).then((s) => (settled = s))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(settled).toBeNull()
+    l.save()
+    await waiting
+    expect(settled!.latest!.number).toBe(2)
+    expect(l.builds.pending(info().id)).toBe(false)
+  })
+
   it('builds again when asked to', async () => {
     const l = loop()
     l.builds.open(info())
@@ -295,6 +315,15 @@ describe('the watch', () => {
     await expect.poll(() => heard.length, { timeout: 3000 }).toBe(1)
     await new Promise((r) => setTimeout(r, 250))
     expect(heard).toEqual([['board.py', 'outline.json', 'parts/usb.py']])
+  })
+
+  it('says a save at once, before the burst has settled', async () => {
+    const order: string[] = []
+    done.push(watchProject(project.dir, () => order.push('settled'), 150, () => order.push('seen')))
+    await new Promise((r) => setTimeout(r, 300))
+    project.touch('b = 3\n')
+    await expect.poll(() => order.includes('settled'), { timeout: 3000 }).toBe(true)
+    expect(order[0]).toBe('seen')
   })
 
   it('watches a project whose own folder is named like an ignored one', async () => {
