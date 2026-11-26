@@ -10,6 +10,8 @@ stages are in `docs/superpowers/plans/`. Stage 2, the app shell, has no engine: 
   side has a copy of its own; `shared/bridge.ts` is everything the renderer may ask of main. `test/fake-agent.mjs`
   is the stand-in for Claude Code, and `e2e/` the specs.
 - `scripts/pino` is the launcher; `scripts/torno-sync` the drift report on the copied files.
+- `.github/workflows/ci.yml` runs the unit tests, the typecheck, the guard cases and the e2e suite
+  (`app/src/ci.test.ts` holds it).
 
 ## Tests
 
@@ -22,7 +24,9 @@ pnpm -C app typecheck
 bash .claude/hooks/guard-bash.test.sh   # the Bash guard's cases
 ```
 
-One file: `pnpm -C app exec vitest run <file>`, for example `src/manifest.test.ts`.
+One file: `pnpm -C app exec vitest run <file>`, for example `src/manifest.test.ts`, or after a build
+`pnpm -C app exec playwright test e2e/chat.spec.ts`. Electron downloads its binary on first use
+(`pnpm -C app exec install-electron`).
 
 While iterating run the focused test; run all four before a commit.
 
@@ -83,7 +87,7 @@ The detail is in `.claude/rules/*.md`. Claude Code loads a rule when a file its 
 read one by hand before work its globs miss. Paths in a rule are written from `app/` (`src/main/...`), or short under
 `app/src/` (`main/`, `shared/`) and under `app/src/renderer/` (`ui/`, `state/`, `styles/`).
 
-- The agent: `agent-launch-and-tokens`, `sessions`, `chat-transcript`. Tests: `e2e-hidden-window` (every launch of Electron),
-  `e2e-stand-in-agent` (the stand-in, the recordings).
+- The agent: `agent-launch-and-tokens`, `sessions`, `chat-transcript`.
+- Tests: `e2e-hidden-window` (every launch of Electron), `e2e-stand-in-agent` (the stand-in, the recordings).
 - The window: `first-screen`, `styles-themes`, `chat-pane`.
 - Files and shipping: `workspace-writes` (what pino writes in a project), `launcher-and-packaging`.

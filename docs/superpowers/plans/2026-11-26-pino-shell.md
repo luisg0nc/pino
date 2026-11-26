@@ -1060,6 +1060,12 @@ git add -A && git commit -m "Copy torno's launcher as scripts/pino, Linux only, 
 
 ### Task 16: CI, README and the closing checks
 
+> **Note from the build:** `ci.test.ts` also runs the workflow's own `changes` script against lists of changed files.
+>
+> **Note from the build:** CI downloads the Electron binary in a step of its own.
+>
+> **Note from the build:** `scripts/torno-sync` gets its executable bit.
+
 **Files:**
 - Copy adapted: `.github/workflows/ci.yml`
   - Job `changes`: torno's, with the non-code list `docs/*|LICENSE|NOTICE|*.md` at the root (`CLAUDE.md` and `.claude/**` count as code).
@@ -1073,7 +1079,7 @@ git add -A && git commit -m "Copy torno's launcher as scripts/pino, Linux only, 
 - Consumes: every suite above.
 - Produces: green CI on the branch; the finished README.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 it('runs the unit tests, the typecheck, the guard cases and the e2e suite, and no kernel job yet', () => {
@@ -1083,21 +1089,21 @@ it('runs the unit tests, the typecheck, the guard cases and the e2e suite, and n
 })
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C app exec vitest run src/ci.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt the workflow; finish the README**
+- [x] **Step 3: Copy and adapt the workflow; finish the README**
 
 The README says what pino is in two plain sentences, that stage 2 is the shell with no engine, the requirements (Linux, Node 22.12+, pnpm, Claude Code signed in), how to run (`scripts/pino [folder]`, `--install-desktop`), the tests, that parts come from torno (`shared-from-torno.json`, `scripts/torno-sync`), and the license (Apache-2.0, see NOTICE). Run the humanizer skill on it.
 
-- [ ] **Step 4: Run every suite and the drift report**
+- [x] **Step 4: Run every suite and the drift report**
 
 Run: `pnpm -C app typecheck && pnpm test && pnpm test:e2e && bash .claude/hooks/guard-bash.test.sh && node scripts/torno-sync`
 Expected: all PASS. torno-sync exits 0, or exits 1 listing only `torno-changed` lines if torno moved since the plan (report them; do not port them in this stage).
 
-- [ ] **Step 5: Leak audit before anything leaves the machine**
+- [x] **Step 5: Leak audit before anything leaves the machine**
 
 Run, and read every hit:
 
@@ -1107,7 +1113,7 @@ git grep -nE "/home/|/Users/|@gmail|192\.168\.|10\.[0-9]+\.[0-9]+\.|BEGIN (RSA|O
 
 Then search the same commits for the user name, the machine names and the e-mail kept in Luis's knowledge base. Do not write them into this repo. Expected: no personal path, host, address or secret.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A && git commit -m "Add CI for unit, typecheck, guard and e2e; finish the README"
