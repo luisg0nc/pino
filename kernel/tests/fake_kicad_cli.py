@@ -1,7 +1,10 @@
-"""A stand-in for kicad-cli in tests: prints what it was called with and never writes a file."""
+"""A stand-in for kicad-cli in tests: prints what it was called with and never writes a file, except that
+`pcb drc` copies the JSON file named by $FAKE_KICAD_DRC to its -o path when that is set (with --save-board the
+board is left as it is)."""
 
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -17,4 +20,6 @@ if args and args[0] == "sleep":
 if args == ["version"]:
     print("10.0.6")
     sys.exit(0)
+if args[:2] == ["pcb", "drc"] and os.environ.get("FAKE_KICAD_DRC") and "-o" in args:
+    shutil.copy(os.environ["FAKE_KICAD_DRC"], args[args.index("-o") + 1])
 print(json.dumps({"argv": args, "env": {k: os.environ.get(k) for k in WATCHED}}))

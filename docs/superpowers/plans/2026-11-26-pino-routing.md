@@ -864,7 +864,7 @@ git commit -m "kernel: router DRC against the unrouted board, router share and c
   - `latest_build(project: Path) -> str | None` (newest `builds.json` entry whose verdict is not `failed` and whose folder holds `board.kicad_pcb`).
   - `pino-kernel route <project> [--build HASH] [--timeout S] [--step-timeout S] [--no-install] [--no-cache] [--keep-steps] [--events]`: without `--events`, stdout is the `RouteResult` JSON only; with it, one event per line and last `{"event": "done", "result": {…}}`. Exit 0 `ok`, 1 `errors`, 2 `failed`, `timed_out` or `busy`, 130 `cancelled`. SIGTERM and SIGINT cancel.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `routed_project` (fixture): a `make_project(SMALL_BOARD_PY)` built with the fake kicad-cli and `FAKE_KICAD_DRC` pointing at a canned report, with `fake_krt` active.
 
@@ -929,12 +929,12 @@ def test_cli_sigterm_cancels(routed_project, monkeypatch): ...   # Popen, wait f
 def test_old_routes_are_pruned(routed_project, monkeypatch): ... # KEEP_ROUTES=2, four placements routed -> 2 folders plus the latest done
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_route_job.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.job'`
 
-- [ ] **Step 3: Write the job, the result, the history, the schema and the CLI**
+- [x] **Step 3: Write the job, the result, the history, the schema and the CLI**
 
 `route_board`, with its timing names in this order:
 
@@ -953,17 +953,25 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.routing.j
 
 `route_project`: take the job lock (`.pino/routes/job.lock`, `LOCK_EX | LOCK_NB`; it holds `{"key", "pid", "started"}`), pick the build (`build` or `latest_build`), compute `plan_for_build` and `route_key`, return the cached result when `.pino/routes/<key>/route.json` is complete and `options.cache`, else run `route_board` in `.pino/routes/<key>.tmp-<pid>-<thread id>/` with the baseline from the build's `drc.json` (or a DRC of the build's `filled/` copy when missing), write the folder, rename it onto `.pino/routes/<key>/`, record history, prune. Failed, cancelled and timed-out runs remove the temp folder and are recorded with their state. `complete` is `counts["unrouted"] == 0`; `verdict` is `failed` for those three states, `errors` when unrouted nets or error findings remain, else `ok`. Findings are sorted and capped as the build's are. `log.txt` keeps the last 200 KB of every step's output with step headers. `artifacts` are paths relative to the project.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_route_job.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/routing kernel/src/pino_kernel/cli.py kernel/schema/route-result-1.schema.json kernel/tests/fake_kicad_cli.py kernel/tests/test_route_job.py kernel/tests/conftest.py
 git commit -m "kernel: route job keyed by its inputs, cached, cancellable, with pino-kernel route"
 ```
+
+**Plan fixes (implementation):**
+- `route_board` gets the router from its caller, so its timings start at `plan` (the plan's warnings); `route_project` times `router` and adds its own planning time (plan and key) to `plan`. The four-layer test in Task 12 calls `route_board` directly, as the plan says.
+- A busy result has number 0 and the headline "Route: a route is already running for this project" (no number is taken while another route holds the lock).
+- `Share.before` comes from the build's normalized `drc.json` by position (Task 7); with no `drc.json` the job runs DRC on the build's `filled/` copy.
+- `RouteOutcome` gains `filled_text`, `problem`, `unrouted` and `plan` (additive). `counts["unrouted"]` counts unconnected items, as the fast build's does.
+- Every chain step writes its whole output to `log.txt` in its folder; the route's `log.txt` keeps the last 200,000 characters of each with a header line. `--keep-steps` keeps the step folders as `steps/`.
+- Test fixtures `kicad_fake`, `built_project` and `routed_project` are in `conftest.py`; `fixtures/route_reports/clean.json` is the canned report. Extra tests: no-cache, a failed step is a warning, headlines, the CLI without events.
 
 ---
 

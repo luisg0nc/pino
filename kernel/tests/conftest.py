@@ -149,3 +149,40 @@ def real_libs(monkeypatch):
     for k in ("PINO_KICAD_SYMBOL_DIR", "PINO_KICAD_FOOTPRINT_DIR", "PINO_KICAD_3DMODEL_DIR"):
         monkeypatch.delenv(k, raising=False)
     return discover()
+
+
+FAKE_KICAD = TESTS / "fake_kicad_cli.py"
+CLEAN_DRC = FIXTURES / "route_reports" / "clean.json"
+
+
+@pytest.fixture
+def kicad_fake(monkeypatch):
+    """The fake kicad-cli for builds and routes; `pcb drc` gives the canned clean report (FAKE_KICAD_DRC)."""
+    import sys
+
+    monkeypatch.setenv("PINO_KICAD_CLI", f"{sys.executable} {FAKE_KICAD}")
+    monkeypatch.setenv("FAKE_KICAD_DRC", str(CLEAN_DRC))
+    from pino_kernel.build import BuildOptions
+
+    return BuildOptions(kicad=True)
+
+
+@pytest.fixture
+def built_project(make_project, fixture_libs, fake_krt, kicad_fake):
+    """built_project(board_py=SMALL_BOARD_PY, name="project") -> a project built once with the fake kicad-cli."""
+    from helpers import SMALL_BOARD_PY
+    from pino_kernel.build import build
+
+    def make(board_py: str = SMALL_BOARD_PY, name: str = "project") -> Path:
+        p = make_project(board_py, name=name)
+        r = build(p, kicad_fake)
+        assert r.verdict != "failed", r.headline
+        return p
+
+    return make
+
+
+@pytest.fixture
+def routed_project(built_project):
+    """The small board, built with the fake kicad-cli, with the fake router active (not routed yet)."""
+    return built_project()

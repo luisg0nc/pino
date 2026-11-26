@@ -4,6 +4,8 @@
     pino-kernel version
     pino-kernel serve
     pino-kernel router status|install
+    pino-kernel route <project> [--build HASH] [--timeout S] [--step-timeout S] [--no-install] [--no-cache]
+                                [--keep-steps] [--events]
 
 `build` prints one build result (schema pino.build/1) on stdout and exits 0 for ok, 1 for errors,
 2 for failed. `serve` reads one JSON request per stdin line and answers one JSON object per stdout
@@ -58,6 +60,43 @@ def _router(action: str) -> int:
         out["problems"] = [e.finding.to_json()]
     sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
     return 0 if out["installed"] and not out["problems"] else 1
+
+
+ROUTE_EXIT = {"ok": 0, "errors": 1, "failed": 2}
+
+
+def _route(args) -> int:
+    import signal
+    import threading
+
+    from .routing.job import RouteOptions, route_project
+
+    cancel = threading.Event()
+
+    def stop(signum, frame):
+        cancel.set()
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    lock = threading.Lock()
+
+    def emit(event: dict) -> None:
+        if args.events:
+            with lock:
+                sys.stdout.write(json.dumps(event, ensure_ascii=False) + "\n")
+                sys.stdout.flush()
+
+    options = RouteOptions(timeout=args.timeout, step_timeout=args.step_timeout, install=not args.no_install,
+                           cache=not args.no_cache, keep_steps=args.keep_steps)
+    result = route_project(args.project, build=args.build, options=options, events=emit, cancel=cancel)
+    if args.events:
+        emit({"event": "done", "result": result.to_dict()})
+    else:
+        sys.stdout.write(result.to_json())
+        sys.stdout.flush()
+    if result.state == "cancelled":
+        return 130
+    return ROUTE_EXIT.get(result.verdict, 2)
 
 
 def _options(raw) -> BuildOptions:
@@ -132,9 +171,23 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("serve", help="answer JSON-line requests on stdin")
     r = sub.add_parser("router", help="show or install the router (KiCadRoutingTools)")
     r.add_argument("action", choices=["status", "install"])
+    rt = sub.add_parser("route", help="route a project's latest build and print the result")
+    rt.add_argument("project", type=Path)
+    rt.add_argument("--build", default=None, help="the build hash to route (default: the latest)")
+    rt.add_argument("--timeout", type=float, default=900.0, help="seconds the whole route may take (default 900)")
+    rt.add_argument("--step-timeout", type=float, default=300.0, help="seconds one router step may take (default 300)")
+    rt.add_argument("--no-install", action="store_true", help="fail instead of installing the router")
+    rt.add_argument("--no-cache", action="store_true", help="route again even when this board was routed before")
+    rt.add_argument("--keep-steps", action="store_true", help="keep every router step's files in the route folder")
+    rt.add_argument("--events", action="store_true", help="print progress events, one JSON object per line")
     args = parser.parse_args(argv)
     if args.command == "router":
         return _router(args.action)
+    if args.command == "route":
+        if not args.project.is_dir():
+            print(f"pino-kernel: no project folder at {args.project}", file=sys.stderr)
+            return 2
+        return _route(args)
     if args.command == "version":
         sys.stdout.write(json.dumps(_version(), ensure_ascii=False) + "\n")
         return 0

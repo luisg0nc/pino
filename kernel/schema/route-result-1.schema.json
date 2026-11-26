@@ -1,0 +1,399 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://pino.invalid/schema/route-result-1.schema.json",
+ "title": "pino route result",
+ "description": "What pino's route job reports about one route (pino_kernel.routing.result.RouteResult.to_json).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "kernel_version",
+  "router",
+  "key",
+  "build",
+  "number",
+  "state",
+  "verdict",
+  "headline",
+  "complete",
+  "counts",
+  "share",
+  "findings",
+  "truncated",
+  "steps",
+  "timings",
+  "artifacts",
+  "cached"
+ ],
+ "properties": {
+  "schema": {
+   "const": "pino.route/1"
+  },
+  "kernel_version": {
+   "type": "string"
+  },
+  "router": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "name",
+    "version",
+    "commit"
+   ],
+   "properties": {
+    "name": {
+     "const": "KiCadRoutingTools"
+    },
+    "version": {
+     "type": "string"
+    },
+    "commit": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{40}$"
+    }
+   }
+  },
+  "key": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "pattern": "^[0-9a-f]{12}$",
+   "description": "the route folder name, .pino/routes/<key>"
+  },
+  "build": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "pattern": "^[0-9a-f]{12}$",
+   "description": "the build whose board was routed"
+  },
+  "number": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "the route number shown as r<number>; 0 when busy"
+  },
+  "state": {
+   "enum": [
+    "done",
+    "failed",
+    "cancelled",
+    "timed_out",
+    "busy"
+   ]
+  },
+  "verdict": {
+   "enum": [
+    "ok",
+    "errors",
+    "failed"
+   ]
+  },
+  "headline": {
+   "type": "string",
+   "maxLength": 160
+  },
+  "complete": {
+   "type": "boolean",
+   "description": "no connection left"
+  },
+  "counts": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "nets",
+    "unrouted",
+    "tracks",
+    "vias",
+    "track_mm",
+    "drc_errors",
+    "drc_warnings",
+    "copper_errors",
+    "copper_warnings"
+   ],
+   "properties": {
+    "nets": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "unrouted": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "tracks": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "vias": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "track_mm": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "drc_errors": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "drc_warnings": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "copper_errors": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "copper_warnings": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  },
+  "share": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "additionalProperties": false,
+   "required": [
+    "nets",
+    "done_before",
+    "router",
+    "finish"
+   ],
+   "properties": {
+    "nets": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "done_before": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "router": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "routed",
+      "of",
+      "share",
+      "seconds"
+     ],
+     "properties": {
+      "routed": {
+       "type": "integer"
+      },
+      "of": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "share": {
+       "type": [
+        "number",
+        "null"
+       ],
+       "minimum": 0,
+       "maximum": 1,
+       "description": "the router's share of the nets left to route; null when there was nothing to route"
+      },
+      "seconds": {
+       "type": "number",
+       "minimum": 0
+      }
+     }
+    },
+    "finish": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "routed",
+      "seconds"
+     ],
+     "properties": {
+      "routed": {
+       "type": "integer"
+      },
+      "seconds": {
+       "type": "number",
+       "minimum": 0
+      }
+     }
+    }
+   }
+  },
+  "findings": {
+   "type": "array",
+   "maxItems": 200,
+   "items": {
+    "$ref": "#/$defs/finding"
+   }
+  },
+  "truncated": {
+   "type": "integer",
+   "minimum": 0
+  },
+  "steps": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "step",
+     "script",
+     "seconds",
+     "returncode",
+     "routed",
+     "failed",
+     "note",
+     "folder"
+    ],
+    "properties": {
+     "step": {
+      "type": "string"
+     },
+     "script": {
+      "type": "string"
+     },
+     "seconds": {
+      "type": "number",
+      "minimum": 0
+     },
+     "returncode": {
+      "type": "integer"
+     },
+     "routed": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "failed": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "note": {
+      "type": "string"
+     },
+     "folder": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "timings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "step",
+     "seconds"
+    ],
+    "properties": {
+     "step": {
+      "type": "string"
+     },
+     "seconds": {
+      "type": "number",
+      "minimum": 0
+     },
+     "cached": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "artifacts": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string"
+   },
+   "description": "files of the route folder, relative to the project"
+  },
+  "cached": {
+   "type": "boolean"
+  }
+ },
+ "$defs": {
+  "finding": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "source",
+    "code",
+    "severity",
+    "message"
+   ],
+   "properties": {
+    "source": {
+     "type": "string"
+    },
+    "code": {
+     "type": "string"
+    },
+    "severity": {
+     "enum": [
+      "error",
+      "warning",
+      "info"
+     ]
+    },
+    "message": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "at": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "space"
+     ],
+     "properties": {
+      "space": {
+       "enum": [
+        "board",
+        "sheet",
+        "source"
+       ]
+      },
+      "x": {
+       "type": "number"
+      },
+      "y": {
+       "type": "number"
+      },
+      "layer": {
+       "type": "string"
+      },
+      "file": {
+       "type": "string"
+      },
+      "line": {
+       "type": "integer"
+      }
+     }
+    },
+    "refs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "pins": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "nets": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

@@ -185,8 +185,10 @@ def run_steps(krt: Krt, steps: Sequence[ChainStep], board_text: str, pro_text: s
             break
         events({"event": "step", "step": step.name, "index": index, "of": of})
         last_log = [0.0]
+        log_file = open(d / "log.txt", "w", encoding="utf-8")
 
         def on_line(line: str, _name=step.name) -> None:
+            log_file.write(line + "\n")
             m = NET_LINE.match(line.strip())
             if m:
                 events({"event": "net", "step": _name, "index": int(m.group(1)), "of": int(m.group(2)),
@@ -197,9 +199,11 @@ def run_steps(krt: Krt, steps: Sequence[ChainStep], board_text: str, pro_text: s
                 events({"event": "log", "step": _name, "line": line[:LOG_CHARS]})
 
         args = [a.replace("{IN}", str(src)).replace("{OUT}", str(out)).replace("{FAB}", str(fab)) for a in step.args]
-        r = run(krt, step.name, step.script, args, cwd=d, env=env, timeout=min(step_timeout, left), on_line=on_line,
-                cancel=cancel)
-        (d / "log.txt").write_text(r.log, encoding="utf-8")
+        try:
+            r = run(krt, step.name, step.script, args, cwd=d, env=env, timeout=min(step_timeout, left),
+                    on_line=on_line, cancel=cancel)
+        finally:
+            log_file.close()
         summary = r.summary or {}
         note = ""
         if r.returncode == -15:
@@ -211,6 +215,9 @@ def run_steps(krt: Krt, steps: Sequence[ChainStep], board_text: str, pro_text: s
             note = f"failed, skipped: {why[:200]}" if r.returncode != 0 else f"no output, skipped: {why[:200]}"
         else:
             current = strip_router_items(out.read_text(encoding="utf-8"), prefix=ROUTER_PREFIX + "region:")
+        if note:
+            with open(d / "log.txt", "a", encoding="utf-8") as fh:
+                fh.write(f"pino: {step.script} {note}\n")
         run_ = StepRun(step.name, step.script, r.seconds, r.returncode, int(summary.get("successful", 0) or 0),
                        [str(n) for n in summary.get("failed_single", []) or []], note, folder)
         runs.append(run_)
