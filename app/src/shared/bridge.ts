@@ -2,6 +2,7 @@
 
 import type { ArtifactName, BuildResult, BuildState } from './build'
 import type { ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatMeta, ChatModel, Effort, Mode } from './chat'
+import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
 import type { BoardLook, Selection, ViewTab } from './view'
 
@@ -81,6 +82,15 @@ export interface PinoBridge {
   view: {
     /** What the window shows, so that Claude can be told what the person sees. */
     tell(projectId: string, view: { tab: ViewTab; look: BoardLook; selection: Selection | null }): Promise<void>
+  }
+  marks: {
+    list(projectId: string): Promise<Mark[]>
+    /** A mark of the person's, a draft until it goes with a prompt. Main works out its id, label and exact line. */
+    add(projectId: string, mark: NewMark): Promise<Mark>
+    update(projectId: string, id: string, patch: MarkPatch): Promise<Mark>
+    remove(projectId: string, id: string): Promise<void>
+    resolve(projectId: string, id: string, note: string): Promise<Mark>
+    onChange(cb: (m: { projectId: string; marks: Mark[] }) => void): () => void
   }
   notices: {
     /** Something main has to say that no call asked for: a folder it may not write into. */

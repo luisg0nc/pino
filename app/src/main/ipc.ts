@@ -1,8 +1,10 @@
 import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import type { ArtifactName } from '../shared/build'
+import type { MarkPatch, NewMark } from '../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../shared/project'
 import { readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
 import type { Builds } from './builds'
+import type { MarkStore } from './marks/store'
 import { lastConversation } from './sessions/chatlog'
 import type { Sessions } from './sessions/manager'
 import type { KnownModels } from './sessions/models'
@@ -15,9 +17,11 @@ import type { ViewHolder } from './view'
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
-//            build:state, build:rebuild, build:result, build:file, build:routeFile, view:tell
+//            build:state, build:rebuild, build:result, build:file, build:routeFile, view:tell,
+//            marks:list, marks:add, marks:update, marks:remove, marks:resolve
 //   sent:    chat:answer, window:minimize, window:toggleMaximize, window:close
-//   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, notice, window:maximized (index.ts)
+//   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
+//            window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
 
 /** What main holds of the open project, as the window may ask for it. */
@@ -39,6 +43,7 @@ export interface IpcDeps {
   models: KnownModels
   builds: Builds
   views: ViewHolder
+  marks: MarkStore
 }
 
 /** Sends a message to the window, if there is one to hear it. */
@@ -48,7 +53,7 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ projects, sessions, trust, models, builds, views }: IpcDeps): void {
+export function registerIpc({ projects, sessions, trust, models, builds, views, marks }: IpcDeps): void {
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -119,6 +124,21 @@ export function registerIpc({ projects, sessions, trust, models, builds, views }
   })
   handle('build:routeFile', (id: unknown, key: unknown, name: unknown) => readRouteFile(mustBeOpen(id), String(key), name as RouteFile))
   builds.onState((state) => broadcast('build:state', state))
+  handle('marks:list', async (id: unknown) => {
+    const project = projectOf(id)
+    if (!project) return []
+    const list = await marks.list(project)
+    // What was wrong with the file is said to the window that asks for its marks: one that was not there yet has heard nothing.
+    const problem = marks.takeProblem(project.id)
+    if (problem) broadcast('notice', { text: problem })
+    return list
+  })
+  // What the window asks to be marked is checked whole by the store (`marks/file.ts`, `sanitiseMark`).
+  handle('marks:add', (id: unknown, mark: unknown) => marks.add(mustBeOpen(id), (mark ?? {}) as NewMark, 'user'))
+  handle('marks:update', (id: unknown, markId: unknown, patch: unknown) => marks.update(mustBeOpen(id), String(markId), (patch ?? {}) as MarkPatch))
+  handle('marks:remove', (id: unknown, markId: unknown) => marks.remove(mustBeOpen(id), String(markId)))
+  handle('marks:resolve', (id: unknown, markId: unknown, note: unknown) => marks.resolve(mustBeOpen(id), String(markId), String(note ?? ''), 'user'))
+  marks.onChange((projectId, list) => broadcast('marks:changed', { projectId, marks: list }))
   handle('view:tell', (id: unknown, view: unknown) => {
     const project = projectOf(id)
     if (project) views.tell(project.id, view)

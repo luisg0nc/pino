@@ -12,7 +12,9 @@ import { startHttp } from './http'
 import { broadcast, type Projects, registerIpc } from './ipc'
 import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
 import { applyLoginPath } from './loginPath'
+import { MarkStore } from './marks/store'
 import { mountMcp } from './mcp/server'
+import { Models } from './model'
 import { onNotOwn } from './own'
 import { openProject } from './project'
 import { systemPrompt } from './prompt'
@@ -114,6 +116,14 @@ const kernel = kernelHolder(() =>
 const builds = new Builds({ kernel: () => kernel.get() })
 /** What the person has on screen, for what Claude is told of it. */
 const views = new ViewHolder()
+/** Each build as main reads it, and the marks, made on the newest board that was drawn. */
+const buildModels = new Models()
+const marks = new MarkStore({
+  model: async (project) => {
+    const drawn = builds.lastGood(project.id)
+    return drawn ? buildModels.get(project, drawn) : null
+  }
+})
 
 /** The one project open, and the rules of opening and closing it. */
 function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: string, said: boolean): Promise<void> } {
@@ -307,7 +317,7 @@ void app.whenReady().then(async () => {
   const models = new KnownModels(join(dataDir, 'models.json'))
   const domain = new PinoDomain({
     builds,
-    marks: { drafts: async () => [], open: async () => [], markSent: async () => {} },
+    marks,
     view: () => {
       const open = holder.open()
       return open ? views.of(open.id) : null
@@ -328,7 +338,16 @@ void app.whenReady().then(async () => {
   if (isDebug) console.error(`[${APP.name}] listening at ${http.url('/')}`)
   // A folder of a project that pino may not write into is said in the window, once.
   onNotOwn((_dir, message) => broadcast('notice', { text: message }))
-  registerIpc({ projects: holder, sessions, trust, models, builds, views })
+  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks })
+  // Every build that drew something has the marks found again on it.
+  builds.onResult((projectId, result) => {
+    const project = holder.open()
+    if (!project || project.id !== projectId || !result.hash) return
+    void buildModels
+      .get(project, result)
+      .then((model) => model && marks.reanchor(project, model))
+      .catch((e: Error) => console.error(`cannot find the marks again on h${result.number}: ${e.message}`))
+  })
 
   testHooks.mcpFor = (projectId) => ({ url: http.url(`/mcp/${projectId}`), token: http.grant([`/mcp/${projectId}`]) })
   if (isTest) Object.assign(globalThis, { [APP.mainHook]: testHooks })

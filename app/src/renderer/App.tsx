@@ -39,11 +39,16 @@ export function App() {
     }
   }, [])
 
+  // The marks of the project on show: as they stand, and every change main says.
+  useEffect(() => window.pino.marks.onChange((m) => actions.setMarks(m.projectId, m.marks)), [])
+
   // The build loop of the project on show: what main tells from now on, and how it stands already.
   useEffect(() => window.pino.build.onState(actions.setBuild), [])
   const projectId = project?.id
   useEffect(() => {
-    if (projectId) void window.pino.build.state(projectId).then((s) => s && actions.setBuild(s), () => {})
+    if (!projectId) return
+    void window.pino.build.state(projectId).then((s) => s && actions.setBuild(s), () => {})
+    void window.pino.marks.list(projectId).then((list) => actions.setMarks(projectId, list), () => {})
   }, [projectId])
 
   // What the person sees is told to main, which tells Claude with the next prompt.

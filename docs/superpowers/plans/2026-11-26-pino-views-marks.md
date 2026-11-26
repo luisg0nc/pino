@@ -815,6 +815,8 @@ git commit -m "Tell Claude the build with every prompt, and hold a Stop while it
 
 ### Task 11: Marks in main: the model, the file, the store, re-anchoring
 
+> As built: main works out where a point stands (the centre of its target, not the pixel clicked), what a stroke crosses and what a region holds, whatever the window said. Claude's arrows span a measured gap and keep their two ends. Whether the target is still there is still checked. A long stroke's path is said by its first and last twelve points. The person hears of a damaged file when the window asks for its marks, since at the start no window is listening yet.
+
 **Files:**
 - Create: `app/src/shared/marks.ts`, `app/src/main/marks/file.ts`, `store.ts`, `reanchor.ts`, `app/src/main/model.ts`
 - Modify: `app/src/main/ipc.ts`, `app/src/main/index.ts`, `app/src/shared/bridge.ts`, `app/src/preload/index.ts`, `app/src/renderer/state/store.ts`, `.claude/rules/workspace-writes.md`
@@ -836,7 +838,7 @@ git commit -m "Tell Claude the build with every prompt, and hold a Stop while it
 - Produces (`main/model.ts`): `interface BuildModel { result: BuildResult; board: Board; routeBoard: Board | null; circuit: Circuit | null; placement: Placement | null; sheet: Sheet | null }`; `class Models { get(p: ProjectInfo, r: BuildResult): Promise<BuildModel | null> }` (parses once per hash and route, keeps the newest 3).
 - Bridge, channels `marks:list`, `marks:add`, `marks:update`, `marks:remove`, `marks:resolve`, to the window `marks:changed`: `marks: { list(projectId): Promise<Mark[]>; add(projectId, mark: NewMark): Promise<Mark>; update(projectId, id, patch: MarkPatch): Promise<Mark>; remove(projectId, id): Promise<void>; resolve(projectId, id, note: string): Promise<Mark>; onChange(cb: (m: { projectId: string; marks: Mark[] }) => void): () => void }`. Store: `marks: Mark[]`, `setMarks`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // marks.test.ts
@@ -873,21 +875,21 @@ it('a failed build re-anchors nothing', () => {})
 it('a stroke redoes what it crosses after a part moved under it', () => {})
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/marks.test.ts src/main/marks src/main/model.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Write the model, file, store, re-anchor, IPC and preload; wire `Builds.onResult` to `marks.reanchor`; give the domain its marks**
+- [x] **Step 3: Write the model, file, store, re-anchor, IPC and preload; wire `Builds.onResult` to `marks.reanchor`; give the domain its marks**
 
 `workspace-writes.md` gains `.pino/marks/marks.json` (main, atomic) as the one file pino's main writes in a project in this stage.
 
-- [ ] **Step 4: Run them**
+- [x] **Step 4: Run them**
 
 Run: `pnpm -C app exec vitest run && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src .claude/rules/workspace-writes.md

@@ -68,6 +68,14 @@ const bridge: PinoBridge = {
   view: {
     tell: (projectId, view) => invoke('view:tell', projectId, view)
   },
+  marks: {
+    list: (projectId) => invoke('marks:list', projectId),
+    add: (projectId, mark) => invoke('marks:add', projectId, mark),
+    update: (projectId, id, patch) => invoke('marks:update', projectId, id, patch),
+    remove: (projectId, id) => invoke('marks:remove', projectId, id),
+    resolve: (projectId, id, note) => invoke('marks:resolve', projectId, id, note),
+    onChange: (cb) => subscribe('marks:changed', cb)
+  },
   notices: {
     onNotice: (cb) => subscribe('notice', cb)
   }

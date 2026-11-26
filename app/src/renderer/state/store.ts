@@ -3,6 +3,7 @@ import { useStore as useZustand } from 'zustand'
 import { createStore, type StoreApi } from 'zustand/vanilla'
 import type { SessionStatus } from '../../shared/bridge'
 import type { BuildState } from '../../shared/build'
+import type { Mark } from '../../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../../shared/project'
 import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../../shared/view'
 
@@ -25,6 +26,12 @@ export interface PinoState {
   hotFinding: number | null
   /** The block pointed at in the route card, by its key: its frame lights on the sheet. */
   hotBlock: string | null
+  /** The project's marks, as main holds them. */
+  marks: Mark[]
+  /** The mark in hand: its row, its chip and its shape are lit. */
+  heldMark: string | null
+  /** The mark pointed at, from its chip or its row. */
+  hotMark: string | null
   /** The session the dock shows, running or just ended; null when the project has had none since it was opened. */
   session: { sessionId: string; status: SessionStatus } | null
   /** What the status line says once of the open project: a folder pino may not write into, a folder that did not open. */
@@ -33,10 +40,10 @@ export interface PinoState {
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [], heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
-const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null } as const
+const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, marks: [], heldMark: null, hotMark: null }
 
 export const actions = {
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
@@ -61,7 +68,20 @@ export const actions = {
     store.setState({ shown, hotFinding: null })
   },
   select(selection: Selection | null): void {
-    store.setState({ selection })
+    // What is selected and a mark in hand are one hand: taking one puts the other down.
+    store.setState({ selection, ...(selection ? { heldMark: null } : {}) })
+  },
+  /** What main says of the marks: heard only for the project on show. */
+  setMarks(projectId: string, marks: Mark[]): void {
+    if (store.getState().project?.id !== projectId) return
+    const held = store.getState().heldMark
+    store.setState({ marks, ...(held && !marks.some((m) => m.id === held) ? { heldMark: null } : {}) })
+  },
+  holdMark(heldMark: string | null): void {
+    store.setState({ heldMark, ...(heldMark ? { selection: null } : {}) })
+  },
+  hoverMark(hotMark: string | null): void {
+    store.setState({ hotMark })
   },
   setLook(patch: Partial<BoardLook>): void {
     store.setState({ look: { ...store.getState().look, ...patch } })

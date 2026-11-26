@@ -216,8 +216,7 @@ function copperFor(placement) {
 }
 
 async function route(id, project) {
-  const job = { project, cancelled: false }
-  running.set(id, job)
+  const job = running.get(id) // there since its line was read, so that a cancel sent right after it finds it
   const started = Date.now()
   const seconds = () => Math.round((Date.now() - started) / 100) / 10
   const memory = memoryOf(project)
@@ -320,6 +319,7 @@ function serve() {
       return
     }
     if (SERVE === 2 && req.op === 'route') {
+      running.set(req.id, { project: req.project, cancelled: false })
       queue = queue.then(() => {
         const done = route(req.id, req.project).then((reply) => send({ id: req.id, ...reply }))
         jobs.add(done)
