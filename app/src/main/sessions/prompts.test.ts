@@ -1,0 +1,96 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ChatItem } from '../../shared/chat'
+import { onNotOwn } from '../own'
+import { appendItems } from './chatlog'
+import { listPrompts } from './prompts'
+
+const A = '6c9664ef-90c4-4c7f-b6d5-180948ac85ee'
+const B = 'b3a2c1d0-1111-4222-8333-444455556666'
+let dir: string
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'pino-prompts-'))
+})
+afterEach(() => {
+  onNotOwn(null)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+const user = (id: string, at: number, state: 'sent' | 'queued' | 'not-sent' = 'sent', text = `say ${id}`): ChatItem => ({ kind: 'user', id, text, images: [], state, at })
+const note = (id: string): ChatItem => ({ kind: 'note', id, text: 'a note', tone: 'quiet' })
+
+describe('listPrompts', () => {
+  it('numbers the prompts of every conversation from 1, in the order they were said', async () => {
+    await appendItems(dir, A, [user('a1', 1000), note('n1'), user('a2', 3000)])
+    await appendItems(dir, B, [user('b1', 2000), user('b2', 4000)])
+    const rows = await listPrompts(dir)
+    expect(rows.map((r) => [r.number, r.id, r.conversation, r.at])).toEqual([
+      [1, 'a1', A, 1000],
+      [2, 'b1', B, 2000],
+      [3, 'a2', A, 3000],
+      [4, 'b2', B, 4000]
+    ])
+    expect(rows[0].text).toBe('say a1')
+  })
+
+  it('leaves out a prompt that was queued or not sent', async () => {
+    await appendItems(dir, A, [user('a1', 1000), user('a2', 2000, 'not-sent'), user('a3', 3000, 'queued'), user('a4', 4000)])
+    expect((await listPrompts(dir)).map((r) => [r.number, r.id])).toEqual([[1, 'a1'], [2, 'a4']])
+  })
+
+  it('keeps only the newest rows past `most`, with the numbers they have in the whole project', async () => {
+    await appendItems(dir, A, [user('a1', 1), user('a2', 2), user('a3', 3), user('a4', 4)])
+    expect((await listPrompts(dir, { most: 2 })).map((r) => [r.number, r.id])).toEqual([[3, 'a3'], [4, 'a4']])
+  })
+
+  it('is empty for a project that has no chat folder, and skips a line that is not an item', async () => {
+    expect(await listPrompts(dir)).toEqual([])
+    mkdirSync(join(dir, '.pino', 'chat'), { recursive: true })
+    writeFileSync(join(dir, '.pino', 'chat', `${A}.jsonl`), `${JSON.stringify(user('a1', 5))}\n{"kind":"user","id":"cut\n${JSON.stringify(user('a2', 6))}\n`)
+    writeFileSync(join(dir, '.pino', 'chat', 'notes.txt'), 'not a log')
+    expect((await listPrompts(dir)).map((r) => r.id)).toEqual(['a1', 'a2'])
+  })
+
+  // RF4: opening the project's history reads every log; an index would be needed only if this were slow. What keeps it
+  // fast is that only the lines that say `user` are parsed, which is checked everywhere. The 200 ms itself is a
+  // wall-clock limit, held on this machine only: a shared CI runner reads the same 70 MB in anything from 100 to
+  // 250 ms, which says nothing about the code.
+  it('reads 50 conversations of 2000 lines, parsing only the prompts, in under 200 ms on a desktop', async () => {
+    mkdirSync(join(dir, '.pino', 'chat'), { recursive: true })
+    for (let c = 0; c < 50; c += 1) {
+      const lines: string[] = []
+      for (let n = 0; n < 2000; n += 1) {
+        const id = `c${c}-i${n}`
+        const item: ChatItem =
+          n % 20 === 0
+            ? user(id, c * 1_000_000 + n)
+            : n % 3 === 0
+              ? { kind: 'text', id, text: 'x'.repeat(400), streaming: false }
+              : { kind: 'tool', id, toolUseId: id, name: 'Edit', own: false, input: { file_path: 'a.py', old_string: 'y'.repeat(300), new_string: 'z'.repeat(300) }, state: 'done', result: 'ok', images: [] }
+        lines.push(JSON.stringify(item))
+      }
+      writeFileSync(join(dir, '.pino', 'chat', `conv-${c}.jsonl`), `${lines.join('\n')}\n`)
+    }
+    const started = performance.now()
+    const rows = await listPrompts(dir)
+    const took = performance.now() - started
+    // The newest 2000 of 5000, numbered as in the whole project.
+    expect(rows).toHaveLength(2000)
+    expect(rows.at(-1)!.number).toBe(5000)
+    if (!process.env.CI) expect(took).toBeLessThan(200)
+
+    // The 5000 prompt lines are parsed, none of the 95,000 lines of tools and text.
+    const parse = vi.spyOn(JSON, 'parse')
+    try {
+      expect(await listPrompts(dir)).toEqual(rows)
+      const parsed = parse.mock.calls.map(([text]) => String(text))
+      expect(parsed).toHaveLength(5000)
+      expect(parsed.filter((text) => !text.includes('"kind":"user"'))).toEqual([])
+    } finally {
+      parse.mockRestore()
+    }
+  })
+})

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { openProject, projectIdOf } from './project'
+import { isProjectFolder, openProject, projectIdOf, workspaceOf } from './project'
 
 let tmp: string
 let real: string
@@ -62,5 +62,27 @@ describe('a project', () => {
   it('makes ids that are one URL segment', () => {
     expect(projectIdOf('/a b/ç')).toMatch(/^p[0-9a-f]{12}$/)
     expect(projectIdOf('/a b/c')).not.toBe(projectIdOf('/a b/ç'))
+  })
+})
+
+describe('a project folder and its workspace', () => {
+  it('is a folder that holds board.py or brief.md as a plain file', async () => {
+    const of = (name: string): string => {
+      const dir = join(tmp, name)
+      mkdirSync(dir, { recursive: true })
+      return dir
+    }
+    writeFileSync(join(of('with-board'), 'board.py'), '')
+    writeFileSync(join(of('with-brief'), 'brief.md'), '')
+    mkdirSync(join(of('with-folder'), 'board.py'))
+    symlinkSync(file, join(of('with-link'), 'board.py'))
+    expect(await Promise.all(['with-board', 'with-brief', 'with-folder', 'with-link', 'gone'].map((n) => isProjectFolder(join(tmp, n))))).toEqual([true, true, false, false, false])
+  })
+
+  it('is the parent, but never the home or the root', () => {
+    expect(workspaceOf('/h/blinky', '/h')).toBeNull()
+    expect(workspaceOf('/h/blinky', '/h/')).toBeNull()
+    expect(workspaceOf('/top', '/h')).toBeNull()
+    expect(workspaceOf('/h/boards/blinky', '/h')).toBe('/h/boards')
   })
 })

@@ -74,10 +74,10 @@ describe("pino's MCP server", () => {
     expect(reply.status).toBe(413)
   })
 
-  it('lists its sixteen tools, project first, loaded up front', async () => {
+  it('lists its eighteen tools, project first, loaded up front', async () => {
     const client = await connect()
     const { tools } = await client.listTools()
-    expect(tools).toHaveLength(16)
+    expect(tools).toHaveLength(18)
     expect(tools[0].name).toBe('project')
     expect(tools[0]._meta?.['anthropic/alwaysLoad']).toBe(true)
     expect(client.getServerVersion()?.name).toBe('pino')

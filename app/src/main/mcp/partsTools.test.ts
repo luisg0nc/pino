@@ -128,7 +128,7 @@ describe('parts', () => {
     rmSync(join(project.dir, 'board.py'))
     let give: () => void = () => {}
     const given = new Promise<void>((done) => (give = done))
-    const slow = { parts: () => Promise.reject(new Error('not asked')), state: () => null as never, defaultFab: () => given.then(() => ({ profile: TWO_LAYER, profiles: [TWO_LAYER] })) }
+    const slow = { parts: () => Promise.reject(new Error('not asked')), lookup: () => Promise.reject(new Error('not asked')), state: () => null as never, defaultFab: () => given.then(() => ({ profile: TWO_LAYER, profiles: [TWO_LAYER] })) }
     const t = await tools({}, { fabProfile: async () => null, fab: slow, fabWaitMs: 20 })
     const first = await t.call('project', {})
     expect(first).toContain('board.py: absent')

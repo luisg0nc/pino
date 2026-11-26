@@ -26,13 +26,27 @@ it('keeps the folders opened last, the newest first, each once, eight at most', 
   expect(recentWithout(['/a'], '/x')).toEqual(['/a'])
 })
 
-it('reads a config file of any age, and nothing from what is not one', () => {
-  expect(configOf({ project: '/a' })).toEqual({ project: '/a', recent: [] })
-  expect(configOf({ project: '/a', recent: ['/a', 3, '', 'relative', '/b', '/a'] })).toEqual({ project: '/a', recent: ['/a', '/b'] })
-  expect(configOf({ recent: Array.from({ length: 20 }, (_, i) => `/f${i}`) }).recent).toHaveLength(8)
-  expect(configOf(null)).toEqual({ recent: [] })
-  expect(configOf('text')).toEqual({ recent: [] })
-  expect(configOf({ project: 4, recent: 'no' })).toEqual({ recent: [] })
+it('reads a config file, and nothing from what is not one', () => {
+  expect(configOf({ project: '/w/a', workspace: '/w', workspaces: ['/w'] }, '/h')).toEqual({ workspace: '/w', project: '/w/a', workspaces: ['/w'] })
+  expect(configOf(null, '/h')).toEqual({ workspaces: [] })
+  expect(configOf('text', '/h')).toEqual({ workspaces: [] })
+  expect(configOf({ project: 4, workspace: 'relative', workspaces: 'no', recent: 'no' }, '/h')).toEqual({ workspaces: [] })
+})
+
+it('turns the recent project folders into recent workspaces, once', () => {
+  expect(configOf({ project: '/w/a', recent: ['/w/a', '/w/b', '/x/c'] }, '/h')).toEqual({ workspace: '/w', project: '/w/a', workspaces: ['/w', '/x'] })
+  expect(configOf({ workspace: '/w', project: '/w/a', workspaces: [], recent: ['/x/c'] }, '/h')).toEqual({ workspace: '/w', project: '/w/a', workspaces: [] })
+})
+
+it('never makes the home or the root a workspace', () => {
+  expect(configOf({ project: '/h/blinky', recent: ['/h/blinky', '/top'] }, '/h')).toEqual({ project: '/h/blinky', workspaces: [] })
+  expect(configOf({ workspace: '/h', workspaces: ['/', '/h/', '/h/boards'] }, '/h')).toEqual({ workspaces: ['/h/boards'] })
+})
+
+it('keeps whole paths only, once each, eight at most', () => {
+  expect(configOf({ workspaces: ['/a', 3, '', 'relative', '/b', '/a'] }, '/h').workspaces).toEqual(['/a', '/b'])
+  expect(configOf({ workspaces: Array.from({ length: 10 }, (_, i) => `/f${i}`) }, '/h').workspaces).toHaveLength(8)
+  expect(configOf({ recent: Array.from({ length: 10 }, (_, i) => `/f${i}/p`) }, '/h').workspaces).toHaveLength(8)
 })
 
 it('says which of them is no longer a folder', async () => {

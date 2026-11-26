@@ -39,8 +39,9 @@ changed.
 
 ## Global invariants
 
-- Copy now, extract later. A copied torno file lives at the same relative path as in torno; where torno's own file
-  name says torno, pino's says pino (`scripts/torno` is `scripts/pino`).
+- Copy now, extract later. A copied torno file lives at the same relative path as in torno (where torno's own file
+  name says torno, pino's says pino: `scripts/torno` is `scripts/pino`), unless a pino rule renames it (object to
+  project, torno's board of cards to cards); then its manifest entry says so in `moved`.
 - Every copied file is listed in `shared-from-torno.json` as `as-is` or `adapted`. A later edit of an as-is file makes
   it adapted in the same commit.
 - Copy the file from torno, then adapt it. Never retype torno code from memory.
@@ -50,8 +51,11 @@ changed.
   `globalThis.__pinoMain`, MCP server `pino` (tools `mcp__pino__<tool>`). A file that cannot import it holds the name
   in one variable, and a test holds that equal to `APP.name`.
 - Code says "project", never "object" (`app/src/names.test.ts`).
-- Never write inside a project folder except under `<project>/.pino/`, through `ownFolder`. This stage has no
-  exceptions.
+- Never write inside a project folder except under `<project>/.pino/`, through `ownFolder`. Two exceptions. The
+  engine writes a new `<project>/fab/v<version>/` on release. Making a new project (`main/projects/create.ts`) writes
+  one new folder `<workspace>/<name>/` with `brief.md`, `reference/` and `.pino/brief/cards.json`, made in a hidden
+  `.<name>.pino-new-<12 hex>` and renamed into place last; it never writes into or replaces a folder that is there.
+  Nothing is written in the workspace before Start.
 - The HTTP server binds `127.0.0.1` only. Every request carries its session's token in `X-Pino-Session`. The token is
   only in the agent's environment (`PINO_SESSION`), never in an argument, a file or a log.
 - Renderer: `contextIsolation: true`, `nodeIntegration: false`, `backgroundThrottling: false`.
@@ -101,4 +105,6 @@ read one by hand before work its globs miss. Paths in a rule are written from `a
 - The window: `first-screen`, `styles-themes`, `chat-pane`.
 - The board: `views` (the three views and what is drawn), `marks`, `engine-client` (the engine, the build loop,
   routing, Claude's tools).
+- The Brief: `brief` (the cards, the page, Claude's card tools).
+- A new project: `new-project` (the New project page, the folder, the first prompt).
 - Files and shipping: `workspace-writes` (what pino writes in a project), `launcher-and-packaging`.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { SessionStatus, StartResult } from '../../shared/bridge'
 import type { ProjectInfo } from '../../shared/project'
 import { chatActions, useChat } from '../state/chat'
+import { onboarding } from '../state/onboard'
 import { actions, store, useStore } from '../state/store'
 import { ChatPane } from './chat/ChatPane'
 import { ModelButton } from './chat/ModelMenu'
@@ -88,6 +89,12 @@ export function SessionDock({ project }: { project: ProjectInfo }) {
       if (running && running.status !== 'exited') await window.pino.session.stop(running.sessionId)
       const result = await window.pino.session.start(project.id, { resume })
       if (here.current) take(result, resume)
+      // A first prompt that was kept goes with the session that starts; it stays kept until it has gone.
+      const kept = onboarding.held(project.id)
+      if (!('refused' in result) && kept && !kept.taken && kept.text !== '') {
+        await window.pino.chat.send(result.sessionId, { text: kept.text })
+        onboarding.take(project.id)
+      }
     } catch (e) {
       if (here.current) setProblem(reason(e))
     } finally {

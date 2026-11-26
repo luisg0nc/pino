@@ -1,7 +1,7 @@
 // Claude's `look`: main asks, the window draws the tab asked for from the build on show and answers with the picture.
 
 import { withRouteFindings } from '../shared/checks'
-import type { LookRequest, LookResult } from '../shared/view'
+import { lookTab, type LookRequest, type LookResult } from '../shared/view'
 import { boardLook } from './board/look'
 import { sheetLook } from './sheet/look'
 import { store } from './state/store'
@@ -29,7 +29,7 @@ async function shownModel(): Promise<ViewModel> {
 async function picture(request: LookRequest): Promise<LookResult> {
   const model = await shownModel()
   const { tab, look, marks } = store.getState()
-  const asked = request.tab ?? tab
+  const asked = lookTab(request.tab, tab)
   const size = request.size ?? DEFAULT_SIZE
   if (asked === 'schematic') return sheetLook(model, request, size, marks)
   if (asked === '3d') return threeLook(model, request, size)

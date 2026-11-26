@@ -6,6 +6,7 @@ import type { Pt } from './board/geom'
 import type { Target } from './board/refs'
 import type { BuildState } from './build'
 import type { Placement } from './circuit'
+import type { ListedProject } from './workspace'
 
 /** The three views over one build of a board. */
 export type ViewTab = 'schematic' | 'board' | '3d'
@@ -14,6 +15,25 @@ export type ViewTab = 'schematic' | 'board' | '3d'
 export type ViewName = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right' | 'iso'
 
 export const TAB_NAMES: Record<ViewTab, string> = { schematic: 'Schematic', board: 'Board', '3d': '3D' }
+
+/** What the middle of the window shows: the project's Brief, first, or one of the views of its board. */
+export type PaneTab = 'brief' | ViewTab
+export const PANE_TABS: readonly PaneTab[] = ['brief', 'schematic', 'board', '3d']
+export const PANE_NAMES: Record<PaneTab, string> = { brief: 'Brief', ...TAB_NAMES }
+
+/**
+ * The tab a project opens on: with no `board.py` the Brief, else the one it was left on, else the schematic. A project
+ * the listing in hand does not have (`listed` undefined) is not known to be without a board.
+ */
+export function firstTab(listed: ListedProject | undefined, remembered: PaneTab | null): PaneTab {
+  if (listed && !listed.board) return 'brief'
+  return remembered ?? 'schematic'
+}
+
+/** The view Claude's `look` draws: the one it asks for, else the one on screen; on the Brief, the board. */
+export function lookTab(asked: ViewTab | undefined, onScreen: PaneTab): ViewTab {
+  return asked ?? (onScreen === 'brief' ? 'board' : onScreen)
+}
 
 /** What is in hand in the views: the same thing in all three. */
 export interface Selection {
@@ -26,9 +46,9 @@ export interface Selection {
   label: string
 }
 
-/** A tab's name; on a tab not chosen, with what is selected, so that switching is seen to keep it. */
-export function tabLabel(tab: ViewTab, chosen: ViewTab, selection: Selection | null): string {
-  return tab !== chosen && selection ? `${TAB_NAMES[tab]} · ${selection.label}` : TAB_NAMES[tab]
+/** A tab's name; on a view's tab not chosen, with what is selected, so that switching is seen to keep it. */
+export function tabLabel(tab: PaneTab, chosen: PaneTab, selection: Selection | null): string {
+  return tab !== 'brief' && tab !== chosen && selection ? `${PANE_NAMES[tab]} · ${selection.label}` : PANE_NAMES[tab]
 }
 
 export interface BoardLook {

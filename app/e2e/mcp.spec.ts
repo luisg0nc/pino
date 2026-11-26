@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { request } from 'node:http'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -52,7 +52,10 @@ test('in a project with no board, project gives the default fab limits, parts an
     const said = await call('parts', { lcsc: 'C25804' })
     expect(said.body).toContain('C25804 · basic')
     expect(said.body).not.toContain('"isError":true')
-    expect(existsSync(join(dir, '.pino'))).toBe(false)
+    // No call wrote anything: what may be there is the Brief on screen keeping what was seen of it.
+    const there = existsSync(join(dir, '.pino')) ? readdirSync(join(dir, '.pino')) : []
+    expect(there.filter((name) => name !== 'brief' && name !== '.gitignore')).toEqual([])
+    expect(existsSync(join(dir, '.pino', 'brief', 'cards.json'))).toBe(false)
   } finally {
     await app.close()
   }

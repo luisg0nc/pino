@@ -83,6 +83,14 @@ it('has the keys of the views in a scope of their own, with no clash', () => {
   expect([pressed({ key: 'f' }, 'board.fit'), pressed({ key: 'n' }, 'board.nets'), pressed({ key: 'Escape' }, 'view.drop')]).toEqual([true, true, true])
 })
 
+it("has the New project page's keys in a scope of their own, and the ink pad's as a sheet's, with no clash", () => {
+  expect(keyClashes(KEYS)).toEqual([])
+  expect(KEYS.filter((r) => r.scope === 'newproject').map((r) => [r.id, r.context])).toEqual([['new.back', 'New project'], ['new.sketch', 'New project']])
+  expect([pressed({ key: 'Escape' }, 'new.back'), pressed({ key: 's' }, 'new.sketch')]).toEqual([true, true])
+  expect([pressed({ key: 'z', code: 'KeyZ', ctrlKey: true }, 'ink.undo'), pressed({ key: 'Tab' }, 'sheet.round')]).toEqual([true, true])
+  expect(KEYS.filter((r) => r.id === 'ink.undo' || r.id === 'sheet.round').map((r) => [r.scope, r.hidden === true])).toEqual([['sheet', false], ['sheet', true]])
+})
+
 it("has Left and Right on the session dock's edge, in a scope of its own", () => {
   expect(KEYS.filter((r) => r.scope === 'separator').map((r) => r.id)).toEqual(['dock.resize'])
   expect([which({ key: 'ArrowLeft' }, 'dock.resize'), which({ key: 'ArrowRight' }, 'dock.resize'), which({ key: 'x' }, 'dock.resize')]).toEqual([0, 1, -1])

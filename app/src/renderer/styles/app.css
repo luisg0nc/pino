@@ -10,6 +10,7 @@
 @import './card.css';
 @import './plate.css';
 @import './welcome.css';
+@import './projects.css';
 @import './route.css';
 @import './views.css';
 @import './board.css';
@@ -22,3 +23,5 @@
 @import './viewbars.css';
 @import './fab.css';
 @import './leaders.css';
+@import './brief.css';
+@import './onboard.css';

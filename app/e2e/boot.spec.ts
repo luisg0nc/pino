@@ -1,3 +1,4 @@
+import { basename, dirname } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { launch, tempProject, type Launched } from './launch'
 
@@ -35,13 +36,13 @@ test.describe('with a project', () => {
     await open?.app.close()
   })
 
-  test('the window is the grid: title, route card with an empty Brief, three views, the dock and the status line', async () => {
+  test('the window is the grid: title, route card, the Brief and the three views, the dock and the status line', async () => {
     const { page } = open
     for (const r of ['title', 'left', 'viewport', 'session', 'status']) await expect(page.locator(`[data-region="${r}"]`)).toBeVisible()
     await expect(page.locator('[data-region="left"] h2')).toHaveText('blinky')
-    await expect(page.locator('[data-region="left"]')).toContainText('No brief yet.')
-    await expect(page.locator('[data-region="left"]')).toContainText('Tell Claude what the board is for. It keeps the brief in brief.md.')
-    await expect(page.getByRole('tablist', { name: 'Views' }).getByRole('tab')).toHaveText(['Schematic', 'Board', '3D'])
+    await expect(page.locator('[data-region="left"]').getByRole('button', { name: 'Open the Brief' })).toBeVisible()
+    await expect(page.getByRole('tablist', { name: 'Views' }).getByRole('tab')).toHaveText(['Brief', 'Schematic', 'Board', '3D'])
+    await page.getByRole('tablist', { name: 'Views' }).getByRole('tab', { name: 'Schematic' }).click()
     await expect(page.getByRole('tabpanel')).toContainText('Nothing to draw yet.')
     await expect(page.getByRole('tabpanel')).toContainText('Claude writes board.py. pino draws the schematic, the board and the 3D view here on every save.')
     await expect(page.locator('[data-region="status"]')).toContainText('blinky')
@@ -61,10 +62,11 @@ test.describe('with a project', () => {
     const { page } = open
     const tab = (name: string) => page.getByRole('tablist', { name: 'Views' }).getByRole('tab', { name })
     const shown = async (name: string): Promise<void> => {
-      for (const other of ['Schematic', 'Board', '3D']) await expect(tab(other)).toHaveAttribute('aria-selected', String(other === name))
+      for (const other of ['Brief', 'Schematic', 'Board', '3D']) await expect(tab(other)).toHaveAttribute('aria-selected', String(other === name))
       await expect(page.getByRole('tabpanel')).toHaveCount(1)
       await expect(page.getByRole('tabpanel', { name })).toBeVisible()
     }
+    await tab('Schematic').click()
     await shown('Schematic')
     await tab('Board').click()
     await shown('Board')
@@ -72,22 +74,23 @@ test.describe('with a project', () => {
     await shown('3D')
     await expect(tab('3D')).toBeFocused()
     await page.keyboard.press('ArrowRight')
-    await shown('Schematic')
+    await expect(tab('Brief')).toHaveAttribute('aria-selected', 'true')
     await page.keyboard.press('ArrowLeft')
     await shown('3D')
     // One tab stop: the chosen view's tab.
-    expect(await page.getByRole('tab').evaluateAll((tabs) => tabs.map((t) => (t as HTMLElement).tabIndex))).toEqual([-1, -1, 0])
+    expect(await page.getByRole('tab').evaluateAll((tabs) => tabs.map((t) => (t as HTMLElement).tabIndex))).toEqual([-1, -1, -1, 0])
   })
 
-  test('Close project goes back to the first screen', async () => {
+  test('All projects ends the project and shows the page', async () => {
     const { page } = open
     await page.getByRole('button', { name: 'Project blinky' }).click()
     const menu = page.getByRole('menu', { name: 'Projects' })
-    await expect(menu.getByRole('menuitem')).toContainText(['Open folder…', 'Close project'])
-    await expect(menu.locator('.folder-row[data-open]')).toContainText('current')
-    await menu.getByRole('menuitem', { name: 'Close project' }).click()
-    await expect(page.locator('.plate')).toContainText('pino')
-    await expect(page.getByRole('navigation', { name: 'Recent folders' })).toContainText(dir)
-    expect(await page.evaluate(() => window.pino.project.current())).toBeNull()
+    await expect(menu.getByRole('menuitem')).toContainText(['New project…', 'All projects', 'blinky'])
+    await menu.getByRole('menuitem', { name: 'All projects' }).click()
+    const all = page.getByRole('main', { name: 'All projects' })
+    await expect(all.getByRole('button', { name: 'blinky' })).toBeVisible()
+    await expect(page.getByRole('button', { name: `Workspace ${basename(dirname(dir))}` })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Project blinky' })).toHaveCount(0)
+    expect(await page.evaluate(() => window.pino.workspace.current())).toMatchObject({ workspace: { root: dirname(dir) }, project: null })
   })
 })

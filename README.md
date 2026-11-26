@@ -148,9 +148,12 @@ pnpm install
 ### Run
 
 ```sh
-scripts/pino ~/boards/blinky    # open a project folder
-scripts/pino                    # the folder you opened last, or the first screen
+scripts/pino ~/boards           # open a folder of boards
+scripts/pino ~/boards/blinky    # open one board in it
+scripts/pino                    # what you had open last, or the first screen
 ```
+
+pino keeps your boards in one folder, each board in a subfolder of its own. On the first run it offers `~/boards`.
 
 The launcher builds the app on the first run, which also downloads Electron, and builds again when the sources
 change, so `git pull` and run it again. `scripts/pino --install-desktop` adds pino to your applications menu, and
@@ -160,7 +163,7 @@ If a folder brings Claude Code settings of its own, pino asks before the first c
 
 ### Your first five minutes
 
-Copy `kernel/tests/fixtures/reference/`, the reference board, to a folder of your own and open the copy. Click a part on the Board, then the same part on the
+Copy `kernel/tests/fixtures/reference/`, the reference board, into your folder of boards and open the copy. Click a part on the Board, then the same part on the
 Schematic. Point at the LEDs and ask the agent to move them to the other edge. Watch it edit `board.py`, the build
 that follows, and the routing. When the checks pass, press **Fab files…** in the status line to see what a release
 would hold.

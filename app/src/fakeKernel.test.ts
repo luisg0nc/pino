@@ -7,6 +7,8 @@ import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { buildResultOf, type BuildResult } from './shared/build'
+import { readingOf } from './shared/cards'
+import type { PartsResult } from './shared/fab'
 import { FAKE_KERNEL } from './test/fixtures'
 
 type Reply = Record<string, any>
@@ -146,6 +148,15 @@ it('cancels a route', async () => {
   expect((await k.call({ op: 'route_cancel', job: id })).cancelled).toBe(true)
   expect((await k.final(id)).result.state).toBe('cancelled')
   expect((await k.call({ op: 'route_cancel', job: 999 })).cancelled).toBe(false)
+})
+
+it('answers a part it cannot ask jlcsearch about as the engine does: no part, and a finding that says why', async () => {
+  const k = serve({ FAKE_KERNEL_SERVE: '3', FAKE_KERNEL_PARTS: 'unreachable' })
+  const { result } = await k.call({ op: 'parts', action: 'get', lcsc: 'C25804' })
+  expect(result.parts).toEqual([])
+  expect(result.findings).toMatchObject([{ code: 'parts_unavailable', severity: 'error' }])
+  expect(result.headline).toBe('Parts: jlcsearch could not be reached')
+  expect(readingOf(result as PartsResult, 'C25804', new Date())).toEqual({ refused: 'jlcsearch could not be reached' })
 })
 
 it('answers shutdown and ends', async () => {

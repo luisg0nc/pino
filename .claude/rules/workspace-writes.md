@@ -10,24 +10,53 @@ paths:
   - "app/src/main/marks/**"
   - "app/src/main/builds.ts"
   - "app/src/main/artifacts.ts"
+  - "app/src/main/thumb.ts"
+  - "app/src/main/thumb.test.ts"
+  - "app/src/main/projects/**"
+  - "app/src/main/cards/**"
 ---
 
 # What pino writes in a project, and `.pino` itself
 
 ## Global Constraints (root `CLAUDE.md`)
 
-- Never write inside a project folder except under `<project>/.pino/`. One exception: the engine writes a new
+- Never write inside a project folder except under `<project>/.pino/`. Two exceptions. The engine writes a new
   `<project>/fab/v<version>/` on release, and only then (the person's `Make fab files`, or `pino-kernel release`). It
-  never touches a folder that is there, and refuses a `fab` that is a link. A later stage that adds another exception
-  (a new project's folder, `board.py` written by the agent itself) says it here in the same commit.
+  never touches a folder that is there, and refuses a `fab` that is a link. And making a new project writes one new
+  folder in the workspace (below). A later stage that adds another exception (`board.py` written by pino itself) says
+  it here in the same commit.
 - Whatever the agent writes in the project folder is the agent's own write, asked of the person by Claude Code's
   permissions; pino does not make it.
 
+## Making a new project (`main/projects/create.ts`)
+
+- One new folder `<workspace>/<name>/`: `brief.md` (`# <name>`, the description and a `## References` list),
+  `reference/` (photos, doodles, PDFs) and `.pino/brief/cards.json` (`cards/start.ts`: the person's slots in frames).
+  Main never writes `brief.md` again. Nothing is written in the workspace before Start or "Make it without starting
+  Claude".
+- **Whole or not there.** Everything is made in a hidden `.<name>.pino-new-<12 hex>` beside it, which no listing
+  shows. The name is taken last, by `mkdir`, which fails if anything is there, and the finished folder is renamed onto
+  that empty one. A folder that is there, empty or not, a link or a file, is never written into or replaced.
+- The whole request is checked again in main before anything is made: the name (no folder of it in any case), every
+  list and its cap, every row, size, link and note. A file given by path is copied only as a plain file through no
+  link, opened and read through one handle, within its cap (a PDF starts `%PDF-`). A pasted picture or a doodle is
+  PNG bytes. A part's stock reading is main's own (`readings.ts`), never the request's.
+- The window reads the bytes only of a file main's own dialog gave it (`offered.ts`).
+- **The sweep:** opening a workspace removes its `.<name>.pino-new-…` folders older than 10 minutes that hold nothing
+  in `reference/` (a doodle exists nowhere else). A link of that name is left, and so is all else.
+
 ## What is written, and by whom
 
-- **pino's main** writes, besides the chat's files, one file in a project: `.pino/marks/marks.json` (`marks/file.ts`),
+- **The Brief** (`.pino/brief/`): `cards.json`, `seen.json` and `told.json`, by `main/cards/store.ts` alone, through
+  `ownFolder(dir, 'brief')` and `writeOwn` (`brief.md`). `cards.json` goes into git; the other two are ignored. The
+  one write there outside the store is the new project's, in its hidden folder.
+- **pino's main** writes, besides the chat's files, in a project: `.pino/marks/marks.json` (`marks/file.ts`),
   through `ownFolder` and `writeFileAtomic`, and it is its only writer (`marks/store.ts` takes one change at a time).
   A file there that cannot be read is renamed `marks.json.bad-<n>` and said; it is never overwritten.
+- **The card's picture** (`main/thumb.ts`): `.pino/thumb.png` and `.pino/thumb.json` (the build's hash and when),
+  through `writeOwn`, both ignored by git. The window draws it and main keeps it only for the open project, only of its
+  newest good build, and only a PNG of 512 KB at most. It is read only as a plain file through no link. Opening a
+  workspace and listing it write nothing in any project.
 - **The engine** writes `.pino/build/`, `.pino/routes/`, `.pino/trials/`, `.pino/release/`, `.pino/kicad/`,
   `builds.json` and `routes.json` itself, and `fab/v<version>/` on release. Before main asks it to build, `.pino` and
   those folders must be the project's own (`builds.ts`, `whyNotOwn`): through a link it would write outside the

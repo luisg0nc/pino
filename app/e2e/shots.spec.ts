@@ -4,8 +4,8 @@
 // Each picture is a launch of its own: a hidden window's `capturePage()` gives one picture, and the next call never
 // returns (torno found the same).
 
-import { appendFileSync, mkdirSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { capture, clickTarget, markScene, markTrack, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
 import { launch, referenceProject, type Launched } from './launch'
@@ -72,6 +72,94 @@ const routed = async (run: Launched): Promise<void> => {
   await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().board?.route ?? null)).not.toBeNull()
 }
 
+/** The page of projects, the open board's picture on its card. */
+const onProjects = async (run: Launched, project: string): Promise<void> => {
+  await expect.poll(() => existsSync(join(project, '.pino', 'thumb.json'))).toBe(true)
+  await run.page.getByRole('button', { name: `Project ${basename(project)}` }).click()
+  await run.page.getByRole('menuitem', { name: 'All projects' }).click()
+  await expect.poll(() => run.page.locator('.project-picture img').evaluateAll((images) => images.map((img) => (img as HTMLImageElement).naturalWidth))).toEqual([480])
+  await run.page.mouse.move(5, 5)
+}
+
+/** The Brief of a board in use: the person's words and cards, a size the board differs from, rules and the fab. */
+const onBrief = async (run: Launched, project: string): Promise<void> => {
+  await tab(run, 'Brief').click()
+  writeFileSync(join(project, 'brief.md'), '# reference\n\nA USB-C board with an ESP32 and a 3.3 V regulator, for a sensor in the workshop.\n\n- It powers from 5 V and draws under 0.5 A\n- One SHT40 sensor over I2C\n\nThe datasheet is at https://example.org/datasheets/AP2112K.pdf\n')
+  mkdirSync(join(project, '.pino', 'brief'), { recursive: true })
+  const cards = [
+    { id: 'C1', kind: 'frame', by: 'person', name: 'Power' },
+    { id: 'C2', kind: 'power', by: 'person', frame: 'C1', text: 'USB-C, 5 V, 0.5 A' },
+    { id: 'C3', kind: 'frame', by: 'person', name: 'Parts I have' },
+    { id: 'C4', kind: 'part', by: 'person', frame: 'C3', text: 'pull-up', part: { lcsc: 'C25804', reading: { class: 'basic', package: '0603', stock: 1234567, price: 0.0024, checkedAt: '2026-11-26T05:00:00.000Z', fresh: true } } },
+    { id: 'C5', kind: 'size', by: 'person', size: { what: 'Board width', value: '50', unit: 'mm', source: 'a guess' } },
+    { id: 'C6', kind: 'size', by: 'agent', size: { what: 'Board height', value: '44', unit: 'mm', source: 'from Claude' } },
+    { id: 'C7', kind: 'rule', by: 'person', text: 'Hand-solderable, 0805 or larger' },
+    { id: 'C8', kind: 'fab', by: 'person', fab: { layers: 2, thickness: 1.6, assembly: 'jlc', boards: 5 } }
+  ]
+  writeFileSync(join(project, '.pino', 'brief', 'cards.json'), JSON.stringify({ next: 9, cards }))
+  await expect(run.page.locator('[data-card="C7"]')).toBeVisible()
+  await expect(run.page.locator('.brief-words')).toContainText('USB-C board')
+  await run.page.mouse.move(5, 5)
+}
+
+/** What Claude wrote down over three prompts, the last two new since the person looked, one card changed. */
+const onSpine = async (run: Launched, project: string): Promise<void> => {
+  mkdirSync(join(project, '.pino', 'chat'), { recursive: true })
+  mkdirSync(join(project, '.pino', 'brief'), { recursive: true })
+  const at = (minute: number): number => Date.parse(`2026-11-26T10:${String(minute).padStart(2, '0')}:00.000Z`)
+  const prompts = ['Make a small USB-C sensor board for the workshop, with an SHT40.', 'Power it from a LiPo cell instead.', 'Which LDO would you use?']
+  writeFileSync(join(project, '.pino', 'chat', 'c1.jsonl'), prompts.map((text, i) => `${JSON.stringify({ kind: 'user', id: `u${i + 1}`, text, images: [], state: 'sent', at: at(i * 7) })}\n`).join(''))
+  const turn = (n: number) => ({ prompt: `u${n}`, conversation: 'c1' })
+  const cards = [
+    { id: 'C1', kind: 'requirement', by: 'agent', text: 'Sensor: reads temperature and humidity every minute', turn: turn(1) },
+    { id: 'C2', kind: 'decision', by: 'agent', text: 'Power: a single LiPo cell, charged over USB-C', turn: turn(2), was: [{ text: 'Power: USB-C, 5 V from a charger', turn: turn(1) }] },
+    { id: 'C3', kind: 'question', by: 'agent', text: 'Case: which enclosure? The connector edge waits on it', turn: turn(2) },
+    { id: 'C4', kind: 'part', by: 'agent', text: 'LDO: AP2112K-3.3, 600 mA', part: { lcsc: 'C51118', reading: { class: 'extended', package: 'SOT-25-5', stock: null, price: 0.09, checkedAt: '2026-11-03T22:33:00.000Z', fresh: true } }, turn: turn(3) }
+  ]
+  writeFileSync(join(project, '.pino', 'brief', 'cards.json'), JSON.stringify({ next: 5, cards }))
+  // Seen: the first prompt's card as it is, and nothing newer.
+  const { seenOf } = await import('../src/shared/brief')
+  writeFileSync(join(project, '.pino', 'brief', 'seen.json'), JSON.stringify(seenOf([cards[0]] as never, new Date(at(1)).toISOString())))
+  await tab(run, 'Brief').click()
+  await expect(run.page.locator('[data-card="C4"]')).toBeVisible()
+  await run.page.locator('[data-card="C4"] .brief-cn-id').click()
+  await run.page.locator('.brief-voices').evaluate((el) => el.scrollIntoView())
+  await run.page.mouse.move(5, 5)
+}
+
+/** The New project page, filled: opened from a board's menu, with every PCB slot holding something. */
+const onNewProject = async (run: Launched, project: string): Promise<void> => {
+  await run.page.getByRole('button', { name: `Project ${basename(project)}` }).click()
+  await run.page.getByRole('menuitem', { name: 'New project…' }).click()
+  const page = run.page.getByRole('region', { name: 'New project', exact: true })
+  await page.getByRole('textbox', { name: 'Name' }).fill('sensor-node')
+  await page.getByRole('textbox', { name: 'What it does' }).fill('Reads temperature and humidity every minute and sends them over Wi-Fi from a LiPo cell.')
+  const open = (title: string) => page.getByRole('list', { name: 'Add' }).getByRole('button', { name: title, exact: true }).click()
+  await open('Power')
+  await page.getByRole('button', { name: 'Add a power source' }).click()
+  await page.getByRole('combobox', { name: 'Source of power 1' }).selectOption('battery')
+  await page.getByRole('textbox', { name: 'Which battery, power 1' }).fill('LiPo 1S')
+  await page.getByRole('textbox', { name: 'Voltage of power 1' }).fill('3.7')
+  await open('Connections')
+  await page.getByRole('button', { name: 'Add a connection' }).click()
+  await page.getByRole('textbox', { name: 'What connection 1 is' }).fill('SHT40 sensor')
+  await page.getByRole('textbox', { name: 'Connector of connection 1' }).fill('JST-SH 4-pin')
+  await open('Size and shape')
+  await page.getByRole('button', { name: 'Board width' }).click()
+  await page.getByRole('textbox', { name: 'Value of size 1' }).fill('50')
+  await page.getByRole('textbox', { name: 'Connector edges' }).fill('USB on a short edge')
+  await open('Parts I have')
+  await page.getByRole('button', { name: 'Add a part' }).click()
+  await page.getByRole('textbox', { name: 'Part 1', exact: true }).fill('C25804')
+  await expect(page.getByRole('listitem', { name: 'Part 1', exact: true })).toContainText('stock 1,234,567')
+  await open('Fab and assembly')
+  await open('Rules')
+  await page.getByRole('textbox', { name: 'Rules' }).fill('Hand-solderable, 0805 or larger')
+  await run.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await run.page.locator('.new-column').evaluate((el) => el.scrollTo(0, 0))
+  await run.page.mouse.move(5, 5)
+}
+
 /** An engine that makes fab files. */
 const FABBED = { FAKE_KERNEL_SERVE: '3' }
 
@@ -89,12 +177,34 @@ const fabPopover = (release: boolean) => async (run: Launched): Promise<void> =>
 }
 
 const SHOTS: Record<string, Shot> = {
+  brief: { env: FABBED, at: onBrief },
+  'brief-dark': { env: FABBED, dark: true, at: onBrief },
+  'brief-spine': { at: onSpine },
+  // The page below its first screenful: the sizes, the rules and the fab.
+  'brief-foot': {
+    env: FABBED,
+    at: async (run, project) => {
+      await onBrief(run, project)
+      await run.page.locator('.brief-page').evaluate((el) => el.scrollTo(0, el.scrollHeight))
+    }
+  },
   'fab-ready': { env: FABBED, at: fabPopover(false) },
   'fab-ready-dark': { env: FABBED, dark: true, at: fabPopover(false) },
   'fab-released': { env: FABBED, at: fabPopover(true) },
   'fab-released-dark': { env: FABBED, dark: true, at: fabPopover(true) },
   'first-light': { first: true },
   'first-dark': { first: true, dark: true },
+  projects: { at: onProjects },
+  'projects-dark': { dark: true, at: onProjects },
+  'new-project': { env: FABBED, at: onNewProject },
+  'new-project-dark': { env: FABBED, dark: true, at: onNewProject },
+  'new-project-foot': {
+    env: FABBED,
+    at: async (run, project) => {
+      await onNewProject(run, project)
+      await run.page.locator('.new-column').evaluate((el) => el.scrollTo(0, el.scrollHeight))
+    }
+  },
   'marks-dense': {
     at: async (run) => {
       await onBoard(run)

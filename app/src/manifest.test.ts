@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 const repo = resolve(__dirname, '../..')
 
-interface Entry { pino: string; torno: string; commit: string; mode: string; change?: string }
+interface Entry { pino: string; torno: string; commit: string; mode: string; change?: string; moved?: string }
 const manifest = (): Entry[] => (JSON.parse(readFileSync(join(repo, 'shared-from-torno.json'), 'utf8')) as { files: Entry[] }).files
 
 describe('shared-from-torno.json', () => {
@@ -24,8 +24,15 @@ describe('shared-from-torno.json', () => {
     expect(paths.filter((p, i) => paths.indexOf(p) !== i)).toEqual([])
   })
 
-  it("keeps torno's paths: pino path is the torno path, with torno in a file name read as pino", () => {
-    for (const f of manifest()) expect(f.pino).toBe(f.torno.replace(/torno(?=[^/]*$)/g, 'pino'))
+  it("keeps torno's paths, or says in moved which pino rule renamed a copy", () => {
+    for (const f of manifest()) {
+      if (f.moved === undefined) expect(f.pino).toBe(f.torno.replace(/torno(?=[^/]*$)/g, 'pino'))
+      else expect([f.pino, f.moved.trim().length > 0, f.moved.includes('\n'), f.pino !== f.torno]).toEqual([f.pino, true, false, true])
+    }
+  })
+
+  it("says that torno's thumbnails moved, and why", () => {
+    expect(manifest().find((f) => f.pino === 'app/src/main/thumb.ts')).toMatchObject({ torno: 'app/src/main/show/cards.ts', moved: "torno's show/cards.ts is the page's cards; in pino cards are the Brief's" })
   })
 
   it('names only files that are tracked in pino', () => {

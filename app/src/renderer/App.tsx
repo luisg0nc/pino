@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { which } from '../shared/keys'
 import type { ProjectInfo } from '../shared/project'
+import type { WorkspaceInfo } from '../shared/workspace'
 import { answerLooks } from './look'
 import { chatActions, connectChat } from './state/chat'
+import { cardsActions, connectCards } from './state/cards'
 import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
+import { useKeepThumb } from './state/keepThumb'
 import { actions, store, useStore } from './state/store'
-import type { FolderChoice } from './ui/FolderMenu'
+import { NewProject, openNewProject } from './ui/onboard/NewProject'
 import { nameOf, openProblem } from './ui/openFolder'
+import { ProjectsPage } from './ui/ProjectsPage'
 import { RouteCard } from './ui/RouteCard'
 import { LeaderLayer } from './ui/LeaderLayer'
 import { SessionDock } from './ui/SessionDock'
@@ -20,16 +24,16 @@ const KEY_STEP = 16
 /** The card's width where it cannot be measured: `--card-w` in `styles/tokens.css`. */
 const CARD_DEFAULT = 296
 
-/** Why a folder did not open, in one sentence: main's own already names the folder and says why. */
+/** Why a folder did not open, in one sentence: main's own are whole sentences, or already name the folder and say why. */
 function why(what: string, e: unknown): string {
   const message = e instanceof Error ? e.message : String(e)
-  return / is not a folder pino can open: /.test(message) ? message : openProblem(what, e)
+  return message.endsWith('.') || / is not a folder pino can open: /.test(message) ? message : openProblem(what, e)
 }
 
-/** Said where the person is looking: under the way in on the first screen, else in the status line. */
+/** Said where the person is looking: in the status line of a project, else on the page itself. */
 function say(text: string): void {
-  if (store.getState().page === 'first') actions.problem(text)
-  else actions.notice(text)
+  if (store.getState().page === 'project') actions.notice(text)
+  else actions.problem(text)
 }
 
 export function App() {
@@ -86,7 +90,7 @@ export function App() {
   }
 
   // A window made smaller than the dock the person kept leaves the view its room: the width shown follows, what is kept does not.
-  const onProject = page !== 'first' && project !== null
+  const onProject = page === 'project' && project !== null
   useEffect(() => {
     if (kept === null || !onProject) return
     const fit = (): void => {
@@ -111,6 +115,10 @@ export function App() {
 
   // Claude's pictures are drawn here, when main asks.
   useEffect(() => answerLooks(), [])
+  // The Brief of the project on show, as main tells it.
+  useEffect(() => connectCards(), [])
+  // And the picture of the open project's card, for the page of projects.
+  useKeepThumb()
 
   // The marks of the project on show: as they stand, and every change main says.
   useEffect(() => window.pino.marks.onChange((m) => actions.setMarks(m.projectId, m.marks)), [])
@@ -140,12 +148,17 @@ export function App() {
     if (projectId) void window.pino.view.tell(projectId, { tab, look, selection }).catch(() => {})
   }, [projectId, tab, look, selection])
 
-  // The project main holds open: the one remembered or named at start, and the same one after the window is reloaded.
+  // What main holds open: the workspace and project remembered or named at start, and the same after the window is reloaded.
   useEffect(() => {
-    void window.pino.project.current().then(
-      (open) => open && actions.openProject(open),
-      (e: unknown) => say(why('The folder', e))
-    )
+    const draw = (open: Awaited<ReturnType<typeof window.pino.workspace.current>>): void => {
+      if (open.workspace) actions.openWorkspace(open.workspace)
+      if (open.project) actions.openProject(open.project)
+    }
+    void window.pino.workspace.current().then(draw, async (e: unknown) => {
+      // Why the folder pino was started with did not open is said once; then what is open is asked for again.
+      await window.pino.workspace.current().then(draw, () => {})
+      say(why('The folder', e))
+    })
   }, [])
 
   /** One opening or closing at a time. */
@@ -153,47 +166,94 @@ export function App() {
     setBusy(true)
     actions.problem(null)
     try {
+      // The project may be left by what is asked: a Brief on screen is marked seen while main still holds it open.
+      if (store.getState().tab === 'brief') await cardsActions.leaveBrief()
       await ask()
     } catch (e) {
       say(why(what, e))
       // The folder may have gone: the list is read again.
-      await window.pino.project.recent().then(actions.setRecent, () => {})
+      await window.pino.workspace.recent().then(actions.setRecent, () => {})
     } finally {
       setBusy(false)
     }
   }
+  /** Another workspace on show: the chats drawn are let go (main has ended the project's session). */
+  const showWorkspace = (opened: WorkspaceInfo): void => {
+    chatActions.dropAll()
+    actions.openWorkspace(opened)
+  }
   /** Another project on show: the chats drawn of the one before are let go (main has ended its session). */
-  const show = (opened: ProjectInfo): void => {
+  const showProject = (opened: ProjectInfo): void => {
     if (store.getState().project?.id !== opened.id) chatActions.dropAll()
     actions.openProject(opened)
   }
   const pick = (): Promise<void> =>
     change('The folder', async () => {
-      const opened = await window.pino.project.pick()
-      if (opened) show(opened)
+      const opened = await window.pino.workspace.pick()
+      if (!opened) return
+      const { workspace, project: next } = opened
+      // The board that is on show already: its session is still running, and its chat stays drawn.
+      if (next && store.getState().project?.id === next.id) return actions.setWorkspace(workspace)
+      showWorkspace(workspace)
+      if (next) showProject(next)
     })
-  const openAt = (root: string): Promise<void> => change(nameOf(root), async () => show(await window.pino.project.open(root)))
-  const close = (): Promise<void> =>
-    change('The first screen', async () => {
+  const useSuggested = (): Promise<void> => change('The folder', async () => showWorkspace(await window.pino.workspace.useSuggested()))
+  const openWorkspace = (root: string): Promise<void> => change(nameOf(root), async () => showWorkspace(await window.pino.workspace.open(root)))
+  const openProject = (name: string): Promise<void> =>
+    change(name, async () => {
+      const next = await window.pino.project.open(name)
+      // What is in the folder may have changed since the workspace was listed, and it says which tab to open on.
+      await window.pino.workspace.list().then(actions.setWorkspace, () => {})
+      showProject(next)
+    })
+  const allProjects = (): Promise<void> =>
+    change('The page of projects', async () => {
       await window.pino.project.close()
       chatActions.dropAll()
       actions.closeProject()
     })
+  const newProject = (): void => void openNewProject()
 
-  if (page === 'first' || !project) {
+  if (page === 'first') {
     return (
       <>
-        <Welcome busy={busy} onPick={() => void pick()} onOpen={(root) => void openAt(root)} />
+        <Welcome busy={busy} onPick={() => void pick()} onSuggested={() => void useSuggested()} onOpen={(root) => void openWorkspace(root)} />
         <BareControls />
       </>
     )
   }
 
-  const choose = (choice: FolderChoice): void => void (choice === 'pick' ? pick() : choice === 'close' ? close() : openAt(choice.root))
+  const titleBar = (
+    <TitleBar
+      disabled={busy}
+      onWorkspace={(choice) => void (choice === 'pick' ? pick() : openWorkspace(choice.root))}
+      onProject={(name) => void openProject(name)}
+      onAll={() => void allProjects()}
+      onNew={newProject}
+    />
+  )
+
+  if (page === 'new') {
+    return (
+      <div className="shell shell-projects">
+        {titleBar}
+        <NewProject onShow={showProject} />
+      </div>
+    )
+  }
+
+  if (page === 'projects' || !project) {
+    return (
+      <div className="shell shell-projects">
+        {titleBar}
+        <ProjectsPage busy={busy} onOpen={(name) => void openProject(name)} onNew={newProject} />
+      </div>
+    )
+  }
 
   return (
     <div ref={shell} className="shell" style={kept === null ? undefined : ({ '--dock-w': `${kept}px` } as CSSProperties)}>
-      <TitleBar project={project} disabled={busy} onChoose={choose} />
+      {titleBar}
       <aside className="left" data-region="left" aria-label="Project">
         <RouteCard project={project} />
       </aside>

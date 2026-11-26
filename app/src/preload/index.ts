@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { APP } from '../shared/app'
 import type { PinoBridge } from '../shared/bridge'
 
@@ -23,12 +23,31 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 const bridge: PinoBridge = {
   home: process.env.HOME ?? '',
+  workspace: {
+    current: () => invoke('workspace:current'),
+    pick: () => invoke('workspace:pick'),
+    open: (root) => invoke('workspace:open', root),
+    suggested: () => invoke('workspace:suggested'),
+    useSuggested: () => invoke('workspace:useSuggested'),
+    recent: () => invoke('workspace:recent'),
+    list: () => invoke('workspace:list')
+  },
   project: {
-    pick: () => invoke('project:pick'),
-    open: (dir) => invoke('project:open', dir),
-    current: () => invoke('project:current'),
-    recent: () => invoke('project:recent'),
-    close: () => invoke('project:close')
+    open: (name) => invoke('project:open', name),
+    close: () => invoke('project:close'),
+    thumb: (name) => invoke('project:thumb', name),
+    saveThumb: (projectId, hash, png) => invoke('project:saveThumb', projectId, hash, png),
+    create: (req) => invoke('project:create', req),
+    pickPhotos: () => invoke('project:pickPhotos'),
+    pickPdf: () => invoke('project:pickPdf'),
+    readPhoto: (path) => invoke('project:readPhoto', path),
+    pathOf: (file) => webUtils.getPathForFile(file),
+    taken: () => invoke('project:taken'),
+    onboard: (projectId, draft) => invoke('project:onboard', projectId, draft),
+    previewPrompt: (name, draft) => invoke('project:previewPrompt', name, draft)
+  },
+  parts: {
+    lookup: (lcsc) => invoke('parts:lookup', lcsc)
   },
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
@@ -52,6 +71,7 @@ const bridge: PinoBridge = {
     setModel: (sessionId, model) => invoke('chat:setModel', sessionId, model),
     setMode: (sessionId, mode) => invoke('chat:setMode', sessionId, mode),
     setEffort: (sessionId, effort) => invoke('chat:setEffort', sessionId, effort),
+    prompts: (projectId) => invoke('chat:prompts', projectId),
     models: () => invoke('chat:models'),
     onItem: (cb) => subscribe('chat:item', cb),
     onMeta: (cb) => subscribe('chat:meta', cb),
@@ -91,6 +111,19 @@ const bridge: PinoBridge = {
     remove: (projectId, id) => invoke('marks:remove', projectId, id),
     resolve: (projectId, id, note) => invoke('marks:resolve', projectId, id, note),
     onChange: (cb) => subscribe('marks:changed', cb)
+  },
+  cards: {
+    read: (projectId) => invoke('cards:read', projectId),
+    change: (projectId, change) => invoke('cards:change', projectId, change),
+    brief: (projectId) => invoke('cards:brief', projectId),
+    references: (projectId) => invoke('cards:references', projectId),
+    reference: (projectId, file) => invoke('cards:reference', projectId, file),
+    openLink: (projectId, cardId, nth) => invoke('cards:openLink', projectId, cardId, nth),
+    seen: (projectId) => invoke('cards:seen', projectId),
+    markSeen: (projectId) => invoke('cards:markSeen', projectId),
+    restock: (projectId, cardId) => invoke('cards:restock', projectId, cardId),
+    onChanged: (cb) => subscribe('cards:changed', cb),
+    onBriefChanged: (cb) => subscribe('cards:briefChanged', cb)
   },
   notices: {
     onNotice: (cb) => subscribe('notice', cb)

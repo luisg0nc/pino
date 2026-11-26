@@ -166,10 +166,15 @@ export class Fab {
     return id !== undefined && this.deps.kernel().cancel(id)
   }
 
-  /** One part by its LCSC number, or a search. */
+  /** One part by its LCSC number, or a search, for a project. */
   async parts(p: ProjectInfo, q: PartsQuery): Promise<PartsResult> {
-    const client = await this.lookupEngine()
     await engineMayWrite(p.dir)
+    return this.lookup(q)
+  }
+
+  /** The engine's `parts` job with no project: a stock check before there is one, or of a card's number. */
+  async lookup(q: PartsQuery): Promise<PartsResult> {
+    const client = await this.lookupEngine()
     const asked = q.lcsc ? { action: 'get', lcsc: q.lcsc } : { action: 'search', q: q.search, package: q.package, basic: q.basic, limit: q.limit }
     return client.job<PartsResult>('parts', asked, () => {}).done
   }

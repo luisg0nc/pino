@@ -1,21 +1,49 @@
 // What the window shows, apart from the chats (`state/chat.ts`). Nothing here changes per frame.
 import { useStore as useZustand } from 'zustand'
 import { createStore, type StoreApi } from 'zustand/vanilla'
+import { APP } from '../../shared/app'
 import type { MarkTool } from '../board/marks/tools'
 import type { SessionStatus } from '../../shared/bridge'
 import type { BuildState } from '../../shared/build'
 import type { FabProfile, FabState } from '../../shared/fab'
 import type { Mark } from '../../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../../shared/project'
-import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../../shared/view'
+import { DEFAULT_LOOK, firstTab, PANE_TABS, type BoardLook, type PaneTab, type Selection } from '../../shared/view'
+import type { WorkspaceInfo } from '../../shared/workspace'
+import { windowStorage } from './dock'
 
-export type { ViewTab }
+export type { PaneTab }
+
+/** The key the tab a project was left on is kept under, in the window's own storage. */
+const TAB_KEY = `${APP.name}.tab:`
+
+/** The tab this project was left on; null for none, or a storage that cannot be read. */
+function leftOn(projectId: string): PaneTab | null {
+  try {
+    const kept = windowStorage()?.getItem(TAB_KEY + projectId)
+    return PANE_TABS.includes(kept as PaneTab) ? (kept as PaneTab) : null
+  } catch {
+    return null
+  }
+}
+
+function keepTab(projectId: string, tab: PaneTab): void {
+  try {
+    windowStorage()?.setItem(TAB_KEY + projectId, tab)
+  } catch {
+    // A storage that refuses: the next visit opens as a first one.
+  }
+}
 
 export interface PinoState {
-  page: 'first' | 'project'
+  /** The first screen with no workspace, the page of projects with no project open, the project, or the New project page over either. */
+  page: 'first' | 'projects' | 'project' | 'new'
+  /** The open folder of boards, as main last listed it. */
+  workspace: WorkspaceInfo | null
   project: ProjectInfo | null
+  /** The workspaces opened lately. */
   recent: RecentFolder[]
-  tab: ViewTab
+  tab: PaneTab
   /** The build loop of the open project, as main last told it. */
   build: BuildState | null
   /** The number of an older build chosen in the strip, which the views then show; null shows the latest. */
@@ -48,28 +76,47 @@ export interface PinoState {
   session: { sessionId: string; status: SessionStatus } | null
   /** What the status line says once of the open project: a folder pino may not write into, a folder that did not open. */
   notice: string | null
-  /** What the first screen says under its way in: why a folder could not be opened. */
+  /** What the first screen and the page of projects say: why a folder could not be opened. */
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabProfiles: [], fabOpen: false, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', workspace: null, project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabProfiles: [], fabOpen: false, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
 const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabOpen: false, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
 
 export const actions = {
+  /** A workspace is opened: its page of projects, or the New project page when it holds none. */
+  openWorkspace(workspace: WorkspaceInfo): void {
+    store.setState({ page: workspace.projects.length === 0 ? 'new' : 'projects', workspace, project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+  },
+  /** Another page of the open workspace: the project open, if any, stays open. */
+  showPage(page: 'projects' | 'project' | 'new'): void {
+    store.setState({ page })
+  },
+  /** The open workspace as listed again; another one's listing, come late, is dropped. */
+  setWorkspace(workspace: WorkspaceInfo): void {
+    if (store.getState().workspace?.root === workspace.root) store.setState({ workspace })
+  },
+  /** No workspace is open: the first screen. */
+  closeWorkspace(): void {
+    store.setState({ page: 'first', workspace: null, project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+  },
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
   openProject(project: ProjectInfo): void {
     const other = store.getState().project?.id !== project.id
-    store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab: 'schematic' as const, ...NO_VIEW } : {}) })
+    const tab = firstTab(store.getState().workspace?.projects.find((p) => p.dir === project.dir), leftOn(project.id))
+    store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab, ...NO_VIEW } : {}) })
   },
   closeProject(): void {
-    store.setState({ page: 'first', project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+    store.setState({ page: 'projects', project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
   },
   setRecent(recent: RecentFolder[]): void {
     store.setState({ recent })
   },
-  setTab(tab: ViewTab): void {
+  setTab(tab: PaneTab): void {
+    const id = store.getState().project?.id
+    if (id !== undefined) keepTab(id, tab)
     store.setState({ tab })
   },
   /** What main says of a build loop: heard only for the project on show. */

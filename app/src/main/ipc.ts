@@ -1,14 +1,28 @@
 import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import type { ArtifactName } from '../shared/build'
 import type { MarkPatch, NewMark } from '../shared/marks'
-import type { ProjectInfo, RecentFolder } from '../shared/project'
-import { readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
+import type { ProjectInfo } from '../shared/project'
+import type { Opened } from './opened'
+import { BUILD_HASH, readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
+import { saveThumbnail, thumbnailOnFile, thumbnailRefusal } from './thumb'
 import type { Builds } from './builds'
+import { type PersonChange, readingOf } from '../shared/cards'
+import { listPrompts } from './sessions/prompts'
+import { linkOf, listReferences, readReference } from './cards/references'
+import type { CardStore } from './cards/store'
+import { readBrief } from './cards/text'
 import type { EngineInfo } from '../shared/ready'
 import type { MarkStore } from './marks/store'
 import type { Routing } from './routing'
 import type { Fab } from './fab'
+import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { toolName } from '../shared/app'
+import type { CreateRequest, OnboardDraft, PromptPreviewDraft } from '../shared/bridge'
+import { onboardProject, previewPrompt } from './onboard'
+import { createProject, readPhoto } from './projects/create'
+import { Offered } from './projects/offered'
+import { lookupPart, makeReadings } from './projects/readings'
 import { lastConversation } from './sessions/chatlog'
 import type { Sessions } from './sessions/manager'
 import type { KnownModels } from './sessions/models'
@@ -17,33 +31,26 @@ import type { Trust } from './trust'
 import { takeAnswer, type ViewHolder } from './view'
 
 // The channels the window may ask on (src/preload/index.ts, `shared/bridge.ts`):
-//   invoked: project:pick, project:open, project:current, project:recent, project:close,
+//   invoked: workspace:current, workspace:pick, workspace:open, workspace:suggested, workspace:useSuggested,
+//            workspace:recent, workspace:list, project:open, project:close, project:thumb, project:saveThumb,
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
 //            build:state, build:rebuild, build:result, build:file, build:routeFile, build:engineInfo, view:tell,
 //            route:start, route:cancel, marks:list, marks:add, marks:update, marks:remove, marks:resolve,
-//            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder
+//            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder, cards:read, cards:change,
+//            cards:brief, cards:references, cards:reference, cards:openLink, cards:seen, cards:markSeen,
+//            cards:restock, chat:prompts, project:create, project:pickPhotos, project:pickPdf, project:readPhoto,
+//            project:taken, parts:lookup, project:onboard, project:previewPrompt
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
-//            fab:state,
+//            fab:state, cards:changed, cards:briefChanged (index.ts),
 //            view:ask (view.ts), window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
 
-/** What main holds of the open project, as the window may ask for it. */
-export interface Projects {
-  /** The project that is open. */
-  open(): ProjectInfo | undefined
-  pick(): Promise<ProjectInfo | null>
-  openAt(dir: string): Promise<ProjectInfo>
-  /** The open project; rejects once with why the folder pino was started with could not be opened. */
-  current(): Promise<ProjectInfo | null>
-  recent(): Promise<RecentFolder[]>
-  close(): Promise<void>
-}
-
 export interface IpcDeps {
-  projects: Projects
+  /** The open workspace and its open project. */
+  opened: Opened
   sessions: Sessions
   trust: Trust
   models: KnownModels
@@ -54,6 +61,12 @@ export interface IpcDeps {
   fab: Fab
   /** Shows a release's README in the file manager; does nothing under test. */
   showFolder: (path: string) => void
+  /** The cards of the open project's Brief. */
+  cards: CardStore
+  /** Opens a web address in the browser; does nothing under test. */
+  openExternal: (url: string) => void
+  /** The dialog for photos or for a PDF of a new project; under test, what a test said it answers. */
+  pickFiles: (kind: 'photos' | 'pdf') => Promise<string[]>
   /** Whether what pino needs is on this machine. */
   engineInfo: () => Promise<EngineInfo>
 }
@@ -65,7 +78,15 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ projects, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo }: IpcDeps): void {
+export function registerIpc({ opened, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo, cards, openExternal, pickFiles }: IpcDeps): void {
+  /** The stock readings of this run, and the files the dialogs handed the window. */
+  const readings = makeReadings()
+  const offered = new Offered()
+  const openWorkspace = () => {
+    const workspace = opened.workspace()
+    if (!workspace) throw new Error('No folder of boards is open.')
+    return workspace
+  }
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -78,7 +99,7 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
     })
   }
   const projectOf = (id: unknown): ProjectInfo | undefined => {
-    const open = projects.open()
+    const open = opened.project()
     return open && open.id === id ? open : undefined
   }
   const mustBeOpen = (id: unknown): ProjectInfo => {
@@ -87,11 +108,55 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
     return project
   }
 
-  handle('project:pick', () => projects.pick())
-  handle('project:open', (dir: unknown) => projects.openAt(String(dir)))
-  handle('project:current', () => projects.current())
-  handle('project:recent', () => projects.recent())
-  handle('project:close', () => projects.close())
+  handle('workspace:current', () => opened.current())
+  handle('workspace:pick', () => opened.pickWorkspace())
+  // A folder the window names is looked at like any other; the home folder and the root are refused.
+  handle('workspace:open', (root: unknown) => opened.openWorkspace(String(root)))
+  handle('workspace:suggested', () => opened.suggested())
+  handle('workspace:useSuggested', () => opened.useSuggested())
+  handle('workspace:recent', () => opened.recent())
+  handle('workspace:list', () => opened.list())
+  // By name: only a project the open workspace lists.
+  handle('project:open', (name: unknown) => opened.openProject(String(name)))
+  handle('project:close', () => opened.closeProject())
+  handle('project:thumb', (name: unknown) => {
+    const listed = opened.workspace()?.projects.find((p) => p.name === name)
+    return listed ? thumbnailOnFile(listed.dir) : null
+  })
+  // Only of the open project and its newest good build, and only bytes that may be such a picture.
+  handle('project:saveThumb', async (id: unknown, hash: unknown, png: unknown) => {
+    const project = projectOf(id)
+    if (!project || typeof hash !== 'string' || !BUILD_HASH.test(hash) || builds.lastGood(project.id)?.hash !== hash) return
+    if (thumbnailRefusal(png as Uint8Array) !== null) return
+    await saveThumbnail(project.dir, png as Uint8Array, { hash }, new Date())
+  })
+
+  // The one place pino makes a folder in a workspace (`createProject`, which checks the whole request again).
+  handle('project:create', async (req: unknown) => {
+    const { root } = openWorkspace()
+    const made = await createProject(req as CreateRequest, { root, readings })
+    if (opened.workspace()?.root !== root) throw new Error(`${made.name} was made, but its folder of boards was left before it could be opened.`)
+    return opened.openProject(made.name).catch((e: Error) => {
+      throw new Error(`${made.name} was made, but it could not be opened: ${e.message.replace(/\.$/, '')}.`)
+    })
+  })
+  handle('project:taken', () => readdir(openWorkspace().root))
+  const picked = async (kind: 'photos' | 'pdf'): Promise<string[]> => {
+    const paths = await pickFiles(kind)
+    offered.add(paths)
+    return paths
+  }
+  handle('project:pickPhotos', () => picked('photos'))
+  handle('project:pickPdf', async () => (await picked('pdf'))[0] ?? null)
+  // Only what the dialog gave: a file dropped on the window is read by the window itself.
+  handle('project:readPhoto', (path: unknown) => {
+    if (!offered.has(path)) throw new Error('That file was not chosen in this window.')
+    return readPhoto(path)
+  })
+  handle('parts:lookup', (lcsc: unknown) => lookupPart(lcsc, (q) => fab.lookup(q), readings))
+  // The first prompt of a new project, sent once it is made and open, and the same text as the page is filled.
+  handle('project:onboard', (id: unknown, draft: unknown) => onboardProject({ project: projectOf, sessions, cards, readings, toolName }, String(id), draft as OnboardDraft))
+  handle('project:previewPrompt', (name: unknown, draft: unknown) => previewPrompt(String(name), draft as PromptPreviewDraft, toolName, readings))
 
   handle('session:current', (id: unknown) => {
     const project = projectOf(id)
@@ -169,6 +234,34 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
   handle('marks:remove', (id: unknown, markId: unknown) => marks.remove(mustBeOpen(id), String(markId)))
   handle('marks:resolve', (id: unknown, markId: unknown, note: unknown) => marks.resolve(mustBeOpen(id), String(markId), String(note ?? ''), 'user'))
   marks.onChange((projectId, list) => broadcast('marks:changed', { projectId, marks: list }))
+  handle('cards:read', (id: unknown) => cards.read(mustBeOpen(id).id))
+  // What the window asks is checked whole by the store, which takes no id, author or reading from it.
+  handle('cards:change', (id: unknown, change: unknown) => cards.person(mustBeOpen(id).id, (change ?? {}) as PersonChange))
+  handle('cards:brief', async (id: unknown) => (await readBrief(mustBeOpen(id).dir)) ?? null)
+  handle('cards:references', (id: unknown) => listReferences(mustBeOpen(id).dir))
+  handle('cards:reference', (id: unknown, file: unknown) => readReference(mustBeOpen(id).dir, String(file)))
+  // The window names a card and a place in it, never an address: it is read from main's own file.
+  handle('cards:openLink', async (id: unknown, from: unknown, nth: unknown) => {
+    const project = mustBeOpen(id)
+    const url = linkOf(await cards.read(project.id), await readBrief(project.dir), String(from), Number.isInteger(nth) ? (nth as number) : 0)
+    if (url === null) throw new Error('There is no web address to open there.')
+    openExternal(url)
+  })
+  handle('cards:seen', (id: unknown) => cards.seen(mustBeOpen(id).id))
+  handle('cards:markSeen', (id: unknown) => cards.markSeen(mustBeOpen(id).id))
+  // The number is read from main's own card, and the reading is the engine's: a lookup that fails changes nothing.
+  handle('cards:restock', async (id: unknown, cardId: unknown) => {
+    const project = mustBeOpen(id)
+    const lcsc = (await cards.read(project.id)).cards.find((c) => c.id === cardId)?.part?.lcsc
+    if (lcsc === undefined) throw new Error(`${String(cardId)} is no part with an LCSC number: there is no stock to check.`)
+    const found = readingOf(await fab.lookup({ lcsc }), lcsc, new Date())
+    if ('refused' in found) throw new Error(`The stock was not checked: ${found.refused}`)
+    return cards.restock(project.id, String(cardId), found)
+  })
+  handle('chat:prompts', (id: unknown) => {
+    const project = projectOf(id)
+    return project ? listPrompts(project.dir) : []
+  })
   handle('view:tell', (id: unknown, view: unknown) => {
     const project = projectOf(id)
     if (project) views.tell(project.id, view)

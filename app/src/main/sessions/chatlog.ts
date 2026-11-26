@@ -1,5 +1,5 @@
 import { constants } from 'node:fs'
-import { lstat, mkdir, open, stat } from 'node:fs/promises'
+import { lstat, mkdir, open, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { APP } from '../../shared/app'
 import type { ChatImage, ChatItem } from '../../shared/chat'
@@ -90,6 +90,44 @@ export async function readLog(dir: string, conversationId: string, limit = 500):
     }
   }
   return items.slice(-limit)
+}
+
+/** The ids of the conversations that have a log, in no order: the names of the files of `.pino/chat/` that are one's. None for a folder that is not there or not pino's own. */
+export async function conversations(dir: string): Promise<string[]> {
+  try {
+    const folder = await ownFolder(dir, FOLDER)
+    return (await readdir(folder)).flatMap((name) => (name.endsWith('.jsonl') && CONVERSATION.test(name.slice(0, -'.jsonl'.length)) ? [name.slice(0, -'.jsonl'.length)] : []))
+  } catch {
+    return []
+  }
+}
+
+type Said = Extract<ChatItem, { kind: 'user' }>
+
+/**
+ * The prompts of a conversation that were sent, in the order they are in its log (from its tail, as `readLog` reads). Only
+ * lines that say `user` are parsed: the log of a long conversation is mostly tools and text, and is read over and over to
+ * number the prompts of the whole project.
+ */
+export async function readPrompts(dir: string, conversationId: string): Promise<Array<{ id: string; text: string; at: number }>> {
+  if (!CONVERSATION.test(conversationId)) return []
+  let text: string
+  try {
+    text = await readTail(join(await ownFolder(dir, FOLDER), nameOf(conversationId)))
+  } catch {
+    return []
+  }
+  const out: Said[] = []
+  for (const line of text.split('\n')) {
+    if (!line.includes('"kind":"user"')) continue
+    try {
+      const item = JSON.parse(line) as { kind?: string; id?: string; text?: string; at?: number; state?: string } | null
+      if (item?.kind === 'user' && item.state === 'sent' && typeof item.id === 'string' && typeof item.text === 'string' && typeof item.at === 'number') out.push(item as Said)
+    } catch {
+      // A line cut short by a crash.
+    }
+  }
+  return out.map(({ id, text: said, at }) => ({ id, text: said, at }))
 }
 
 /** How many items of a conversation's end the empty pane shows. */

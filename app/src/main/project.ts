@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { constants } from 'node:fs'
-import { access, realpath, stat } from 'node:fs/promises'
-import { basename, isAbsolute } from 'node:path'
+import { access, lstat, realpath, stat } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import type { ProjectInfo } from '../shared/project'
 
 /** `p` and the first 12 hex characters of the sha256 of the folder's real path: one URL segment, whatever the path holds. */
@@ -26,4 +26,20 @@ export async function openProject(dir: string): Promise<ProjectInfo> {
     throw refused(code === 'ENOENT' || code === 'ENOTDIR' ? 'it is not there' : code === 'EACCES' || code === 'EPERM' ? 'it cannot be read' : (e as Error).message)
   }
   return { id: projectIdOf(real), dir: real, name: basename(real) || real }
+}
+
+/** Whether a folder is a project: it holds `board.py` or `brief.md` as a plain file. */
+export async function isProjectFolder(dir: string): Promise<boolean> {
+  const plain = (name: string): Promise<boolean> =>
+    lstat(join(dir, name)).then(
+      (s) => s.isFile(),
+      () => false
+    )
+  return (await plain('board.py')) || (await plain('brief.md'))
+}
+
+/** The workspace a project is in: its parent, but never the home folder or the root, which are not listed. */
+export function workspaceOf(projectDir: string, home: string): string | null {
+  const parent = dirname(resolve(projectDir))
+  return parent === '/' || parent === resolve(home) ? null : parent
 }

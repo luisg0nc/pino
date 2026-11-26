@@ -4,10 +4,10 @@
 import type { BrowserWindow } from 'electron'
 import type { Target } from '../shared/board/refs'
 import { isRecord } from '../shared/build'
-import type { BoardLook, Selection, ViewTab } from '../shared/view'
+import { type BoardLook, PANE_TABS, type PaneTab, type Selection, type ViewTab } from '../shared/view'
 
 export interface SeenView {
-  tab: ViewTab
+  tab: PaneTab
   look: BoardLook
   selection: Selection | null
 }
@@ -37,11 +37,11 @@ function selectionOf(v: unknown): Selection | null {
 }
 
 export function viewOf(value: unknown): SeenView | null {
-  if (!isRecord(value) || !TABS.includes(value.tab as ViewTab) || !isRecord(value.look)) return null
+  if (!isRecord(value) || !PANE_TABS.includes(value.tab as PaneTab) || !isRecord(value.look)) return null
   const { active, pours, ratsnest, silk, netColours } = value.look
   if (!line(active) || ![pours, ratsnest, silk, netColours].every((v) => typeof v === 'boolean')) return null
   const look = { active, pours, ratsnest, silk, netColours } as BoardLook
-  return { tab: value.tab as ViewTab, look, selection: selectionOf(value.selection) }
+  return { tab: value.tab as PaneTab, look, selection: selectionOf(value.selection) }
 }
 
 /** The view of the one open project. */

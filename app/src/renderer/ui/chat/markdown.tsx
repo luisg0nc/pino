@@ -6,7 +6,7 @@ import { numbered } from '../numbered'
 // monospace face: nothing to click), tables of pipes, quotes and rules. Never raw html: everything is a React text
 // node. No library.
 
-type Inline = { t: 'text'; text: string } | { t: 'code'; text: string } | { t: 'bold' | 'italic'; of: Inline[] } | { t: 'link'; text: string; url: string }
+export type Inline = { t: 'text'; text: string } | { t: 'code'; text: string } | { t: 'bold' | 'italic'; of: Inline[] } | { t: 'link'; text: string; url: string }
 
 interface Item {
   of: Inline[]

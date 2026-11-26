@@ -1,6 +1,6 @@
 import type { ProjectInfo } from '../../shared/project'
 import { releaseFindings } from '../../shared/checks'
-import { useStore } from '../state/store'
+import { actions, useStore } from '../state/store'
 import { useViewModel } from '../state/viewModel'
 import { BlocksBlock } from './route/BlocksBlock'
 import { BoardBlock } from './route/BoardBlock'
@@ -17,8 +17,7 @@ import { Section } from './route/Section'
 /**
  * The route card at the left of an open project: the project read top to bottom. Its head says the newest build; under
  * it what is in hand, how far the routing is, every check, the board in numbers and, over the sheet, its blocks and the
- * net in hand; and last the brief, which Claude keeps in `brief.md`, with the fab's limits under it. The Brief page
- * comes with a later stage.
+ * net in hand; and last the way to the Brief, with the fab's limits under it.
  */
 export function RouteCard({ project }: { project: ProjectInfo }) {
   const build = useStore((s) => s.build)
@@ -65,10 +64,9 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
       )}
       {model && tab !== 'schematic' && <BoardBlock model={model} />}
       <Section title="Brief">
-        <p>No brief yet.</p>
-        <p className="muted">
-          Tell Claude what the board is for. It keeps the brief in <span className="num">brief.md</span>.
-        </p>
+        <button type="button" className="link-button route-brief" onClick={() => actions.setTab('brief')}>
+          Open the Brief
+        </button>
         <FabBlock />
       </Section>
     </div>

@@ -1,45 +1,41 @@
 import { useEffect, useState } from 'react'
 import { APP } from '../../shared/app'
-import { readyLines, type ReadyLine } from '../../shared/ready'
 import { numbered } from './numbered'
+import { useReady } from './useReady'
 import { Plate } from './plate/Plate'
 import { PinOneDrawing } from './plate/PinOneDrawing'
 import { nameOf } from './openFolder'
 import { actions, useStore } from '../state/store'
 
 /**
- * The first screen, while no folder is open: the dyed plate at the left (780 of 1440), and at the right, on the surface,
- * the way in, in two states. On a first run (no folder opened lately): the folder idea in a sentence and the folder
- * dialog (an empty folder is fine). Coming back: the folders opened lately first (one that is gone is struck and cannot
- * be pressed), then the same way in. The window has no frame here either, so the top 40 px is its drag strip
- * (`welcome-drag`), with the window controls over its right end.
+ * The first screen, while no folder of boards is open: the dyed plate at the left (780 of 1440), and at the right, on
+ * the surface, the ways in, in two states. On a first run (no workspace opened lately): what the folder is for in a
+ * sentence. Coming back: the workspaces opened lately in its place (one that is gone is struck and cannot be pressed).
+ * Under either, `~/boards` and the folder dialog. The window has no frame here either, so the top 40 px is its drag
+ * strip (`welcome-drag`), with the window controls over its right end.
  */
-export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () => void; onOpen: (root: string) => void }) {
+export function Welcome({ busy, onPick, onSuggested, onOpen }: { busy: boolean; onPick: () => void; onSuggested: () => void; onOpen: (root: string) => void }) {
   const recent = useStore((s) => s.recent)
   const problem = useStore((s) => s.problem)
+  const [suggested, setSuggested] = useState<{ path: string; exists: boolean } | null>(null)
 
   // A disk that was not mounted may be there now: the list is read again whenever the window is come back to.
   useEffect(() => {
     // A list that cannot be read is none: the screen is not left at its head.
-    const read = (): void => void window.pino.project.recent().then(actions.setRecent, () => {})
+    const read = (): void => {
+      void window.pino.workspace.recent().then(actions.setRecent, () => {})
+      void window.pino.workspace.suggested().then(setSuggested, () => {})
+    }
     read()
     window.addEventListener('focus', read)
     return () => window.removeEventListener('focus', read)
   }, [])
 
-  const [ready, setReady] = useState<ReadyLine[] | null>(null)
-  useEffect(() => {
-    let here = true
-    void window.pino.build.engineInfo().then(
-      (info) => here && setReady(readyLines(info)),
-      () => {}
-    )
-    return () => {
-      here = false
-    }
-  }, [])
-
+  const ready = useReady()
   const returning = recent.length > 0
+  // The home folder is written as `~`, as the chat writes it.
+  const home = window.pino.home
+  const shortened = suggested === null ? '~/boards' : home && suggested.path.startsWith(`${home}/`) ? `~${suggested.path.slice(home.length)}` : suggested.path
 
   return (
     <main className="welcome-page" data-region="viewport">
@@ -53,8 +49,8 @@ export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () =>
       </Plate>
       <div className="welcome-side">
         {returning ? (
-          <nav className="welcome-recent" aria-label="Recent folders">
-            <h2 className="welcome-title">Recent folders</h2>
+          <nav className="welcome-recent" aria-label="Recent workspaces">
+            <h2 className="welcome-title">Recent workspaces</h2>
             <ul>
               {recent.map((folder) => (
                 <li key={folder.root} data-missing={folder.missing ? '' : undefined}>
@@ -75,13 +71,16 @@ export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () =>
           </nav>
         ) : (
           <>
-            <h2 className="welcome-title">Open a folder to work in</h2>
-            <p className="welcome-lead">A project is one folder with a board in it. An empty folder is fine.</p>
+            <h2 className="welcome-title">Choose a folder for your boards</h2>
+            <p className="welcome-lead">Each board is a folder in it. Nothing is written there until you start a board.</p>
           </>
         )}
         <div className="welcome-ways">
-          <button type="button" className="button button-primary" disabled={busy} onClick={onPick}>
-            Open folder
+          <button type="button" className="button button-primary" disabled={busy} onClick={onSuggested}>
+            {suggested?.exists ? 'Open' : 'Use'} {shortened}
+          </button>
+          <button type="button" className="button" disabled={busy} onClick={onPick}>
+            Choose folder…
           </button>
         </div>
         <ul className="welcome-ready" aria-label="What pino needs">
@@ -101,7 +100,7 @@ export function Welcome({ busy, onPick, onOpen }: { busy: boolean; onPick: () =>
           </p>
         )}
         <p className="welcome-foot">
-          pino itself writes only into a <span className="num">.pino</span> folder inside the project.
+          pino writes into each board&apos;s <span className="num">.pino</span> folder, and into its <span className="num">fab/</span> folder when you make fab files. It makes a board&apos;s folder when you start one, and <span className="num">~/boards</span> when you press Use ~/boards.
         </p>
       </div>
     </main>

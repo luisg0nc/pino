@@ -1,11 +1,14 @@
 // The tools of the MCP server an agent working on a project is given: the one list of them, and what they need of
 // pino. Those that read are in readTools.ts, the marks' in markTools.ts, routing's in routeTools.ts, JLC's parts in
-// partsTools.ts.
+// partsTools.ts, the Brief's cards in cardTools.ts.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { statSync } from 'node:fs'
 import { join } from 'node:path'
 import { verdictWords, type BuildResult, type BuildState } from '../../shared/build'
+import type { CardTurn } from '../../shared/cards'
+import type { PromptRow } from '../../shared/chat'
+import type { CardStore } from '../cards/store'
 import { defaultFabNote, FAB_STILL_FETCHING, fabLine, fabUnknown, type FabProfile } from '../../shared/fab'
 import type { ProjectInfo } from '../../shared/project'
 import type { LookRequest, LookResult } from '../../shared/view'
@@ -13,6 +16,7 @@ import type { Fab } from '../fab'
 import type { MarkStore } from '../marks/store'
 import type { BuildModel } from '../model'
 import type { Routing } from '../routing'
+import { registerCardTools } from './cardTools'
 import { registerMarkTools } from './markTools'
 import { registerPartsTools } from './partsTools'
 import { registerReadTools } from './readTools'
@@ -41,7 +45,13 @@ export interface ToolDeps {
   /** Claude has looked at the build, or at its checks. */
   looked(projectId: string): void
   /** Parts at JLC, and the release's state. */
-  fab: Pick<Fab, 'parts' | 'state' | 'defaultFab'>
+  fab: Pick<Fab, 'parts' | 'lookup' | 'state' | 'defaultFab'>
+  /** The cards of the project's Brief: Claude reads them all and changes its own. */
+  cards: Pick<CardStore, 'read' | 'agent'>
+  /** The prompt the project's session is answering, which a card of Claude's is stamped with. */
+  turnNow(projectId: string): CardTurn | undefined
+  /** The project's prompts, numbered, as its chat logs hold them. */
+  prompts(project: ProjectInfo): Promise<PromptRow[]>
   /** The limits of the fab the newest drawn board is built for. */
   fabProfile(project: ProjectInfo): Promise<FabProfile | null>
   /** How long `project` waits for the default fab's limits; `FAB_WAIT_MS` where none is said. */
@@ -108,4 +118,5 @@ export function registerTools(server: McpServer, deps: ToolDeps, projectId: stri
   registerMarkTools(server, deps, onProject)
   registerRouteTools(server, deps, onProject)
   registerPartsTools(server, deps, onProject)
+  registerCardTools(server, deps, onProject)
 }
