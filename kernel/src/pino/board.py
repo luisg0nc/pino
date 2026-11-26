@@ -11,6 +11,7 @@ board.py it came from, so a problem points at the line that caused it.
 
 from __future__ import annotations
 
+import math
 import os
 import re
 import sys
@@ -158,7 +159,8 @@ def _pins_of(items) -> list[PinRef]:
 class Part:
     def __init__(self, board: "Board", block: "Block", role: str, ref: str, symbol: Symbol, value: str,
                  footprint: str, lcsc: str, dnp: bool, key: str, where, *, hand_fit: bool = False, why: str = "",
-                 source: str = "kicad"):
+                 source: str = "kicad", rotation: float | None = None):
+        self.rotation = rotation
         self.board, self.block, self.role, self.ref = board, block, role, ref
         self.symbol, self.value, self.footprint, self.lcsc, self.dnp = symbol, value, footprint, lcsc, dnp
         self.hand_fit, self.why, self.source = hand_fit, why, source
@@ -186,7 +188,7 @@ class Block:
         self.parts: list[Part] = []
 
     def _add(self, role, ref, symbol=None, value="", *, footprint="", lcsc="", dnp=False, id=None, hand_fit=False,
-             why="") -> Part:
+             why="", rotation=None) -> Part:
         where = _caller()
         b = self.board
         if not isinstance(ref, str) or not REF_RE.match(ref):
@@ -207,6 +209,15 @@ class Block:
         why = str(why).strip()
         if len(why) > MAX_WHY or "\n" in why:
             raise _fail(f"{ref}: why= takes one line of at most {MAX_WHY} characters", where)
+        if rotation is not None:
+            try:
+                rotation = float(rotation)
+            except (TypeError, ValueError):
+                rotation = math.nan
+            if not math.isfinite(rotation):
+                raise _fail(f"{ref}: rotation= takes degrees, counter-clockwise: the correction JLC's CPL needs "
+                            "for this part", where)
+            rotation %= 360
         source, mapped_value = "kicad", ""
         if symbol is None:
             found = _resolve(ref, lcsc, where)
@@ -220,7 +231,7 @@ class Block:
         if not fp:
             raise _fail(f"{ref} has no footprint: pass footprint='Library:Name'", where)
         part = Part(b, self, role, ref, sym, value or mapped_value or sym.properties.get("Value", ""), fp, lcsc,
-                    bool(dnp), key, where, hand_fit=bool(hand_fit), why=why, source=source)
+                    bool(dnp), key, where, hand_fit=bool(hand_fit), why=why, source=source, rotation=rotation)
         b._parts[ref] = part
         b._keys[key] = part
         self.parts.append(part)
@@ -793,7 +804,7 @@ class Board:
             PartSpec(p.ref, p.key, p.symbol.lib_id, p.footprint, p.value, p.lcsc, p.dnp, p.block.key, p.role,
                      [PinInfo(s.number, s.name, s.etype) for s in p.symbol.pins], p.line,
                      p.symbol.properties.get("Datasheet", ""), p.symbol.properties.get("Description", ""),
-                     p.hand_fit, p.why, p.source)
+                     p.hand_fit, p.why, p.source, p.rotation)
             for blk in self._blocks for p in blk.parts
         ]
         declared = {ref: i for i, ref in enumerate(self._parts)}

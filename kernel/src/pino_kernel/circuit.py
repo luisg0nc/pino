@@ -59,6 +59,7 @@ class PartSpec:
     hand_fit: bool = False  # soldered by hand: left out of JLC's assembly files
     why: str = ""  # board.py's reason for choosing this part (an extended part needs one)
     source: str = "kicad"  # kicad when board.py named the symbol, else how the LCSC number was mapped
+    rotation: float | None = None  # board.py's rotation=: replaces pino's CPL rotation correction for this part
 
 
 @dataclass

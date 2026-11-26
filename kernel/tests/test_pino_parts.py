@@ -234,3 +234,16 @@ def test_child_reads_only_the_cache(make_project, fixture_libs, monkeypatch, tmp
     run = run_board(make_project(BY_NUMBER), libraries=fixture_libs)
     assert run.missing_parts == ["C900001"]
     assert not (tmp_path / "pino-cache" / "parts").exists()
+
+
+def test_rotation_override_reaches_the_circuit(fixture_libs):
+    b = small_board()
+    r = b.block("x").path("R9", "pino_test:R", "1k", footprint="pino_test:R_0603", rotation=-90)
+    b.nc(r[1], r[2])
+    assert b.to_circuit().part("R9").rotation == 270 and b.to_circuit().part("R1").rotation is None
+
+
+@pytest.mark.parametrize("bad", ["a quarter", float("nan")])
+def test_a_rotation_that_is_not_degrees_is_refused(fixture_libs, bad):
+    with pytest.raises(CircuitError, match="rotation= takes degrees"):
+        block().path("R1", "pino_test:R", "1k", footprint="pino_test:R_0603", rotation=bad)
