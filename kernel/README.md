@@ -209,7 +209,8 @@ route stale (`labels moved`).
 
 `b.label(part, ...)` in board.py sets one label by hand and wins: `side="left"` (top, bottom, left or right, centred),
 `at=(dx, dy)` (mm from the part's origin, board frame), `rot=90` (degrees; alone it only turns the automatic search) or
-`hide=True`. A hand label is not checked; DRC reports one that lands on a pad or another label.
+`hide=True`. A hand label is not checked; DRC reports one that lands on a pad or another label. A `b.label()` on a
+part whose footprint draws no reference on the silkscreen places nothing and gives a `label_not_drawn` warning.
 
 ## Design rules
 

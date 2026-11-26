@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from ..circuit import Circuit, LabelSpec
 from ..fab import FabProfile
-from ..findings import Finding
+from ..findings import At, Finding
 from ..geometry import (Point, Polygon, arc_points, bbox, circle_polygon, point_in_polygon, polygons_overlap,
                         segment_polygon_distance)
 from ..outline import polygon as outline_polygon
@@ -218,10 +218,11 @@ def _body(p: Placed, side: str, pad_gap: float) -> Box:
 
 
 def spots(body: Box, w: float, h: float, angle: float, gap: float = BODY_GAP):
-    """Where a label of w by h (upright) may go beside `body`, in order: each side centred, then flush with each end."""
+    """Where a label of w by h (upright) turned by `angle` may go beside `body`, in order: each side centred, then
+    flush with each end. The spot keeps the whole box of the turned text clear of the body."""
     x0, y0, x1, y1 = body
-    if angle % 180:
-        w, h = h, w
+    _, _, hx, hy = label_box(0, 0, w, h, angle)
+    w, h = 2 * hx, 2 * hy
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     out = []
     for side in SIDE_ORDER:
@@ -348,4 +349,12 @@ def place_labels(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> tup
         findings.append(Finding("placement", "label_hidden", "info",
                                 f"No room on the silkscreen, so {what} hidden. Make room beside the part, or set the "
                                 "label in board.py with b.label().", refs=tuple(hidden)))
+    lines = {s.ref: s.line for s in circuit.labels}
+    for p in placed:
+        if p.ref in hand and texts[p.ref] is None:
+            findings.append(Finding(
+                "placement", "label_not_drawn", "warning",
+                f"b.label() sets the label of {p.ref}, but its footprint {p.footprint.lib_id} draws no reference on "
+                "the silkscreen, so there is nothing to place. Take the b.label() line out.",
+                At("source", file=circuit.source_file, line=lines[p.ref]) if lines[p.ref] else None, refs=(p.ref,)))
     return out, findings

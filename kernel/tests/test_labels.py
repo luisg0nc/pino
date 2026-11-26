@@ -258,6 +258,9 @@ def test_label_is_in_the_circuit_and_survives_json(fixture_libs):
     ('b.label(r1, hide=True, rot=90)', "hide=True"),
     ('b.label(r1)', "needs side=, at=, rot= or hide=True"),
     ('b.label(r1, at=(1,))', "at= takes (dx, dy)"),
+    ('b.label(r1, at={})', "at= takes (dx, dy)"),
+    ("b.label(r1, at='12')", "at= takes (dx, dy)"),
+    ('b.label(r1, at=(1, 2, 3))', "at= takes (dx, dy)"),
     ('b.label(r1, rot="up")', "rot= takes degrees"),
     ('b.label("R1", side="top")', "takes a part"),
     ('b.label(r1, side="top")\nb.label(r1, side="left")', "set twice"),
@@ -266,3 +269,48 @@ def test_label_refuses_what_it_cannot_do(fixture_libs, call, says):
     with pytest.raises(CircuitError) as e:
         board_from_text(parts_py(2, call + "\n"))
     assert says in str(e.value)
+
+
+# --- turns that are not a multiple of 90 -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("rot", [30, 45])
+def test_a_slanted_label_fits_beside_a_lone_part(fixture_libs, rot):
+    labels, findings, placed, _, _ = labels_of(fixture_libs, 2, {"R1": (0, 0, 0)}, f"b.label(r1, rot={rot})\n")
+    lab = labels["R1"]
+    assert not lab.hidden and lab.angle == rot and findings == []
+    box = boxed("R1", lab)
+    r1 = next(p for p in placed if p.ref == "R1")
+    assert box[1] > CY_H / 2 and not any(overlaps(box, bbox(poly)) for poly in courtyard_world(r1)["F"])
+
+
+@pytest.mark.parametrize("rot", [30, 45])
+def test_a_slanted_hand_label_on_a_side_stands_clear_of_its_part(fixture_libs, rot):
+    labels, *_ = labels_of(fixture_libs, 2, {"R1": (0, 0, 0)}, f'b.label(r1, side="left", rot={rot})\n')
+    box = boxed("R1", labels["R1"])
+    assert labels["R1"].angle == rot and box[2] < -CY_W / 2 and labels["R1"].y == 0
+
+
+def test_spots_take_a_slanted_texts_whole_box():
+    hw = label_box(0, 0, 1.0, 0.5, 45)[2]
+    found = spots((0, 0, 4, 2), 1.0, 0.5, 45.0, gap=0.0)
+    assert found[0] == ("top", 2.0, round(2 + hw, 4)) and found[6] == ("left", round(-hw, 4), 1.0)
+
+
+# --- a label board.py sets that pino cannot draw ---------------------------------------------------------------
+
+
+def test_a_hand_label_on_a_part_with_no_silk_reference_is_a_finding(fixture_libs):
+    circuit = board_from_text(parts_py(2, 'b.label(r1, side="left")\n')).to_circuit()
+    placement = {"R1": PartPose(0, 0, 0, False), "R2": PartPose(8, 0, 0, False)}
+    placed = placed_parts(circuit, placement, FootprintLibrary(fixture_libs))
+    r1 = next(p for p in placed if p.ref == "R1")
+    # the footprint draws its Reference on F.Fab only
+    node = [c if not (isinstance(c, list) and c and c[0] == "property" and c[1] == "Reference") else
+            [x if not (isinstance(x, list) and x and x[0] == "layer") else [x[0], "F.Fab"] for x in c]
+            for c in r1.footprint.node]
+    r1.footprint = dataclasses.replace(r1.footprint, node=node)
+    labels, findings = place_labels(circuit, placed, fab_of(circuit))
+    assert "R1" not in labels
+    f = [f for f in findings if f.code == "label_not_drawn"]
+    assert len(f) == 1 and f[0].refs == ("R1",) and f[0].severity == "warning" and "R1" in f[0].message

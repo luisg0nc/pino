@@ -471,7 +471,8 @@ class Board:
 
         side= is top, bottom, left or right as seen from above; at=(dx, dy) is mm from the part's origin in the
         board frame (y up); rot= is degrees counter-clockwise (0 reads left to right). A hand label is not checked:
-        DRC reports one that lands on a pad or another label."""
+        DRC reports one that lands on a pad or another label. A part whose footprint draws no reference on the
+        silkscreen has no label to set: the build says so (label_not_drawn)."""
         where = _caller()
         if not isinstance(part, Part):
             raise _fail(f"label() takes a part, not {part!r}", where)
@@ -486,10 +487,12 @@ class Board:
             raise _fail(f"{name}: hide=True leaves the label off; it takes no side=, at= or rot=", where)
         if at is not None:
             try:
+                if not isinstance(at, (tuple, list)) or len(at) != 2:
+                    raise ValueError
                 at = (float(at[0]), float(at[1]))
                 if not all(math.isfinite(v) for v in at):
                     raise ValueError
-            except (TypeError, ValueError, IndexError):
+            except (TypeError, ValueError):
                 raise _fail(f"{name}: at= takes (dx, dy) in mm from the part's origin", where) from None
         if rot is not None:
             try:
