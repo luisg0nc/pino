@@ -141,3 +141,11 @@ def test_refetch_runs_board_py_again_at_most_twice(make_project, fixture_libs, k
              '        p.path(f"U{i + 1}", lcsc=n)\n')
     r = build(make_project(three, name="three"), kicad_fake)
     assert len(runs) == 3 and r.verdict == "failed" and r.findings[0].code == "part_not_cached"
+
+
+@pytest.mark.kicad_cli
+def test_kicad_parity_holds_with_a_hand_fit_part(make_project, fixture_libs):
+    board = SMALL_BOARD_PY.replace('"pino_test:R", "10k")', '"pino_test:R", "10k", hand_fit=True)')
+    r = build(make_project(board))
+    assert r.verdict == "ok", [f.to_json() for f in r.findings if f.severity == "error"]
+    assert not [f for f in r.findings if "parity" in f.code or "mismatch" in f.code]

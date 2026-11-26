@@ -339,3 +339,50 @@ def test_kicad_reads_every_rule(kicad, tmp_path):
     assert "pino: via annular_width" in text, found
     assert "pino: via hole_to_hole" in text, found
     assert "annular_width" in {t for t, _ in found} and "hole_to_hole" in {t for t, _ in found}
+
+
+def test_place_origin_is_the_outline_centre(fixture_libs):
+    setup = find(parse(write(small_board()).kicad_pcb), "setup")
+    assert [str(v) for v in find(setup, "aux_axis_origin")[1:]] == ["100", "100"]
+
+
+def attr_of(files, ref):
+    return [str(a) for a in find(footprint_named(files, ref), "attr")[1:]]
+
+
+def test_hand_fit_part_is_out_of_position_files(fixture_libs):
+    c = small_board().to_circuit()
+    c.part("R1").hand_fit = True
+    c.part("C1").hand_fit = c.part("C1").dnp = True
+    files = write(c)
+    assert attr_of(files, "R1") == ["smd", "exclude_from_pos_files"] and attr_of(files, "C2") == ["smd"]
+    assert attr_of(files, "C1") == ["smd", "exclude_from_pos_files", "dnp"]
+
+
+def test_the_schematic_says_the_same_about_hand_fit_parts(fixture_libs):
+    from pino_kernel.libraries import discover
+    from pino_kernel.schematic.writer import write_schematic
+    from pino_kernel.symbols import SymbolLibrary
+
+    c = small_board().to_circuit()
+    c.part("R1").hand_fit = True
+    sch = parse(write_schematic(c, SymbolLibrary(discover().symbols)).kicad_sch)
+    flags = {}
+    for sym in find_all(sch, "symbol"):
+        ref = next((str(p[2]) for p in find_all(sym, "property") if p[1] == "Reference"), "")
+        if find(sym, "in_pos_files"):
+            flags[ref] = str(find(sym, "in_pos_files")[1])
+    assert flags["R1"] == "no" and flags["C1"] == "yes"
+
+
+@pytest.mark.kicad_cli
+@pytest.mark.kicad_libs
+def test_kicad_keeps_the_origin_and_the_hand_fit_flag_on_save(kicad, tmp_path):
+    c = real_circuit(2, zone=False, keepout=False, dnp=())
+    c.part("R1").hand_fit = True
+    out = write_real(tmp_path, c, REAL_POSES)
+    filled = refill_copy(kicad, out)
+    assert changed_items(out.read_text(), filled.read_text()) == []
+    assert "(aux_axis_origin 100 100)" in filled.read_text()
+    fp = footprint_named_text(filled, "R1")
+    assert [str(a) for a in find(fp, "attr")[1:]] == ["smd", "exclude_from_pos_files"]

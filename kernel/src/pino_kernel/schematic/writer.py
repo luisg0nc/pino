@@ -143,7 +143,7 @@ def symbol_node(symbols: SymbolLibrary, item):
     symbol_uuid = ids.symbol_uuid(part.key) if part else ids.uid("sch", "symbol", item.key)
     node += [
         ["unit", "1"], ["body_style", "1"], ["exclude_from_sim", "no"],
-        ["in_bom", "yes"], ["on_board", "yes"], ["in_pos_files", "yes"],
+        ["in_bom", "yes"], ["on_board", "yes"], ["in_pos_files", "no" if part and part.hand_fit else "yes"],
         ["dnp", "yes" if part and part.dnp else "no"],
         ["uuid", Q(symbol_uuid)],
     ]

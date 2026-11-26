@@ -113,6 +113,7 @@ class Placed:
     lcsc: str = ""
     datasheet: str = ""
     description: str = ""
+    hand_fit: bool = False
 
 
 # --- loading -------------------------------------------------------------------------
@@ -413,6 +414,18 @@ def _zone_item(c, p: Placed, copper_layers: list[str], item_uuid: str):
     return out
 
 
+_AFTER_POS_FILES = ("exclude_from_bom", "allow_missing_courtyard", "allow_soldermask_bridges", "dnp")
+
+
+def _hand_fit_attr(attr: list) -> list:
+    """`attr` with exclude_from_pos_files, where KiCad saves it: a hand-fit part is never placed by the fab."""
+    flag = Sym("exclude_from_pos_files")
+    if flag in attr:
+        return attr
+    at = next((i for i, v in enumerate(attr) if i and str(v) in _AFTER_POS_FILES), len(attr))
+    return [*attr[:at], flag, *attr[at:]]
+
+
 def place(p: Placed, *, copper_layers: list[str]) -> list:
     src = p.footprint.node
     key = p.key
@@ -443,6 +456,8 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
             out.append([Sym("sheetname"), "/"])
             out.append([Sym("sheetfile"), "board.kicad_sch"])
             inserted_path = True
+        if kind == "attr" and p.hand_fit:
+            c = _hand_fit_attr(c)
         if kind == "attr" and p.dnp and Sym("dnp") not in c:
             c = [*c, Sym("dnp")]
         item_uuid = ids.uid("footprint", key, str(i), kind)
