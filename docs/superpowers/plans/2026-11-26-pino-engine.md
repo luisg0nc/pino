@@ -534,7 +534,7 @@ git commit -m "pino: board.py library with parts by symbol and footprint, pins, 
   - `Board.expect_path(a, b, *, through: Sequence[Part] = ()) -> None`, `Board.expect_apart(a, b) -> None`.
   - `pino.fab` is `pino_kernel.fab`; `pino` exports `Group`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # test_outline.py
@@ -579,26 +579,30 @@ def test_expect_path_records_pins(fixture_libs):
     assert e.kind == "path" and e.a == [PinRef("J1", n) for n in "1234"] and e.b == [PinRef("U1", "1")]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_outline.py tests/test_pino_intent.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.outline'`
 
-- [ ] **Step 3: Write `outline.py` and extend `pino/board.py`**
+- [x] **Step 3: Write `outline.py` and extend `pino/board.py`**
 
 Port `outline_points` and its two helpers unchanged in logic. `Board.part(ref) -> Part` is added for tests and helpers. All intent and rule checks that need the whole board (unknown nets in a class, missing outline) run in `validate()`; argument checks raise at the call.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_outline.py tests/test_pino_intent.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino kernel/src/pino_kernel/outline.py kernel/tests/fixtures/outline kernel/tests/test_outline.py kernel/tests/test_pino_intent.py
 git commit -m "pino: placement intent, outline.json, keep-outs, zones, net classes and expect_path"
 ```
+
+> **Plan fix (Task 6, during the build):** `test_cutout_that_does_not_fit` used a boss at (9.5, 9.5) on a 20 x 20 board,
+> which pcb-kit's rule accepts (the cut stays inside the board). The test uses a boss at (2, 2), whose cut reaches past
+> the board's centre lines. Keep-out layers "all" are stored as `["*.Cu"]` and expanded by the board writer.
 
 ---
 

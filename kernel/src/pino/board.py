@@ -18,13 +18,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pino_kernel import fab as fab_profiles
+from pino_kernel import outline as outlines
 from pino_kernel.circuit import (
-    SCHEMA, BlockSpec, Circuit, NetSpec, OutlineSpec, PartSpec, PinInfo, PinRef,
+    SCHEMA, BlockSpec, Circuit, Expect, GroupSpec, Intent, Keepout, NetClassSpec, NetSpec, OutlineSpec, PartSpec,
+    PinInfo, PinRef, ZoneSpec,
 )
 from pino_kernel.libraries import Libraries, LibrariesNotFound, discover
 from pino_kernel.symbols import Symbol, SymbolLibrary, SymbolNotFound, UnsupportedSymbol
 
 ROLES = ("path", "shunt", "tap", "across")
+SIDES = ("top", "bottom", "left", "right")
+FORBID = ("tracks", "vias", "pads", "copperpour", "footprints")
 REF_RE = re.compile(r"^[A-Z][A-Z_]*[0-9]+$")
 NET_RE = re.compile(r"^[A-Za-z0-9_+.\-]+$")
 
@@ -80,6 +84,21 @@ def _symbols() -> SymbolLibrary:
 
 class PinSet(tuple):
     """Every pad that one name or number stands for ("VBUS" on USB-C is four pads)."""
+
+
+class Group:
+    """Parts the placer keeps together; place it like a part."""
+
+    def __init__(self, board: "Board", name: str, parts: list["Part"], where):
+        self.board, self.name, self.parts = board, name, parts
+        self.file, self.line = where
+
+    def __repr__(self) -> str:
+        return f"Group({self.name})"
+
+
+def copper_layer_names(layers: int) -> list[str]:
+    return ["F.Cu"] + [f"In{i}.Cu" for i in range(1, layers - 1)] + ["B.Cu"]
 
 
 def _pins_of(items) -> list[PinRef]:
@@ -190,11 +209,17 @@ class Board:
         self._pin_net: dict[PinRef, str] = {}
         self._no_connects: dict[PinRef, tuple] = {}
         self._nc_rest: dict[str, list[str]] = {}
-        self._init_rules()
+        if layers not in (2, 4):
+            raise _fail(f"layers={layers}: pino builds boards with 2 or 4 copper layers", self._where)
+        if fab is not None and getattr(fab, "layers", layers) != layers:
+            raise _fail(f"fab profile {fab.name} is for {fab.layers} layers; this board has {layers}", self._where)
+        self._intents: dict[str, Intent] = {}
+        self._groups: dict[str, GroupSpec] = {}
+        self._keepouts: list[Keepout] = []
+        self._zones: list[ZoneSpec] = []
+        self._net_classes: list[NetClassSpec] = []
+        self._expects: list[Expect] = []
         _BOARDS.append(self)
-
-    def _init_rules(self) -> None:
-        """Placement and rules state; filled in by the intent API."""
 
     @property
     def folder(self) -> Path:
@@ -289,6 +314,144 @@ class Board:
         self._nc_rest.setdefault(part.ref, []).extend(p.number for p in marked)
         return marked
 
+    # -- placement intent -----------------------------------------------------
+
+    def group(self, name: str, *parts: Part) -> Group:
+        where = _caller()
+        if name in self._groups:
+            raise _fail(f"group {name!r} used twice", where)
+        for p in parts:
+            if not isinstance(p, Part):
+                raise _fail(f"group {name}: {p!r} is not a part", where)
+            for g in self._groups.values():
+                if p.ref in g.refs:
+                    raise _fail(f"{p.ref} is in group {g.name} already", where)
+        self._groups[name] = GroupSpec(name, [p.ref for p in parts], where[1])
+        return Group(self, name, list(parts), where)
+
+    def _anchor(self, near, where) -> str:
+        if isinstance(near, Part):
+            return near.ref
+        if isinstance(near, Group):
+            return f"group:{near.name}"
+        if isinstance(near, PinRef):
+            return str(near)
+        if isinstance(near, PinSet):
+            if not near:
+                raise _fail("near= names no pin", where)
+            return str(near[0])
+        if isinstance(near, str):
+            return near
+        raise _fail(f"near={near!r}: pass a part, a pin or a group", where)
+
+    def place(self, target, *, edge=None, center=False, along=None, near=None, side=None, at=None, rot=None,
+              back=False) -> None:
+        where = _caller()
+        if isinstance(target, Part):
+            name = target.ref
+        elif isinstance(target, Group):
+            name = f"group:{target.name}"
+        else:
+            raise _fail(f"place() takes a part or a group, not {target!r}", where)
+        if edge is not None and edge not in SIDES:
+            raise _fail(f"edge={edge!r}: use one of {', '.join(SIDES)}", where)
+        if side is not None and side not in SIDES:
+            raise _fail(f"side={side!r}: use one of {', '.join(SIDES)}", where)
+        if at is not None and (edge is not None or near is not None):
+            raise _fail(f"{name}: at= is a fixed position; it cannot go with edge= or near=", where)
+        if edge is not None and near is not None:
+            raise _fail(f"{name}: edge= and near= cannot go together; pick one", where)
+        if side is not None and near is None:
+            raise _fail(f"{name}: side= says which side of near=; pass near= too", where)
+        if (center or along is not None) and edge is None:
+            raise _fail(f"{name}: center= and along= place a part along an edge; pass edge= too", where)
+        if center and along is not None:
+            raise _fail(f"{name}: center=True means along=0; pass one of them", where)
+        if at is not None:
+            try:
+                at = (float(at[0]), float(at[1]))
+            except (TypeError, ValueError, IndexError):
+                raise _fail(f"{name}: at= takes (x, y) in mm", where) from None
+        if name in self._intents:
+            raise _fail(f"{name} is placed twice (lines {self._intents[name].line} and {where[1]})", where)
+        self._intents[name] = Intent(
+            name, edge, 0.0 if center else (None if along is None else float(along)),
+            None if near is None else self._anchor(near, where), side, at,
+            None if rot is None else float(rot), bool(back), where[1])
+
+    # -- rules ----------------------------------------------------------------
+
+    def _layers(self, layers, where) -> list[str]:
+        if layers == "all":
+            return ["*.Cu"]
+        names = [layers] if isinstance(layers, str) else list(layers)
+        copper = copper_layer_names(self.layers)
+        for n in names:
+            if n not in copper:
+                raise _fail(f"this board has no {n}; its copper layers are {', '.join(copper)}", where)
+        return names
+
+    def keepout(self, *, region, layers="all", why="", forbid=FORBID) -> None:
+        where = _caller()
+        bad = [f for f in forbid if f not in FORBID]
+        if bad:
+            raise _fail(f"keepout forbid={bad}: use some of {', '.join(FORBID)}", where)
+        try:
+            if len(region) == 4 and all(isinstance(v, (int, float)) for v in region):
+                x0, y0, x1, y1 = region
+                poly = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            else:
+                poly = [(p[0], p[1]) for p in region]
+        except (TypeError, IndexError):
+            raise _fail("keepout region takes (x0, y0, x1, y1) or a list of (x, y) points in mm", where) from None
+        if len(poly) < 3:
+            raise _fail("keepout region needs at least 3 points", where)
+        self._keepouts.append(Keepout(poly, self._layers(layers, where), list(forbid), str(why), "board.py", where[1]))
+
+    def zone(self, net, *, layer: str, region=None) -> None:
+        where = _caller()
+        name = net.name if isinstance(net, NetSpec) else str(net)
+        (layer,) = self._layers(layer, where)
+        poly = None
+        if region is not None:
+            if len(region) == 4 and all(isinstance(v, (int, float)) for v in region):
+                x0, y0, x1, y1 = region
+                poly = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            else:
+                poly = [(p[0], p[1]) for p in region]
+        self._zones.append(ZoneSpec(name, layer, poly, where[1]))
+
+    def net_class(self, name: str, nets, *, width: float, clearance=None, via_diameter=None, via_drill=None) -> None:
+        where = _caller()
+        f = self._fab_profile()
+        names = [n.name if isinstance(n, NetSpec) else str(n) for n in nets]
+        if any(c.name == name for c in self._net_classes):
+            raise _fail(f"net class {name} declared twice", where)
+        self._net_classes.append(NetClassSpec(
+            str(name), names, float(width), float(f.min_clearance if clearance is None else clearance),
+            float(f.min_via_diameter if via_diameter is None else via_diameter),
+            float(f.min_via_drill if via_drill is None else via_drill), where[1]))
+
+    def _expect(self, kind, a, b, through) -> None:
+        where = _caller()
+        a_pins, b_pins = _pins_of([a]), _pins_of([b])
+        for p in a_pins + b_pins:
+            self._check_pin(p, where)
+        refs = []
+        for part in through:
+            if not isinstance(part, Part):
+                raise _fail(f"through= takes parts, not {part!r}", where)
+            refs.append(part.ref)
+        self._expects.append(Expect(kind, a_pins, b_pins, refs, where[1]))
+
+    def expect_path(self, a, b, *, through=()) -> None:
+        """a and b must be joined: on one net, or through the listed parts only. Checked by pins, never names."""
+        self._expect("path", a, b, through)
+
+    def expect_apart(self, a, b) -> None:
+        """a and b must never be on one net."""
+        self._expect("apart", a, b, ())
+
     # -- checks ---------------------------------------------------------------
 
     def _problems(self) -> list[Problem]:
@@ -296,8 +459,6 @@ class Board:
         if self.outline is None:
             out.append(Problem("Board needs an outline: pass outline='outline.json' or outline=(width, height)",
                                *self._where))
-        if self.layers not in (2, 4):
-            out.append(Problem(f"layers={self.layers}: pino builds 2 or 4 copper layers", *self._where))
         for part in self._parts.values():
             where = (part.file, part.line)
             positions: dict[tuple[int, int], set[str]] = {}
@@ -330,7 +491,52 @@ class Board:
         return out
 
     def _rule_problems(self) -> list[Problem]:
-        return []
+        out: list[Problem] = []
+        file = self._where[0]
+        if isinstance(self.outline, (str, os.PathLike)):
+            try:
+                self._loaded_outline()
+            except outlines.OutlineError as e:
+                out.append(Problem(str(e), *self._where))
+        elif self.outline is not None:
+            try:
+                w, h = self.outline
+                if float(w) <= 0 or float(h) <= 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                out.append(Problem("outline=(width, height) takes two positive numbers in mm", *self._where))
+        for c in self._net_classes:
+            for n in c.nets:
+                if n not in self._nets:
+                    out.append(Problem(f"net class {c.name} names {n}, which is no net", file, c.line))
+        for z in self._zones:
+            if z.net not in self._nets:
+                out.append(Problem(f"zone on {z.layer} names {z.net}, which is no net", file, z.line))
+        known = set(self._parts) | {f"group:{g}" for g in self._groups}
+        for i in self._intents.values():
+            if i.target.startswith("group:") and i.target not in known:
+                out.append(Problem(f"no group {i.target[6:]}", file, i.line))
+            if i.near is not None:
+                ref = i.near.split(".")[0] if not i.near.startswith("group:") else i.near
+                if ref not in known:
+                    out.append(Problem(f"{i.target}: near={i.near!r} is no part, pin or group", file, i.line))
+                elif "." in i.near and not i.near.startswith("group:"):
+                    r, num = i.near.split(".", 1)
+                    if not self._parts[r].symbol.pins_for(num):
+                        out.append(Problem(f"{i.target}: near={i.near!r} is no pin", file, i.line))
+                if ref == i.target or (i.target.startswith("group:") and ref in self._groups.get(i.target[6:], GroupSpec("", [])).refs):
+                    out.append(Problem(f"{i.target} is placed near itself", file, i.line))
+        return out
+
+    def _outline_path(self) -> Path:
+        path = Path(self.outline)
+        return path if path.is_absolute() else self.folder / path
+
+    def _loaded_outline(self) -> OutlineSpec:
+        cached = getattr(self, "_outline_cache", None)
+        if cached is None:
+            cached = self._outline_cache = outlines.load_outline(self._outline_path())
+        return cached
 
     def validate(self) -> None:
         problems = self._problems()
@@ -343,11 +549,19 @@ class Board:
         return self.fab or fab_profiles.for_layers(self.layers)
 
     def _outline_spec(self) -> OutlineSpec:
+        if isinstance(self.outline, (str, os.PathLike)):
+            return self._loaded_outline()
         w, h = self.outline
-        return OutlineSpec(float(w), float(h), [], [], None, "board.py")
+        return outlines.rectangle(float(w), float(h), 1.0)
 
     def _circuit_extras(self) -> dict:
-        return {"intents": [], "groups": [], "keepouts": [], "zones": [], "net_classes": [], "expects": []}
+        keepouts = []
+        if isinstance(self.outline, (str, os.PathLike)):
+            keepouts += outlines.outline_keepouts(self._outline_path())
+        keepouts += self._keepouts
+        return {"intents": list(self._intents.values()), "groups": list(self._groups.values()),
+                "keepouts": keepouts, "zones": list(self._zones), "net_classes": list(self._net_classes),
+                "expects": list(self._expects)}
 
     def to_circuit(self) -> Circuit:
         self.validate()
