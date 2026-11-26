@@ -1,0 +1,20 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C900003&limit=1",
+ "synthetic": true,
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 900003,
+    "mfr": "SYN-C-100N",
+    "package": "0402",
+    "description": "100nF 16V X7R ±10% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": 100000,
+    "price": 0.001,
+    "stock_checked_at": "2026-11-26T05:00:00.000Z"
+   }
+  ]
+ }
+}

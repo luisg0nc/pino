@@ -1,0 +1,7 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C99999999&limit=1",
+ "status": 200,
+ "body": {
+  "components": []
+ }
+}

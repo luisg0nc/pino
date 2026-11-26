@@ -1,0 +1,20 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C900004&limit=1",
+ "synthetic": true,
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 900004,
+    "mfr": "SYN-LED-R",
+    "package": "0805",
+    "description": "Red 20mA 0805 LED Indication - Discrete ROHS",
+    "is_basic": false,
+    "is_preferred": true,
+    "stock": 100000,
+    "price": 0.001,
+    "stock_checked_at": "2026-11-26T05:00:00.000Z"
+   }
+  ]
+ }
+}

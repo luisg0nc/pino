@@ -1,0 +1,19 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=C2286&limit=1",
+ "status": 200,
+ "body": {
+  "components": [
+   {
+    "lcsc": 2286,
+    "mfr": "KT-0603R",
+    "package": "0603",
+    "description": "-40℃~+85℃ 1.6mm x 0.8mm square LED 1.8V~2.4V 120° 20mA 300mcd 40mW 615nm~630nm 645nm Discrete Diode Red Water Clear 0603 LED Indication - Discrete ROHS",
+    "is_basic": true,
+    "is_preferred": false,
+    "stock": null,
+    "price": 0.0077,
+    "stock_checked_at": "2026-11-04T01:30:10.000Z"
+   }
+  ]
+ }
+}

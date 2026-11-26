@@ -1,0 +1,13 @@
+{
+ "url": "https://jlcsearch.tscircuit.com/api/search?q=RK3576+unavailable&limit=8",
+ "synthetic": true,
+ "status": 503,
+ "body": {
+  "error": "Search is unavailable",
+  "error_code": "search_unavailable",
+  "message": "Search is unavailable, try again shortly"
+ },
+ "headers": {
+  "retry-after": "30"
+ }
+}
