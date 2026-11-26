@@ -174,6 +174,7 @@
     { "pino": "app/src/renderer/ui/strip/strip.test.ts", "torno": "app/src/renderer/ui/strip/strip.test.ts", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the cases of pino's strip" },
     { "pino": "app/src/renderer/styles/strip.css", "torno": "app/src/renderer/styles/strip.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "pino's node, with a failed and a not-kept look; folding, brackets and stars cut" },
     { "pino": "app/src/renderer/styles/tools.css", "torno": "app/src/renderer/styles/tools.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the reed only: one group, the tool in hand in the person's violet with a raised name pill" },
-    { "pino": "app/src/renderer/styles/marks.css", "torno": "app/src/renderer/styles/marks.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the chips only, in pino's mock shapes, with pino's mark rows and the mark in hand" }
+    { "pino": "app/src/renderer/styles/marks.css", "torno": "app/src/renderer/styles/marks.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the chips only, in pino's mock shapes, with pino's mark rows and the mark in hand" },
+    { "pino": "app/src/renderer/styles/viewbars.css", "torno": "app/src/renderer/styles/viewbars.css", "commit": "597befd755fbffb7af5740f21d64892db0abbd63", "mode": "adapted", "change": "the menu rules only (.menu, .menu-item); no bars and no Compare" }
   ]
 }
