@@ -130,3 +130,8 @@ def test_pin_without_pad_is_an_error(fixture_libs, fp_lib):
 def test_missing_footprint(fp_lib):
     with pytest.raises(FootprintNotFound):
         fp_lib.load("pino_test:Nope")
+
+
+def test_footprint_angle_is_written_as_kicad_saves_it(placed):
+    at = find(place(placed("R1", x=0, y=0, rot=270), copper_layers=CU2), "at")
+    assert str(at[3]) == "-90"

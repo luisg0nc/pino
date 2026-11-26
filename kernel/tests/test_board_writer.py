@@ -287,3 +287,10 @@ def test_footprint_zone_survives_kicad_resave(kicad, tmp_path):
     assert zone_polygon(before) == zone_polygon(after)
     assert [str(s) for s in find(find(after, "zone"), "layers")[1:]] == ["F.Cu", "B.Cu"]
     assert changed_items(out.read_text(), filled.read_text()) == []
+
+
+def test_symbol_fields_go_onto_the_footprint(fixture_libs):
+    c = small_board().to_circuit()
+    c.part("R1").datasheet, c.part("R1").description, c.part("R1").lcsc = "https://example.invalid/r.pdf", "Resistor", "C1234"
+    props = {p[1]: p[2] for p in find_all(footprint_named(write(c), "R1"), "property")}
+    assert (props["Datasheet"], props["Description"], props["LCSC"]) == ("https://example.invalid/r.pdf", "Resistor", "C1234")

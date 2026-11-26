@@ -54,6 +54,8 @@ class PartSpec:
     role: str  # path | shunt | tap | across
     pins: list[PinInfo]
     line: int | None = None
+    datasheet: str = ""  # the symbol's, carried onto the footprint so DRC's parity check agrees
+    description: str = ""
 
 
 @dataclass

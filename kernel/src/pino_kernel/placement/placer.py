@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 from ..circuit import Circuit, PartPose, Placement
 from ..fab import PROFILES, for_layers
 from ..findings import At, Finding
-from ..geometry import bbox, distance_to_edges, inside, point_in_polygon, polygons_overlap
+from ..geometry import bbox, clip_half_plane, distance_to_edges, inside, point_in_polygon, polygons_overlap
 from ..outline import polygon as outline_polygon
-from ..pcb.footprint import FootprintLibrary, Placed, courtyard_world, keepouts_world, pad_world
+from ..pcb.footprint import FACE_AXIS, FootprintLibrary, Placed, courtyard_world, face_line, keepouts_world, pad_world
 from .ratsnest import WEIGHTS, EdgeIndex, PadPoint, Score, edge, score
 
 SNAP = 0.05
@@ -140,8 +140,18 @@ class Placer:
         if face is None and (x0 < ox0 - eps or y0 < oy0 - eps or x1 > ox1 + eps or y1 > oy1 + eps):
             return False
         polys = [self._moved(q, c.x, c.y) for v in s.sides.values() for q in v]
+        if face is not None:
+            line, _, by_keepout = self.face_of(ref, c.rot, c.back, face)
+            axis, sign = FACE_AXIS[face]
+            off = (c.x if axis == "x" else c.y)
+            cut = line + off - sign * (0.05 if by_keepout else 0.05 + self._pull_depth(s, axis))
         for poly in polys:
-            test = poly if face is None else self._pull_in(poly, face)
+            if face is None:
+                test = poly
+            else:
+                test = clip_half_plane(poly, axis, cut, "below" if sign > 0 else "above")
+                if len(test) < 3:
+                    continue
             if not inside(test, self.outline):
                 return False
         for _, px, py, _, _, ppoly in s.pads:
@@ -174,19 +184,15 @@ class Placer:
                     return False
         return True
 
-    def _pull_in(self, poly, face):
-        """An edge part may cross the outline on its face side only: test its box with that side pulled in."""
-        x0, y0, x1, y1 = bbox(poly)
-        pull = 0.05 + max(0.0, min(2.0, (x1 - x0 if face in ("left", "right") else y1 - y0) / 2 - 0.05))
-        if face == "bottom":
-            y0 = min(y0 + pull, y1)
-        elif face == "top":
-            y1 = max(y1 - pull, y0)
-        elif face == "left":
-            x0 = min(x0 + pull, x1)
-        else:
-            x1 = max(x1 - pull, x0)
-        return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+    @staticmethod
+    def _pull_depth(s: _Shape, axis: str) -> float:
+        """How far an edge part's courtyard may cross on its face side: half its depth, at most 2 mm."""
+        lo, hi = (s.box[0], s.box[2]) if axis == "x" else (s.box[1], s.box[3])
+        return max(0.0, min(2.0, (hi - lo) / 2 - 0.05))
+
+    def face_of(self, ref: str, rot: float, back: bool, face: str):
+        s = self.shape(ref, rot, back)
+        return face_line([q for v in s.sides.values() for q in v], s.keepouts, [q[5] for q in s.pads], face)
 
     # -- cost -----------------------------------------------------------------------------------------
 
@@ -252,9 +258,14 @@ class Placer:
         s = self.shape(ref, r, back)
         ox0, oy0, ox1, oy1 = self.obox
         x0, y0, x1, y1 = s.box
+        # the face line meets the edge; pads keep the fab's copper-to-edge distance
+        line, reach, _ = self.face_of(ref, r, back, edge)
+        axis, sign = FACE_AXIS[edge]
+        shift = max(0.0, self.fab.copper_to_edge + 0.05 - sign * (line - reach))
+        line += sign * shift  # the edge sits that much past the face line, so the part moves in
         out = []
         if edge in ("bottom", "top"):
-            y = oy0 - y0 if edge == "bottom" else oy1 - y1
+            y = (oy0 if edge == "bottom" else oy1) - line
             if along is not None:
                 xs = [along]
             else:
@@ -262,7 +273,7 @@ class Placer:
                 xs = _spread(lo, hi, 0.5, MAX_CANDIDATES)
             out = [_Cand(snap(x), snap(y), r, back, abs(x)) for x in xs]
         else:
-            x = ox0 - x0 if edge == "left" else ox1 - x1
+            x = (ox0 if edge == "left" else ox1) - line
             if along is not None:
                 ys = [along]
             else:
@@ -354,11 +365,14 @@ class Placer:
 
     # -- choosing -------------------------------------------------------------------------------------
 
-    def choose(self, ref: str, cands: list[_Cand], face: str | None = None, *, report: bool = True) -> _Cand:
+    def choose(self, ref: str, cands: list[_Cand], face: str | None = None, *, report: bool = True,
+               fallback: bool = False) -> _Cand:
         ranked = sorted(cands, key=lambda c: (round(self.cost(ref, c), 6), round(c.anchor_dist, 6), c.y, c.x, c.rot))
         for c in ranked:
             if self.valid(ref, c, face):
                 return c
+        if fallback:  # a preference (a satellite by its pin, a group member by the others), not an intent
+            return self.choose(ref, self.rest_cands(ref), report=report)
         best = ranked[0]
         if report:
             self.findings.append(Finding(
@@ -368,9 +382,24 @@ class Placer:
         return best
 
     def box_of(self, ref: str) -> tuple:
+        """The part's courtyard box; for an edge part whose own keep-out lies past the edge (a module's antenna
+        clearance), only the part on the board side of its face line, so neighbours gather round its body."""
         pose = self.pose[ref]
         s = self.shape(ref, pose.rot, pose.back)
-        return (s.box[0] + pose.x, s.box[1] + pose.y, s.box[2] + pose.x, s.box[3] + pose.y)
+        box = (s.box[0] + pose.x, s.box[1] + pose.y, s.box[2] + pose.x, s.box[3] + pose.y)
+        a = self.anchor.get(ref)
+        if self.kind.get(ref) == "edge" and a:
+            face = a[1].edge
+            line, _, by_keepout = self.face_of(ref, pose.rot, pose.back, face)
+            if by_keepout:
+                axis, sign = FACE_AXIS[face]
+                off = pose.x if axis == "x" else pose.y
+                polys = [clip_half_plane(self._moved(q, pose.x, pose.y), axis, line + off, "below" if sign > 0 else "above")
+                         for v in s.sides.values() for q in v]
+                pts = [pt for q in polys if len(q) >= 3 for pt in q]
+                if pts:
+                    box = bbox(pts)
+        return box
 
     def pad_point(self, ref: str, number: str):
         pose = self.pose[ref]
@@ -489,7 +518,7 @@ class Placer:
         for ref in todo[1:]:
             box = self.box_of(first)
             cands = self.near_cands(ref, box, None, None, False)
-            self._commit(ref, self.choose(ref, cands))
+            self._commit(ref, self.choose(ref, cands, fallback=True))
             self.kind[ref] = "group"
             self.anchor[ref] = ("group", first)
             first = ref
@@ -518,7 +547,7 @@ class Placer:
             self.kind[hub] = "rest"
         point = self.pad_point(hub, hnum)
         cands = self.point_cands(ref, point, 6.0, [0.0, 90.0], False, pad_number=num)
-        self._commit(ref, self.choose(ref, cands))
+        self._commit(ref, self.choose(ref, cands, fallback=True))
         self.kind[ref] = "satellite"
         self.anchor[ref] = ("satellite", anchor)
 

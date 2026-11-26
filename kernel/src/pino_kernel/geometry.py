@@ -131,3 +131,19 @@ def arc_points(start: Point, mid: Point, end: Point, chord: float = 0.1) -> list
 
 def circle_polygon(cx: float, cy: float, r: float, n: int = 48) -> Polygon:
     return [(cx + r * math.cos(2 * math.pi * k / n), cy + r * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+
+def clip_half_plane(poly: Polygon, axis: str, value: float, keep: str) -> Polygon:
+    """The part of poly on one side of the line axis = value (keep "below" or "above"), Sutherland-Hodgman."""
+    i = 0 if axis == "x" else 1
+    inside_ = (lambda p: p[i] <= value + 1e-9) if keep == "below" else (lambda p: p[i] >= value - 1e-9)
+    out: Polygon = []
+    n = len(poly)
+    for k in range(n):
+        a, b = poly[k], poly[(k + 1) % n]
+        if inside_(a):
+            out.append(a)
+        if inside_(a) != inside_(b):
+            t = (value - a[i]) / (b[i] - a[i])
+            out.append((a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])))
+    return out

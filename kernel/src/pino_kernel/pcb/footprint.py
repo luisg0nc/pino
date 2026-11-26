@@ -111,6 +111,8 @@ class Placed:
     pad_nets: dict[str, str] = field(default_factory=dict)
     dnp: bool = False
     lcsc: str = ""
+    datasheet: str = ""
+    description: str = ""
 
 
 # --- loading -------------------------------------------------------------------------
@@ -415,8 +417,9 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
     out.append([Sym("uuid"), ids.footprint_uuid(key)])
     X, Y = to_kicad(p.x, p.y)
     at = [Sym("at"), num(X), num(Y)]
-    if norm_angle(p.rot):
-        at.append(num(norm_angle(p.rot)))
+    angle = norm_angle(p.rot)
+    if angle:
+        at.append(num(angle - 360 if angle > 180 else angle))  # KiCad saves a footprint's angle in (-180, 180]
     out.append(at)
 
     body = [c for c in src[2:] if isinstance(c, list) and c[0] not in _DROP and c[0] != "layer"]
@@ -452,6 +455,9 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
                 item = [item[0], item[1], p.ref] + item[3:]
             elif item[1] == "Value" and p.value:
                 item = [item[0], item[1], p.value] + item[3:]
+            elif item[1] in ("Datasheet", "Description"):
+                # the symbol's fields win, as KiCad's update from the schematic does
+                item = [item[0], item[1], p.datasheet if item[1] == "Datasheet" else p.description] + item[3:]
         if kind in ("property", "fp_text", "pad"):
             for j, cc in enumerate(item):
                 if isinstance(cc, list) and cc[0] == "at":
@@ -484,7 +490,8 @@ def place(p: Placed, *, copper_layers: list[str]) -> list:
             have = {b[1] for b in body if b[0] == "property"}
             for extra in ("Datasheet", "Description"):
                 if extra not in have:
-                    out.append(_empty_prop(extra, p, ids.uid("footprint", key, "prop", extra)))
+                    value = p.datasheet if extra == "Datasheet" else p.description
+                    out.append(_empty_prop(extra, p, ids.uid("footprint", key, "prop", extra), value))
             if "LCSC" not in have:
                 # the symbol's fields must be on its footprint, or DRC's parity check reports the one missing
                 out.append(_empty_prop("LCSC", p, ids.uid("footprint", key, "prop", "LCSC"), p.lcsc, 0.15))
@@ -587,3 +594,30 @@ def pin_pad_findings(circuit: Circuit, lib: FootprintLibrary) -> list[Finding]:
                                f"{part.ref}: pad {n} of {part.footprint} has no pin in {part.symbol}",
                                refs=(part.ref,)))
     return out
+
+
+# --- edge parts --------------------------------------------------------------------------
+
+# world face -> (axis, which way is off the board)
+FACE_AXIS = {"top": ("y", 1), "bottom": ("y", -1), "right": ("x", 1), "left": ("x", -1)}
+
+
+def face_line(courtyards: list, keepouts: list, pad_polys: list, face: str) -> tuple[float, float, bool]:
+    """Where an edge part meets the board edge on its face side, in board mm along the face's axis.
+
+    A footprint that carries its own keep-out on the face side (a module's antenna clearance) meets the edge
+    where that keep-out begins, so the keep-out lies off the board. Any other part meets it with its
+    courtyard's face side. Returns (line, how far the pads reach toward the face, whether a keep-out set it).
+    """
+    axis, sign = FACE_AXIS[face]
+    i = 0 if axis == "x" else 1
+    pts = [q for poly in courtyards for q in poly]
+    pad_pts = [q for poly in pad_polys for q in poly] or pts
+    centre = (min(q[i] for q in pad_pts) + max(q[i] for q in pad_pts)) / 2
+    ahead = [k for k in keepouts if k and sign * (sum(q[i] for q in k) / len(k) - centre) > 0]
+    reach = max(sign * q[i] for q in pad_pts) * sign
+    if ahead:
+        inner = [min(sign * q[i] for q in k) * sign for k in ahead]
+        return (min(inner) if sign > 0 else max(inner)), reach, True
+    side = max(sign * q[i] for q in pts) * sign
+    return side, reach, False

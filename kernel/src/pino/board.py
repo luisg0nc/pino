@@ -567,7 +567,8 @@ class Board:
         self.validate()
         parts = [
             PartSpec(p.ref, p.key, p.symbol.lib_id, p.footprint, p.value, p.lcsc, p.dnp, p.block.key, p.role,
-                     [PinInfo(s.number, s.name, s.etype) for s in p.symbol.pins], p.line)
+                     [PinInfo(s.number, s.name, s.etype) for s in p.symbol.pins], p.line,
+                     p.symbol.properties.get("Datasheet", ""), p.symbol.properties.get("Description", ""))
             for blk in self._blocks for p in blk.parts
         ]
         declared = {ref: i for i, ref in enumerate(self._parts)}

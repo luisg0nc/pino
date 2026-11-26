@@ -34,6 +34,7 @@ from .diff import changes as diff_changes
 from .findings import At, Finding
 from .history import History
 from .kicad_cli import CliRun, KicadCli
+from .normalize import normalize
 from .libraries import Libraries, LibrariesNotFound, discover
 from .pcb.footprint import FootprintLibrary, FootprintNotFound, model_findings, pad_world, pin_pad_findings
 from .pcb.writer import copper_layers, fab_of, write_board
@@ -337,6 +338,8 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
         if made:
             made[0].replace(tmp / "schematic.svg")
         _remove(out)
+        for name in ("erc.json", "netlist.xml", "schematic.svg"):
+            normalize(tmp / name)
 
     def board_worker():
         filled = tmp / "filled"
@@ -354,6 +357,8 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
             runs["render"] = clock.run("render", cli.render, board_file, tmp / "render-top.png")
         for extra in filled.glob("*.kicad_prl"):
             extra.unlink()
+        for f in [tmp / "drc.json", tmp / "board.glb", *svg_found.values()]:
+            normalize(f)
 
     if cli is not None:
         with ThreadPoolExecutor(2) as ex:

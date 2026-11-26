@@ -136,3 +136,11 @@ def test_edge_part_may_cross_on_its_face_only(fixture_libs, fp_lib):
     assert fit_findings(c, [over_face], fab.jlc_standard_2layer) == []
     turned = placed(fp_lib, "J1", "pino_test:USB_Edge", x=0, y=-9.5, rot=180)   # its back past the edge: not its face
     assert [f.code for f in fit_findings(c, [turned], fab.jlc_standard_2layer)] == ["outside_outline"]
+
+
+def test_a_module_may_hang_its_antenna_keepout_off_the_edge(fixture_libs, fp_lib):
+    c = fit_board()
+    c.intents = [Intent("U3", "top", 0.0, None, None, None, None, False, 1)]
+    # MODULE_ANT: keep-out at local y -1 to -8, pads at local y 3; at board y 8.6 the keep-out begins 0.4 inside the top edge
+    mod = placed(fp_lib, "U3", "pino_test:MODULE_ANT", x=0, y=8.6)
+    assert fit_findings(c, [mod], fab.jlc_standard_2layer) == []

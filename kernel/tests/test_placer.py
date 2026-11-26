@@ -173,3 +173,20 @@ def test_hundred_parts_in_under_five_seconds(fixture_libs, fp_lib):
 def test_score_is_reported(fixture_libs, fp_lib):
     r = place(small_board().to_circuit(), fp_lib)
     assert r.score.length > 0 and r.score.total >= r.score.length * 0.2 - 1e-9
+
+
+def test_a_module_meets_the_edge_where_its_antenna_keepout_begins(fixture_libs, fp_lib):
+    from pino_kernel.pcb.footprint import keepouts_world
+    r = place(board_with(intent={"U3": {"edge": "top", "center": True}}, module=True), fp_lib)
+    zone = keepouts_world(placed_of(r, "U3"))[0]
+    assert bbox(zone)[1] >= 15.0 - 0.3                    # the keep-out starts at the top edge (y 15), off the board
+    pads = [q for q in pad_world(placed_of(r, "U3"))]
+    assert max(y for q in pads for _, y in q.poly) <= 15.0 - 0.3 + 1e-6
+
+
+def test_edge_part_pads_keep_the_copper_to_edge_distance(fixture_libs, fp_lib):
+    from pino_kernel.geometry import distance_to_edges
+    c = board_with(intent={"U3": {"edge": "top", "center": True}}, module=True)
+    r = place(c, fp_lib)
+    outline = polygon(c.outline)
+    assert min(distance_to_edges(pt, outline) for q in pad_world(placed_of(r, "U3")) for pt in q.poly) >= 0.3 - 1e-6

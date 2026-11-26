@@ -1545,7 +1545,7 @@ git commit -m "kernel: pino-kernel build and serve, README and CI jobs"
 
 The board (spec section 6, parts only from KiCad's shipped libraries, LCSC fields empty): the spike schematic circuit (`spike-schematic:spike/schematic/board.py`) rewritten on the `pino` API, plus a second LED. Blocks `usb` (J1 `Connector:USB_C_Receptacle_USB2.0_16P` with footprint `Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12`, F1 polyfuse, R9 0R DNP across it, CC resistors, shield RC), `reg` (U2 `Regulator_Linear:AP2112K-3.3`, C3, C4), `mcu` (U1 `RF_Module:ESP32-C6-MINI-1`, decoupling, EN and BOOT pull-ups, SW1 `Switch:SW_Push` on `Button_Switch_SMD:SW_SPST_TL3342`, D1 status LED on IO8 with R6, D2 power LED on +3V3 with R7, `id="power-led"`). `outline.json`: 56 x 44 mm, corner radius 2, mounts H1 to H4 at (±24.5, ±18.5), hole 3.2, boss 5.0. Intent: `b.place(u1, edge="top", center=True)`, `b.place(j1, edge="bottom", center=True)`, `b.place(u2, near=j1, side="top")`, `b.place(sw1, edge="left")`, group `leds` (D1, R6, D2, R7) near U1 on the right. Rules: `b.zone("GND", layer="B.Cu")`, `b.net_class("power", ["VBUS", "+3V3"], width=0.5)`, `b.expect_path(j1["VBUS"], u2["VIN"], through=[f1])`, `b.expect_path(j1["D+"], u1["IO13"])`, `b.expect_path(j1["D-"], u1["IO12"])`, `b.expect_path(u2["VOUT"], u1["3V3"])`, `b.expect_apart(j1["D+"], j1["D-"])`.
 
-- [ ] **Step 1: Write the fixture and the failing test**
+- [x] **Step 1: Write the fixture and the failing test**
 
 ```python
 pytestmark = [pytest.mark.kicad_cli, pytest.mark.kicad_libs]
@@ -1589,21 +1589,21 @@ def test_ref_rename_with_id_keeps_the_link(ref):
 def test_serve_builds_the_reference(ref): ...       # one serve session: ping, build, shutdown; result verdict "ok"
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run --directory kernel pytest tests/test_reference_build.py -v`
 Expected: FAIL on the first real gap (or SKIPPED with "kicad-cli not found: install KiCad 10 to run this test" on a machine without KiCad)
 
-- [ ] **Step 3: Fix what the end-to-end build finds**
+- [x] **Step 3: Fix what the end-to-end build finds**
 
 Each fix goes into the module that owns it, with a unit test there first. Look at `schematic.svg` (rendered to PNG with `rsvg-convert`) and `svg/board-F_Cu.svg` yourself and say in the report what you saw and what they do not show.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `uv run --directory kernel pytest -v`
 Expected: PASS, with the kicad tests run (not skipped) on this machine
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/tests/fixtures/reference kernel/tests/test_reference_build.py
@@ -1611,6 +1611,19 @@ git commit -m "kernel: the reference board built end to end"
 ```
 
 ---
+
+> **Plan fixes (Task 18, during the build), each found by building the reference board:**
+> - DRC parity wants the symbol's Datasheet and Description on the footprint too: `PartSpec` carries both and the
+>   board writer writes them.
+> - The ESP32-C6-MINI-1 courtyard is a T that includes the antenna clearance. An edge part meets the edge on its face
+>   line: where its own face-side keep-out begins (the clearance then lies past the edge), else its courtyard's face
+>   side; it moves in until its pads keep the fab's copper-to-edge distance. A part placed near it gathers round its
+>   on-board body. Satellites and group members that find no room by their anchor fall back to the rest rule.
+> - KiCad saves a footprint's angle in (-180, 180] (270 is written -90).
+> - kicad-cli stamps the run's time into SVG titles, ERC/DRC JSON, the netlist and the GLB, the input's absolute path
+>   into the netlist, and its threaded DRC names either of two stacked pads in the unconnected list. `normalize.py`
+>   takes these out so a build folder is the same bytes in any copy of the project.
+> - `test_exported_names_and_parity` allows KiCad's `unconnected-(...)` nets beside board.py's.
 
 ## Self-review
 

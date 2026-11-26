@@ -5,9 +5,9 @@ from __future__ import annotations
 from ..circuit import Circuit
 from ..fab import FabProfile
 from ..findings import At, Finding
-from ..geometry import bbox, circle_polygon, distance_to_edges, inside, point_in_polygon, polygons_overlap
+from ..geometry import bbox, circle_polygon, clip_half_plane, distance_to_edges, inside, point_in_polygon, polygons_overlap
 from ..outline import polygon as outline_polygon
-from ..pcb.footprint import Placed, courtyard_world, pad_world
+from ..pcb.footprint import FACE_AXIS, Placed, courtyard_world, face_line, keepouts_world, pad_world
 
 DIRECTION = {"right": 0, "top": 90, "left": 180, "bottom": 270}
 NAMES = {v: k for k, v in DIRECTION.items()}
@@ -21,18 +21,21 @@ def world_face(p: Placed) -> str:
     return NAMES[int(round(a + p.rot)) % 360 // 90 * 90]
 
 
-def _pull_in(poly, face):
-    """An edge part may cross the outline on its face side: test its box with that half taken off."""
-    x0, y0, x1, y1 = bbox(poly)
-    if face == "bottom":
-        y0 = (y0 + y1) / 2
-    elif face == "top":
-        y1 = (y0 + y1) / 2
-    elif face == "left":
-        x0 = (x0 + x1) / 2
-    else:
-        x1 = (x0 + x1) / 2
-    return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+def _board_side(p: Placed, polys, face):
+    """The courtyards with what may cross the edge on the face side taken off: everything past a footprint's own
+    face-side keep-out (an antenna clearance), else up to half the courtyard's depth (a connector's overhang)."""
+    axis, sign = FACE_AXIS[face]
+    i = 0 if axis == "x" else 1
+    line, _, by_keepout = face_line(polys, keepouts_world(p), [q.poly for q in pad_world(p)], face)
+    if not by_keepout:
+        lo, hi = min(q[i] for poly in polys for q in poly), max(q[i] for poly in polys for q in poly)
+        line = (lo + hi) / 2
+    out = []
+    for poly in polys:
+        kept = clip_half_plane(poly, axis, line - sign * 0.05, "below" if sign > 0 else "above")
+        if len(kept) >= 3:
+            out.append(kept)
+    return out
 
 
 def fit_findings(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> list[Finding]:
@@ -49,7 +52,8 @@ def fit_findings(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> lis
         at = At("board", p.x, p.y, "B.Cu" if p.back else "F.Cu")
         polys = [q for v in courtyard_world(p).values() for q in v]
         face = world_face(p) if p.ref in edge_parts else None
-        outside = any(not inside(q if face is None else _pull_in(q, face), outline) for q in polys)
+        tested = polys if face is None else _board_side(p, polys, face)
+        outside = any(not inside(q, outline) for q in tested)
         if outside:
             where = "past the outline" if face is None else f"past the outline on a side other than its {face} face"
             out.append(Finding("fit", "outside_outline", "error", f"{p.ref} is {where}", at, (p.ref,)))
