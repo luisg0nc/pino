@@ -1,14 +1,19 @@
 # pino
 
 A Linux desktop workbench where Claude Code designs printed circuit boards from a Python board file, a sibling of
-torno (the build123d CAD workbench). The design is `docs/superpowers/specs/2026-11-26-pino-design.md`; the build
-stages are in `docs/superpowers/plans/`. Stage 2, the app shell, has no engine: nothing is built or drawn yet.
+torno (the build123d CAD workbench). The design is `docs/superpowers/specs/2026-11-26-pino-design.md`, and the picked
+look `2026-11-26-pino-design-picks.md` beside it; the build stages are in `docs/superpowers/plans/`. On every save of
+`board.py` the engine builds, and the app draws the Schematic, the Board and 3D, takes marks, and gives Claude its
+tools. Routing in the app works only with an engine that routes (serve protocol 2).
+
+- `kernel/`: the engine, Python (uv). It runs `board.py` and writes the KiCad project, the checks and the build
+  result (`kernel/README.md`).
 
 - `app/`: the Electron app (pnpm, TypeScript, electron-vite). `src/main` is the shell, the sessions, and the HTTP
-  server with the MCP tool and the hooks. `src/renderer` is the UI (`ui/`), the store (`state/`) and the stylesheets
+  server with the MCP tools and the hooks, with the engine's client, the build loop, routing and the marks. `src/renderer` is the UI (`ui/`), the store (`state/`) and the stylesheets
   (`styles/`). `src/shared` holds the types and the pure rules both sides use, so that each is one rule and neither
   side has a copy of its own; `shared/bridge.ts` is everything the renderer may ask of main. `test/fake-agent.mjs`
-  is the stand-in for Claude Code, and `e2e/` the specs.
+  is the stand-in for Claude Code, `test/fake-kernel.mjs` the one for the engine, and `e2e/` the specs.
 - `scripts/pino` is the launcher; `scripts/torno-sync` the drift report on the copied files.
 - `.github/workflows/ci.yml` runs the unit tests, the typecheck, the guard cases and the e2e suite
   (`app/src/ci.test.ts` holds it).
@@ -22,13 +27,15 @@ pnpm test                               # unit tests: app/src/**/*.test.ts (vite
 pnpm test:e2e                           # builds the app, then drives it in a hidden window: app/e2e/*.spec.ts
 pnpm -C app typecheck
 bash .claude/hooks/guard-bash.test.sh   # the Bash guard's cases
+env -u DISPLAY -u WAYLAND_DISPLAY uv run --directory kernel pytest   # the engine's tests
 ```
 
 One file: `pnpm -C app exec vitest run <file>`, for example `src/manifest.test.ts`, or after a build
 `pnpm -C app exec playwright test e2e/chat.spec.ts`. Electron downloads its binary on first use
 (`pnpm -C app exec install-electron`).
 
-While iterating run the focused test; run all four before a commit.
+While iterating run the focused test; run the first four before a commit, and the engine's tests when `kernel/`
+changed.
 
 ## Global invariants
 
@@ -90,4 +97,6 @@ read one by hand before work its globs miss. Paths in a rule are written from `a
 - The agent: `agent-launch-and-tokens`, `sessions`, `chat-transcript`.
 - Tests: `e2e-hidden-window` (every launch of Electron), `e2e-stand-in-agent` (the stand-in, the recordings).
 - The window: `first-screen`, `styles-themes`, `chat-pane`.
+- The board: `views` (the three views and what is drawn), `marks`, `engine-client` (the engine, the build loop,
+  routing, Claude's tools).
 - Files and shipping: `workspace-writes` (what pino writes in a project), `launcher-and-packaging`.

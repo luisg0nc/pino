@@ -35,8 +35,8 @@ something changed. A sheet copied from torno keeps its rules; pino's own areas h
 - An edit drawn as a diff has its own two washes (`--diff-removed-wash`, a grey between the panel and the hairline;
   `--diff-added-wash`, the value of `--accent-wash`): `--ink` 7:1 and `--muted` 4.5:1 on both. The added wash is 60
   degrees of hue at least from both marks and from `--fail`, but not from `--ok`: pino's accent is green.
-- Copper, mask, silk and per-net colours of a board are a second palette, separate from the accent. It comes with the
-  views.
+- Copper, mask, silk and per-net colours of a board are a second palette, separate from the accent: the drawing's
+  tokens in `tokens.css`, the net colours in `shared/board/palette.ts` (see `views`).
 
 ## Faces and shape
 
