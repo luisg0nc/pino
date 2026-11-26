@@ -1065,7 +1065,7 @@ git commit -m "kernel: board writer with stackups, outline, holes, zones, net cl
   - `ratsnest(nets: Mapping[str, Sequence[PadPoint]], planes: Collection[str] = ()) -> list[Edge]`.
   - `Score(crossings: int, length: float, total: float, points: list[tuple[float, float]])`; `score(nets, planes=(), weights=WEIGHTS, any_side=False) -> Score` with `total = cross * crossings + length_weight * length`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_mst_of_a_square():
@@ -1091,21 +1091,21 @@ def test_index_agrees_with_brute_force():
     assert EdgeIndex(edges).count_within() == count_among(edges)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_ratsnest.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Port the functions and add `PadPoint`, `ratsnest`, `Score`, `score`**
+- [x] **Step 3: Port the functions and add `PadPoint`, `ratsnest`, `Score`, `score`**
 
 Iterate nets in sorted name order so ties and crossing points come out the same every run.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_ratsnest.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/placement kernel/tests/test_ratsnest.py
