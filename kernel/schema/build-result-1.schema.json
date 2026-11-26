@@ -1,0 +1,345 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://pino.invalid/schema/build-result-1.schema.json",
+ "title": "pino build result",
+ "description": "What pino's engine reports about one build (pino_kernel.result.BuildResult.to_json).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "kernel_version",
+  "kicad_cli",
+  "number",
+  "hash",
+  "verdict",
+  "headline",
+  "counts",
+  "findings",
+  "truncated",
+  "artifacts",
+  "timings",
+  "changes",
+  "placement",
+  "waiting",
+  "cached"
+ ],
+ "properties": {
+  "schema": {
+   "const": "pino.build/1"
+  },
+  "kernel_version": {
+   "type": "string"
+  },
+  "kicad_cli": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "description": "kicad-cli's version, or null when it was not used"
+  },
+  "number": {
+   "type": "integer",
+   "minimum": 1,
+   "description": "the build number shown as h<number>"
+  },
+  "hash": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "pattern": "^[0-9a-f]{12}$",
+   "description": "the build folder name; null when board.py failed"
+  },
+  "verdict": {
+   "enum": [
+    "ok",
+    "errors",
+    "failed"
+   ]
+  },
+  "headline": {
+   "type": "string",
+   "maxLength": 160
+  },
+  "counts": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "errors",
+    "warnings",
+    "infos",
+    "parts",
+    "nets",
+    "unrouted",
+    "crossings"
+   ],
+   "properties": {
+    "errors": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "warnings": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "infos": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "parts": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "nets": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "unrouted": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "crossings": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  },
+  "findings": {
+   "type": "array",
+   "maxItems": 200,
+   "items": {
+    "$ref": "#/$defs/finding"
+   }
+  },
+  "truncated": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "findings left out past the first 200"
+  },
+  "artifacts": {
+   "type": "object",
+   "description": "paths relative to the project, POSIX separators",
+   "additionalProperties": false,
+   "properties": {
+    "circuit": {
+     "type": "string"
+    },
+    "placement": {
+     "type": "string"
+    },
+    "schematic": {
+     "type": "string"
+    },
+    "board": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    },
+    "rules": {
+     "type": "string"
+    },
+    "sym_lib_table": {
+     "type": "string"
+    },
+    "fp_lib_table": {
+     "type": "string"
+    },
+    "filled": {
+     "type": "string"
+    },
+    "erc": {
+     "type": "string"
+    },
+    "netlist": {
+     "type": "string"
+    },
+    "drc": {
+     "type": "string"
+    },
+    "schematic_svg": {
+     "type": "string"
+    },
+    "glb": {
+     "type": "string"
+    },
+    "render": {
+     "type": "string"
+    },
+    "svg": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "string"
+     },
+     "description": "layer name to SVG path"
+    }
+   }
+  },
+  "timings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "step",
+     "seconds"
+    ],
+    "properties": {
+     "step": {
+      "type": "string"
+     },
+     "seconds": {
+      "type": "number",
+      "minimum": 0
+     },
+     "cached": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "changes": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "circuit",
+    "layout"
+   ],
+   "properties": {
+    "circuit": {
+     "type": "array",
+     "maxItems": 50,
+     "items": {
+      "type": "string",
+      "maxLength": 300
+     }
+    },
+    "layout": {
+     "type": "array",
+     "maxItems": 50,
+     "items": {
+      "type": "string",
+      "maxLength": 300
+     }
+    }
+   }
+  },
+  "placement": {
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "score",
+      "crossings",
+      "length_mm"
+     ],
+     "properties": {
+      "score": {
+       "type": "number"
+      },
+      "crossings": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "length_mm": {
+       "type": "number"
+      }
+     }
+    }
+   ]
+  },
+  "waiting": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "cached": {
+   "type": "boolean"
+  }
+ },
+ "$defs": {
+  "finding": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "source",
+    "code",
+    "severity",
+    "message"
+   ],
+   "properties": {
+    "source": {
+     "type": "string"
+    },
+    "code": {
+     "type": "string"
+    },
+    "severity": {
+     "enum": [
+      "error",
+      "warning",
+      "info"
+     ]
+    },
+    "message": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "at": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "space"
+     ],
+     "properties": {
+      "space": {
+       "enum": [
+        "board",
+        "sheet",
+        "source"
+       ]
+      },
+      "x": {
+       "type": "number"
+      },
+      "y": {
+       "type": "number"
+      },
+      "layer": {
+       "type": "string"
+      },
+      "file": {
+       "type": "string"
+      },
+      "line": {
+       "type": "integer"
+      }
+     }
+    },
+    "refs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "pins": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "nets": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

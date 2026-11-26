@@ -1,0 +1,80 @@
+name: Kernel
+
+# The engine's tests (kernel/). `kernel` runs everything that needs no KiCad on a plain runner; `kernel-kicad` runs
+# the whole suite, kicad-cli and KiCad's own libraries included, in KiCad's 10.0.6 image. A change that touches
+# neither kernel/ nor this file runs neither: `changes` says so, and the jobs it gates are skipped (which a required
+# check accepts). Any doubt (no base, a failed diff) says run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kernel-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      kernel: ${{ steps.diff.outputs.kernel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          kernel=true
+          if [ "$EVENT" = pull_request ]; then
+            range="origin/$BASE_REF...HEAD"
+          else
+            range="$BEFORE..$SHA"
+            case "$BEFORE" in 0000000*) range= ;; esac
+          fi
+          if [ -n "$range" ] && files=$(git diff --name-only "$range") && [ -n "$files" ]; then
+            kernel=false
+            while IFS= read -r f; do
+              case "$f" in
+                kernel/*|.github/workflows/kernel.yml) kernel=true ;;
+              esac
+            done <<< "$files"
+          fi
+          echo "kernel=$kernel"
+          echo "kernel=$kernel" >> "$GITHUB_OUTPUT"
+
+  kernel:
+    name: Kernel (no KiCad)
+    needs: changes
+    if: needs.changes.outputs.kernel == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --directory kernel pytest -m "not kicad_cli and not kicad_libs"
+
+  kernel-kicad:
+    name: Kernel (KiCad 10)
+    needs: changes
+    if: needs.changes.outputs.kernel == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: kicad/kicad:10.0.6-full
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: kicad-cli version
+      - run: uv run --directory kernel pytest

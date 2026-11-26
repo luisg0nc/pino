@@ -1,0 +1,10 @@
+{
+  "name": "pino reference board",
+  "notes": ["56 x 44 mm, four M3 mounts on a 49 x 37 mm pattern"],
+  "origin": "centre of the mounting pattern, x along the long axis, mm",
+  "board": {"width": 56, "height": 44, "corner_radius": 2},
+  "mounts": [{"x": -24.5, "y": 18.5, "hole": 3.2, "boss": 5.0, "name": "H1"},
+             {"x": 24.5, "y": 18.5, "hole": 3.2, "boss": 5.0, "name": "H2"},
+             {"x": -24.5, "y": -18.5, "hole": 3.2, "boss": 5.0, "name": "H3"},
+             {"x": 24.5, "y": -18.5, "hole": 3.2, "boss": 5.0, "name": "H4"}]
+}

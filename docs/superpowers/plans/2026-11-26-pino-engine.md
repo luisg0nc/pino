@@ -97,7 +97,7 @@ kernel/
   - `libraries.Libraries(symbols: Path, footprints: Path, models: Path)` (frozen dataclass) with `path_vars() -> dict[str, str]` (the three `KICAD10_*_DIR` names), `libraries.discover(env: Mapping[str, str] = os.environ) -> Libraries`, `libraries.LibrariesNotFound(Exception)` with `.tried: list[str]`.
   - `pino_kernel.__version__ = "0.1.0"`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # test_sexpr.py
@@ -148,12 +148,12 @@ def test_no_pcbnew_import(): ...      # grep kernel/src for r"^\s*(import|from)\
 def test_no_personal_paths(): ...     # grep kernel/ text files (skip .venv and this file) for r"/home/[a-z]" and "/Users/"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel'`
 
-- [ ] **Step 3: Write the package**
+- [x] **Step 3: Write the package**
 
 - `pyproject.toml`: name `pino-kernel`, version `0.1.0`, `requires-python = ">=3.12"`, `dependencies = []`, build backend hatchling with packages `src/pino` and `src/pino_kernel`, `[project.scripts] pino-kernel = "pino_kernel.cli:main"`, dependency group `dev = ["pytest>=8", "jsonschema>=4"]`, pytest `testpaths = ["tests"]` and markers `kicad_cli`, `kicad_libs`.
 - `sexpr.py`: the board spike's reader and printer as they are (they match KiCad 10's save layout). Every later module uses its convention: `Sym` for bare atoms, `str` for quoted strings. The schematic spike's `Q` convention is not used.
@@ -162,12 +162,12 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel'`
 - `NOTICE`: append a "pcb-kit" section: source URL, commit `32867ca`, the three ported files, and the MIT licence text with "Copyright (c) 2026 Jeremy Seitz".
 - `.gitignore`: add `kernel/.venv/`, `__pycache__/`, `.pytest_cache/`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests -v`
 Expected: PASS (6 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add NOTICE .gitignore kernel
@@ -189,7 +189,7 @@ git commit -m "kernel: package skeleton, S-expressions, IDs, coordinates, librar
   - `KicadCli(libraries: Libraries, home: Path, argv0: Sequence[str])`; `KicadCli.find(env=os.environ) -> list[str] | None` (`shlex.split(env["PINO_KICAD_CLI"])` when set and its first word resolves, else `shutil.which("kicad-cli")`).
   - Methods, each deleting its output file or folder first (a failed run must not leave the last build's report behind): `version() -> str`, `erc(sch, out) -> CliRun`, `netlist(sch, out) -> CliRun`, `sch_svg(sch, out_dir) -> CliRun`, `drc(pcb, out, *, refill=False, save=False, parity=False) -> CliRun`, `pcb_svg(pcb, out_dir, layers: Sequence[str]) -> CliRun`, `glb(pcb, out) -> CliRun`, `render(pcb, out, *, side="top", width=1600, height=1200) -> CliRun`, `sch_upgrade(sch) -> CliRun`, `run(step, *args, timeout=120.0) -> CliRun`, `env() -> dict[str, str]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `fake_kicad_cli.py` prints one JSON line `{"argv": sys.argv[1:], "env": {k: os.environ.get(k) for k in WATCHED}}`; prints `--define-var` for any `--help`; sleeps 30 s when its first argument is `sleep`; never writes an output file.
 
@@ -230,24 +230,24 @@ def test_real_version_is_10(tmp_path):
     assert cli.version().startswith("10.")
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_kicad_cli.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.kicad_cli'`
 
-- [ ] **Step 3: Write `kicad_cli.py`**
+- [x] **Step 3: Write `kicad_cli.py`**
 
 - `env()`: `os.environ` minus `DISPLAY` and `WAYLAND_DISPLAY`, plus `KICAD_CONFIG_HOME=<home>/config`, `XDG_CACHE_HOME=<home>/cache`, plus `libraries.path_vars()`. Create both folders on first use.
 - `-D NAME=VALUE` for each path var is added to a subcommand only when `<argv0> <subcommand> --help` lists `--define-var`; the answer is cached per subcommand on the instance.
 - `run()` uses `subprocess.run(argv, env=..., capture_output=True, text=True, timeout=..., start_new_session=True)`; on `TimeoutExpired` it kills the child's process group with `os.killpg(proc.pid, SIGKILL)` (only that group) and returns `returncode=-9` with output `"timed out after <n> s"`. Paths are passed as `str(path)` list items, never through a shell.
 - Exact commands: `sch erc --format json --severity-all -o OUT SCH`; `sch export netlist --format kicadxml -o OUT SCH`; `sch export svg -o DIR SCH`; `pcb drc --format json --severity-all [--refill-zones] [--save-board] [--schematic-parity] -o OUT PCB`; `pcb export svg --mode-multi --exclude-drawing-sheet --page-size-mode 2 -l L1,L2,… -o DIR/ PCB` (if this kicad-cli's `pcb export svg --help` lacks `--mode-multi`, one `--mode-single` call per layer named `DIR/board-<layer with . replaced by _>.svg`); `pcb export glb --include-tracks --include-pads --include-zones --include-silkscreen --include-soldermask -o OUT PCB`; `pcb render --side SIDE --width W --height H --quality basic -o OUT PCB`; `sch upgrade --force SCH`; `version`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_kicad_cli.py -v`
 Expected: PASS (the real-version test passes or skips with the marker message)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/kicad_cli.py kernel/tests/fake_kicad_cli.py kernel/tests/test_kicad_cli.py
@@ -270,7 +270,7 @@ git commit -m "kernel: kicad-cli wrapper with no display, isolated home and path
   - `SymbolNotFound(KeyError)`, `UnsupportedSymbol(ValueError)`.
   - `turn`, `pin_at`, `pin_outward`, `body_box` as in the spike.
 
-- [ ] **Step 1: Write the fixture libraries and the failing tests**
+- [x] **Step 1: Write the fixture libraries and the failing tests**
 
 `pino_test.kicad_sym` is hand-written, indented with two spaces (not tabs), with: `R` and `C` (pins 1 and 2, vertical, as KiCad's Device:R), `R_Derived` (`extends "R"`, Value `Rd`), `LED` (K=1 left, A=2 right), `LDO3` (VIN=1 left, GND=2 bottom, VOUT=3 right), `IC6` (VDD=1, GND=2, IO1=3, IO2=4, IO3=5, EN=6), `CONN_VBUS` (VBUS on pins 1 to 4, GND on 5, all on the right), `CONN2` (pins 1 and 2 on one side), `DUAL` (two units). `power.kicad_sym` holds `GND`, `+3V3`, `VBUS` and `PWR_FLAG` power symbols.
 
@@ -312,21 +312,21 @@ def test_real_ldo_extends_and_footprint():
 
 `fixture_libs` (in `conftest.py`) sets the three `PINO_KICAD_*_DIR` variables to `tests/fixtures/libs/{symbols,footprints,3dmodels}` with monkeypatch and returns `discover()`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_symbols.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.symbols'`
 
-- [ ] **Step 3: Write `symbols.py`**
+- [x] **Step 3: Write `symbols.py`**
 
 Find a top-level symbol by scanning tokens with a depth counter (strings and parentheses, as the spike's `_STRING_OR_PAREN`) and taking `(symbol "<name>"` at depth 1; never by indentation. Count units from sub-symbol names `<Name>_<unit>_<style>`; more than one unit above 0 raises `UnsupportedSymbol`. Keep the spike's `extends` flattening, pin geometry and pose functions.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_symbols.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/symbols.py kernel/tests/fixtures/libs/symbols kernel/tests/test_symbols.py kernel/tests/conftest.py
@@ -361,7 +361,7 @@ git commit -m "kernel: symbol loader that does not depend on KiCad's indentation
   - `findings.At(space: str, x=None, y=None, layer=None, file=None, line=None)` (`space` in `board|sheet|source`), `findings.Finding(source, code, severity, message, at: At | None = None, refs=(), pins=(), nets=())` frozen, `to_json() -> dict`, `SEVERITIES = ("error", "warning", "info")`.
   - `fab.FabProfile(name, layers, min_track, min_clearance, min_via_drill, min_via_diameter, min_annular, min_hole, hole_to_hole, copper_to_edge, silk_min_width, silk_min_text_height, board_thickness=1.6, copper_oz=1.0)`, `fab.jlc_standard_2layer`, `fab.jlc_standard_4layer`, `fab.PROFILES: dict[str, FabProfile]`, `fab.for_layers(n) -> FabProfile`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_json_round_trip_is_exact(sample_circuit):           # a hand-built Circuit with every field set
@@ -394,22 +394,22 @@ def test_jlc_profiles():
     assert set(fab.PROFILES) == {"jlc-standard-2layer", "jlc-standard-4layer"}
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_circuit.py tests/test_fab.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write the three modules**
+- [x] **Step 3: Write the three modules**
 
 - `to_json`: `json.dumps(..., indent=1, sort_keys=True, ensure_ascii=False) + "\n"`; floats rounded to 6 decimals; lists keep declaration order (layout reads it).
 - Profiles (conservative values at or above JLC's published standard minimums; a person checks them against JLC's capability page before stage 8 makes fab files): 2-layer `min_track 0.15, min_clearance 0.15, min_via_drill 0.3, min_via_diameter 0.6, min_annular 0.15, min_hole 0.3, hole_to_hole 0.5, copper_to_edge 0.3, silk_min_width 0.15, silk_min_text_height 1.0`; 4-layer the same except `min_track 0.1, min_clearance 0.1`. Both 1.6 mm, 1 oz.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_circuit.py tests/test_fab.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/circuit.py kernel/src/pino_kernel/findings.py kernel/src/pino_kernel/fab.py kernel/tests/test_circuit.py kernel/tests/test_fab.py
@@ -439,7 +439,7 @@ git commit -m "kernel: circuit model JSON, placement, findings and fab profiles"
   - `pino.__init__` exports `Board, Block, Part, PinSet, CircuitError`.
   - `tests/helpers.py`: `small_board() -> pino.Board` (fixture libs: CONN_VBUS J1 to LDO3 U1 to IC6 U2, caps, an LED with its resistor; validated and complete) used by later tasks.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_pin_name_gives_every_pad(fixture_libs):
@@ -483,12 +483,12 @@ def test_to_circuit_is_deterministic(fixture_libs):
     assert small_board().to_circuit().to_json() == small_board().to_circuit().to_json()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_pino_parts.py -v`
 Expected: FAIL with `ImportError: cannot import name 'Board' from 'pino'`
 
-- [ ] **Step 3: Write `pino/board.py`**
+- [x] **Step 3: Write `pino/board.py`**
 
 - Keep the spike's rules: role as method name; every pin on a net or no-connect; stacked pins on different nets are an error; `external=True` is explicit; no automatic PWR_FLAG.
 - Line capture: each public call records the first stack frame whose file is outside the `pino` package (`sys._getframe` walk); stored as `line` on specs and on `Problem`. `file` is the frame's filename.
@@ -497,17 +497,20 @@ Expected: FAIL with `ImportError: cannot import name 'Board' from 'pino'`
 - `nc_rest` returns what it marked and `to_circuit` stores it in `Circuit.nc_rest` so the build can list it.
 - Placement, outline, keep-outs, zones, net classes and expects come in Task 6; `to_circuit` fills them with empty values for now, and `outline` is required (a missing one is a validate problem: "Board needs an outline: pass outline='outline.json' or outline=(width, height)"). A tuple outline becomes a rounded rectangle with 1 mm corners through Task 6's `outline.rectangle`; until then the tuple only stores width and height.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_pino_parts.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino kernel/tests/helpers.py kernel/tests/test_pino_parts.py
 git commit -m "pino: board.py library with parts by symbol and footprint, pins, nets and blocks"
 ```
+
+> **Plan fix (Task 5, during the build):** `test_unknown_pin_names_the_line` as written could never pass: `r["X"]` raises
+> before `line = ...` runs on the same line. The test takes the line number first (`f_lineno + 2`) and then calls `r["X"]`.
 
 ---
 
@@ -531,7 +534,7 @@ git commit -m "pino: board.py library with parts by symbol and footprint, pins, 
   - `Board.expect_path(a, b, *, through: Sequence[Part] = ()) -> None`, `Board.expect_apart(a, b) -> None`.
   - `pino.fab` is `pino_kernel.fab`; `pino` exports `Group`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # test_outline.py
@@ -576,26 +579,30 @@ def test_expect_path_records_pins(fixture_libs):
     assert e.kind == "path" and e.a == [PinRef("J1", n) for n in "1234"] and e.b == [PinRef("U1", "1")]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_outline.py tests/test_pino_intent.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.outline'`
 
-- [ ] **Step 3: Write `outline.py` and extend `pino/board.py`**
+- [x] **Step 3: Write `outline.py` and extend `pino/board.py`**
 
 Port `outline_points` and its two helpers unchanged in logic. `Board.part(ref) -> Part` is added for tests and helpers. All intent and rule checks that need the whole board (unknown nets in a class, missing outline) run in `validate()`; argument checks raise at the call.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_outline.py tests/test_pino_intent.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino kernel/src/pino_kernel/outline.py kernel/tests/fixtures/outline kernel/tests/test_outline.py kernel/tests/test_pino_intent.py
 git commit -m "pino: placement intent, outline.json, keep-outs, zones, net classes and expect_path"
 ```
+
+> **Plan fix (Task 6, during the build):** `test_cutout_that_does_not_fit` used a boss at (9.5, 9.5) on a 20 x 20 board,
+> which pcb-kit's rule accepts (the cut stays inside the board). The test uses a boss at (2, 2), whose cut reaches past
+> the board's centre lines. Keep-out layers "all" are stored as `["*.Cu"]` and expanded by the board writer.
 
 ---
 
@@ -611,7 +618,7 @@ git commit -m "pino: placement intent, outline.json, keep-outs, zones, net class
   - Child: `python -I -m pino_kernel.runner <board.py>`; prints exactly one JSON object on the real stdout: `{"ok": true, "circuit": {...}}` or `{"ok": false, "problems": [{"message", "file", "line"}]}`. `board.py`'s own prints go to stderr.
   - Parent: `RunResult(circuit: Circuit | None, problems: list[Problem], log: str, seconds: float)`; `run_board(project: Path, *, libraries: Libraries, timeout: float = 30.0, python: str = sys.executable) -> RunResult`. `log` is the child's stderr, last 4000 characters. Problem files are relative to the project when inside it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_good_board(make_project, fixture_libs):
@@ -647,22 +654,22 @@ def test_board_py_imports_a_sibling_module(make_project, fixture_libs):
 
 `make_project(board_py: str, extra: dict[str, str] = {}, outline: str | None = None) -> Path` (conftest) writes a project folder in `tmp_path`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_run_board.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.run_board'`
 
-- [ ] **Step 3: Write the runner and the parent**
+- [x] **Step 3: Write the runner and the parent**
 
 - Child: dup the real stdout, point `sys.stdout` at stderr, put the project folder at `sys.path[0]`, `os.chdir` to it, `runpy.run_path(board.py, run_name="__main__")`, then take the single board from `_BOARDS` and print `to_circuit().to_json()` wrapped as above. Map `SyntaxError` to its `lineno`; any other exception to the innermost traceback frame inside the project folder.
 - Parent: environment = `PATH`, `HOME`, `LANG`, `PYTHONHASHSEED=0` and the three `PINO_KICAD_*_DIR` values from `libraries`; `cwd=project`; `start_new_session=True`; on timeout kill the child's process group only. Output that is not one JSON object becomes the problem "board.py stopped the engine's runner: <last stderr line>".
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_run_board.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/runner.py kernel/src/pino_kernel/run_board.py kernel/tests/test_run_board.py kernel/tests/conftest.py
@@ -685,7 +692,7 @@ git commit -m "kernel: run board.py in a child process with a timeout and errors
   - `writer.write_schematic(circuit: Circuit, symbols: SymbolLibrary) -> SchematicFiles`; `writer.DrawingError(Exception)`; `writer.symbol_boxes(canvas: Canvas) -> list[dict]` (`{ref, x0, y0, x1, y1, pins: [{number, x, y}]}` in sheet mm, for the views stage).
   - `checks.netlist.Netlist(comps: dict, nets: dict[str, frozenset[tuple[str, str]]])`, `read_netlist(path: Path) -> Netlist`, `compare(circuit: Circuit, netlist: Netlist) -> list[Finding]` (source `netlist`, code `netlist_mismatch`, error), `net_names(circuit, netlist) -> list[Finding]` (source `netlist`, code `net_name`, warning: "net LED_A exports as Net-(D1-A)").
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_same_bytes_in_two_processes(fixture_libs, tmp_path):
@@ -743,12 +750,12 @@ def test_probe_pin_positions(kicad, tmp_path): ...   # port of spike probe.py: 1
 def test_kicad_resave_keeps_uuids(kicad, tmp_path): ...  # sch_upgrade; every symbol and pin uuid survives; netlist still matches
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_writer.py tests/test_netlist_check.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.schematic'`
 
-- [ ] **Step 3: Port the spike's layout and writer onto `Circuit`**
+- [x] **Step 3: Port the spike's layout and writer onto `Circuit`**
 
 - The layout reads `Circuit` (parts, blocks, `net_of`) and `SymbolLibrary`, not the spike's `model.Board`. Every S-expression uses `Sym`/`str` from Task 1.
 - UUIDs: symbol `ids.symbol_uuid(part.key)`, pins `ids.uid("pin", key, number)`, sheet `ids.sheet_uuid()`, power symbols, labels, wires, junctions, no-connects and frames `ids.uid("sch", <kind>, <spike key parts>)`. The board name appears only in the title block.
@@ -756,12 +763,12 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.schematic
 - Net names: every signal net gets at least one global label. Where the layout drew a net only as wire, add a global label on a two-grid stub from the net's first wire end that has room; the drawing check (`connect`) must still pass. Power nets keep power symbols.
 - Keep the spike's field-justify rule, its geometry check (`connect`), and `nc_rest` behaviour.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_writer.py tests/test_netlist_check.py -v`
 Expected: PASS (kicad tests pass, or skip with the marker messages)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/schematic kernel/src/pino_kernel/checks kernel/tests/test_schematic_writer.py kernel/tests/test_netlist_check.py kernel/tests/schematic_cases.py kernel/tests/fixtures
@@ -781,7 +788,7 @@ git commit -m "kernel: schematic writer with stable UUIDs and a pin-based netlis
 - Consumes: `Canvas`, `Circuit`, `SymbolLibrary`.
 - Produces: `lint(canvas: Canvas, circuit: Circuit, symbols: SymbolLibrary) -> list[Finding]`; source `lint`, severity `warning`, codes `overlap`, `wire_through`, `crossing`, `direction`, `blocks_overlap`; `at` is `At("sheet", x_mm, y_mm)`; `refs` names the parts involved.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_clean_board_has_no_findings(fixture_libs):
@@ -813,24 +820,24 @@ def test_mosfet_in_a_path_is_a_lint_finding():
     assert any(f.code == "direction" for f in lint(layout_sheet(c, syms)[0], c, syms))
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_lint.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.schematic.lint'`
 
-- [ ] **Step 3: Write the lint and the three layout fixes**
+- [x] **Step 3: Write the lint and the three layout fixes**
 
 - Lint: the spike's rules, each finding with a sheet position in mm (the centre of the overlap, the crossing point, the symbol origin) and the refs involved.
 - Frames: each frame takes its own block's height; frames in one row share their top edge.
 - Satellites: clusters are ordered by the position of the hub pin they share a net with (top to bottom for columns, left to right for rows); clusters with no hub pin keep declaration order after them.
 - Arrangement: "clusters below" when the block's largest path part has at most `SMALL_HUB` (8) pins, "columns to the right" otherwise. The spike's `right < 90 and len(paths) < 3` threshold is removed.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_schematic_lint.py tests/test_schematic_writer.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/schematic kernel/tests/test_schematic_lint.py
@@ -857,7 +864,7 @@ git commit -m "kernel: schematic lint with positions; frames per block, satellit
   - `model_findings(placed: list[Placed], lib: FootprintLibrary) -> list[Finding]` (source `model3d`, code `model3d_missing` warning with the unresolved path, `model3d_none` info).
   - `pin_pad_findings(circuit: Circuit, lib: FootprintLibrary) -> list[Finding]` (source `pads`: a pin with no pad is an error; a numbered pad with no pin is a warning; pads numbered `""` are mechanical and ignored).
 
-- [ ] **Step 1: Write the fixture footprints and the failing tests**
+- [x] **Step 1: Write the fixture footprints and the failing tests**
 
 Hand-written footprints in `pino_test.pretty`: `R_0603` (pads 1 at (-0.8, 0) and 2 at (0.8, 0), courtyard rect (-1.5, -0.75)-(1.5, 0.75), model `${KICAD10_3DMODEL_DIR}/pino_test.3dshapes/R_0603.step`, two drawings that carry library UUIDs), `R_0603_oneline` (the same, on one line), `C_0603`, `LED_0603` (model path that does not exist), `SOT23` (3 pads), `SOIC6`, `USB_Edge` (5 pads, a `"PCB Edge"` text on Dwgs.User at local y = +3), `MODULE_ANT` (6 pads, a keep-out zone at local y < 0 whose `layers` list F.Cu, B.Cu and In1.Cu to In30.Cu), `PIN_TH` (one through-hole pad).
 
@@ -899,12 +906,12 @@ def test_touching_squares_do_not_overlap(): ...
 def test_l_shape_containment(): ...                  # a square in the notch of an L is not inside it
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_footprint.py tests/test_geometry.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Port the spike's footprint code**
+- [x] **Step 3: Port the spike's footprint code**
 
 - Keep the spike's flip, absolute pad and text angles, pad option order, KiCad drawing order (`drawing_key`), library-UUID stripping and `Datasheet`/`Description` properties. The footprint UUID is `ids.footprint_uuid(key)`; item UUIDs `ids.uid("footprint", key, str(child_index), kind)`; `(path …)` is `ids.footprint_path(key)`, `(sheetname "/")`, `(sheetfile "board.kicad_sch")`.
 - The placed position goes through `coords.to_kicad`; pad and courtyard results come back in board mm.
@@ -912,12 +919,12 @@ Expected: FAIL with `ModuleNotFoundError`
 - `edge_face`: the side of the footprint's bounding box where a footprint-owned keep-out zone lies; else the side of a `"PCB Edge"` text on Dwgs.User; else `bottom` (KiCad's connector convention: mating face toward local +y).
 - `model_exists`: replace `${KICAD10_3DMODEL_DIR}`, `${KICAD9_3DMODEL_DIR}`, `${KICAD8_3DMODEL_DIR}`, `${KICAD7_3DMODEL_DIR}` and `${KICAD6_3DMODEL_DIR}` with `libraries.models`; true when that file, or the same stem with `.step`, `.stp` or `.wrl`, exists.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_footprint.py tests/test_geometry.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/pcb kernel/src/pino_kernel/geometry.py kernel/tests/fixtures/libs kernel/tests/test_footprint.py kernel/tests/test_geometry.py
@@ -941,7 +948,7 @@ git commit -m "kernel: footprint loader with library roots, edge face and 3D mod
   - `copper_layers(n: int) -> list[tuple[int, str]]` (F.Cu 0, In1.Cu 4, In2.Cu 6, B.Cu 2).
   - `tests/semdiff.py`: `changed_items(a_text: str, b_text: str) -> list[tuple[str, str]]` (top-level `(kind, uuid)` pairs that differ, order ignored).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_same_bytes_twice_and_across_hash_seeds(fixture_libs, tmp_path): ...   # sha256 equal; subprocess with PYTHONHASHSEED 1 and 98765
@@ -999,12 +1006,12 @@ def test_footprint_zone_survives_kicad_resave(kicad, tmp_path):
     assert zone_polygon(footprint_named_text(out, "U1")) == zone_polygon(footprint_named_text(filled, "U1"))
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_board_writer.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.pcb.writer'`
 
-- [ ] **Step 3: Write the board writer**
+- [x] **Step 3: Write the board writer**
 
 - From the spike: header, layers, setup with `pcbplotparams`, footprints front then back each by UUID, Edge.Cuts drawings by (layer, start, end, uuid), `embedded_fonts no`. No tracks or vias in this stage.
 - Outline: `circuit.outline.segments` to `gr_line`/`gr_arc` on Edge.Cuts, stroke 0.05, UUIDs `ids.uid("edge", kind, index)`.
@@ -1017,17 +1024,30 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'pino_kernel.pcb.write
 - `kicad_pro`: the spike's JSON with rules from the profile and net classes from `circuit.net_classes`; `meta.filename "board.kicad_pro"`.
 - `kicad_dru`: `(version 1)` then one rule per limit named `"pino: <limit>"` with the profile's values in mm (`edge_clearance` = `copper_to_edge`, `text_height` = `silk_min_text_height`, `silk_clearance` 0).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_board_writer.py -v`
 Expected: PASS (kicad tests pass, or skip with the marker messages)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/pcb kernel/tests/semdiff.py kernel/tests/test_board_writer.py
 git commit -m "kernel: board writer with stackups, outline, holes, zones, net classes and JLC rules"
 ```
+
+> **Plan fixes (Task 11, during the build), each found by the refill test against kicad-cli 10.0.6:**
+> - Footprint-owned zones: board coordinates (after rotation, flip and translation) are what KiCad's re-save keeps;
+>   `test_footprint_zone_survives_kicad_resave` passes with them and with `(layers "F.Cu" "B.Cu")` written as a list.
+> - Edge.Cuts arcs: KiCad keeps arcs turning one way in its y-down frame and swaps the ends of the others, so the
+>   writer swaps start and end when the cross product in KiCad's frame is negative.
+> - `drc --save-board` stores every `-D` variable as a board `(property ...)`. A saving run passes the library paths
+>   through the environment only.
+> - Mounting holes use the footprint name `"MountingHole"` with no library nickname (KiCad's library check reports
+>   `"pino:MountingHole"` as a missing library).
+> - `.kicad_dru`: `silk_clearance` with no condition also matches silk against copper zones, and `text_height` against
+>   fab-layer text, so both rules carry a silkscreen condition.
+> - An unrouted board's GND zone with no through-hole pad is `isolated_copper` (warning); the refill test allows it.
 
 ---
 
@@ -1045,7 +1065,7 @@ git commit -m "kernel: board writer with stackups, outline, holes, zones, net cl
   - `ratsnest(nets: Mapping[str, Sequence[PadPoint]], planes: Collection[str] = ()) -> list[Edge]`.
   - `Score(crossings: int, length: float, total: float, points: list[tuple[float, float]])`; `score(nets, planes=(), weights=WEIGHTS, any_side=False) -> Score` with `total = cross * crossings + length_weight * length`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_mst_of_a_square():
@@ -1071,21 +1091,21 @@ def test_index_agrees_with_brute_force():
     assert EdgeIndex(edges).count_within() == count_among(edges)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_ratsnest.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Port the functions and add `PadPoint`, `ratsnest`, `Score`, `score`**
+- [x] **Step 3: Port the functions and add `PadPoint`, `ratsnest`, `Score`, `score`**
 
 Iterate nets in sorted name order so ties and crossing points come out the same every run.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_ratsnest.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/placement kernel/tests/test_ratsnest.py
@@ -1107,7 +1127,7 @@ git commit -m "kernel: ratsnest scorer ported from pcb-kit (MIT)"
   - `place(circuit: Circuit, footprints: FootprintLibrary, *, rounds: int = 2) -> PlaceResult`.
   - Findings: source `placement`, codes `placement_no_room` (warning, with the best invalid spot as `at`), `placement_loop` (error).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_fixed_position_is_exact(fixture_libs, fp_lib):
@@ -1143,12 +1163,12 @@ def test_hundred_parts_in_under_five_seconds(fixture_libs, fp_lib):
     assert place(many_parts(100, outline=(80, 60)), fp_lib).seconds < 5.0
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_placer.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write the placer**
+- [x] **Step 3: Write the placer**
 
 The algorithm, which the tests do not fully fix:
 
@@ -1177,12 +1197,12 @@ improve: `rounds` rounds over non-fixed parts (edge parts only along their edge)
          candidates with the others held; keep a move only if the total score drops
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_placer.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/placement/placer.py kernel/tests/test_placer.py
@@ -1206,7 +1226,7 @@ git commit -m "kernel: placer that turns edge, near, side, group and fixed inten
   - `courtyard_overlaps(placed: list[Placed]) -> list[Finding]` (source `courtyard`, code `courtyard_overlap`, error, `at` the centre of the overlap box, `layer` `F.CrtYd` or `B.CrtYd`).
   - `fit_findings(circuit: Circuit, placed: list[Placed], fab: FabProfile) -> list[Finding]` (source `fit`, errors: `outside_outline`, `pad_near_edge`, `in_keepout`, `on_hole`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_path_on_one_net_passes(): assert check_expects(c_path_same_net, n_ok, PADS) == []
@@ -1237,23 +1257,23 @@ def test_fit(fixture_libs, fp_lib): ...                          # part past the
 def test_edge_part_may_cross_on_its_face_only(fixture_libs, fp_lib): ...
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_checks.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write the four checks**
+- [x] **Step 3: Write the four checks**
 
 - `expect_path`, no `through`: every pin of `a` and every pin of `b` sit on one exported net. With `through`: a breadth-first walk where nodes are exported nets and a step crosses one listed part from the net of one of its pins to the net of another; it must reach `b`'s net using only listed parts. The walk reads `netlist.nets` pin sets only; net names are only used in messages.
 - Severity map for both reports: `error` and `warning` as they are; `exclusion` and `ignore` dropped.
 - Courtyards and fit reuse the geometry the placer uses (Task 10); a through-hole part's courtyard counts on both sides.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_checks.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/checks kernel/tests/test_checks.py kernel/tests/fixtures/reports
@@ -1272,7 +1292,7 @@ git commit -m "kernel: pin-based assertions, ERC and DRC findings with positions
 - Consumes: `sexpr.parse`, `sexpr.dump`.
 - Produces: `circuit(text: str) -> dict`, `circuit_changes(old: dict, new: dict) -> list[str]`, `layout(text: str) -> dict`, `layout_changes(old: dict, new: dict) -> list[str]`, `changes(old_pcb: str | None, new_pcb: str) -> dict[str, list[str]]` (`{"circuit": [...], "layout": [...]}`; with no old board, `{"circuit": ["first build"], "layout": []}`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_value_change(): assert "R3 value 10k -> 4.7k" in changes(board_text(r3="10k"), board_text(r3="4.7k"))["circuit"]
@@ -1287,21 +1307,21 @@ def test_first_build(): assert changes(None, base) == {"circuit": ["first build"
 
 The board texts are small `.kicad_pcb` strings built in the test file with `sexpr.dump`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_diff.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Port**
+- [x] **Step 3: Port**
 
 Take text, never a path. Drop the release parts of `layout()` (`title`, `prints`, `plotted_texts`, `_masked`): silk texts are compared as written. Use pino's `sexpr` (its `Sym` matches pcb-kit's bare-atom convention).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_diff.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/diff.py kernel/tests/test_diff.py
@@ -1329,7 +1349,7 @@ git commit -m "kernel: circuit and layout changes in words, ported from pcb-kit 
   - `build(project: Path, options: BuildOptions = BuildOptions()) -> BuildResult`. `KEEP_BUILDS = 20`.
   - Build folder `.pino/build/<hash>/`: `circuit.json`, `placement.json` (poses and ratsnest edges), `board.kicad_sch`, `board.kicad_pcb`, `board.kicad_pro`, `board.kicad_dru`, `sym-lib-table`, `fp-lib-table`, `filled/` (copies of the project files plus the refilled `board.kicad_pcb`), `erc.json`, `netlist.xml`, `drc.json`, `svg/board-<layer>.svg`, `schematic.svg`, `board.glb`, `render-top.png` (only with `render`), `result.json`. `artifacts` holds these paths relative to the project, POSIX separators; `svg` is a map layer to path.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 NO_KICAD = BuildOptions(kicad=False)
@@ -1386,12 +1406,12 @@ def test_two_builds_at_once(make_project, fixture_libs):
 def test_old_builds_are_pruned(make_project, fixture_libs, monkeypatch): ...   # KEEP_BUILDS=2, four different builds -> two folders remain
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_build.py tests/test_result.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write `result.py`, `history.py`, `build.py` and the schema**
+- [x] **Step 3: Write `result.py`, `history.py`, `build.py` and the schema**
 
 Steps and their timing names, in this fixed order in `timings` whatever order they finish in:
 
@@ -1418,17 +1438,27 @@ Steps and their timing names, in this fixed order in `timings` whatever order th
 - The temp folder is renamed onto `.pino/build/<hash>/` when complete; if that folder already exists (another build won the race), the temp folder is removed and the existing one used. History is recorded under the lock. Pruning removes build folders not among the newest `KEEP_BUILDS` history hashes, never the current or the previous one.
 - The JSON Schema file describes `pino.build/1` exactly as `BuildResult.to_json()` writes it (`additionalProperties: false` at the top level and in findings).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_build.py tests/test_result.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/result.py kernel/src/pino_kernel/history.py kernel/src/pino_kernel/build.py kernel/schema kernel/tests/test_build.py kernel/tests/test_result.py
 git commit -m "kernel: the fast build with a versioned result, cache, history and changes"
 ```
+
+> **Plan fixes (Task 16, during the build):**
+> - `test_missing_libraries_fail_in_plain_words` could not pass with Task 1's discovery order (a wrong
+>   `PINO_KICAD_SYMBOL_DIR` fell through to `/usr/share/kicad/symbols`). A `PINO_KICAD_<KIND>_DIR` that is set now wins
+>   outright, like `PINO_KICAD_CLI`; a wrong one is reported.
+> - The first kicad-cli build found three board-writer gaps: DRC parity wants every symbol field on the footprint
+>   (an `LCSC` property, font thickness 0.15 as KiCad writes it), pads of no-connect pins carry KiCad's
+>   `unconnected-(REF-PIN-PadN)` net, and the GLB export fails on a model file it cannot read (the test models are
+>   now a real 1.6 x 0.8 mm STEP box made with kicad-cli). A kicad-cli build of the small board is now a test.
+> - Build numbers are taken at the start under the lock (an entry marked `running`), so two builds at once get 1 and 2.
 
 ---
 
@@ -1452,7 +1482,7 @@ git commit -m "kernel: the fast build with a versioned result, cache, history an
     - a line that is not JSON, or an unknown `op` -> `{"id": <id or null>, "ok": false, "error": "<plain words>"}` and the loop goes on.
     - board.py still runs in a fresh child per build; logs go to stderr.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def run_cli(*args, **kw): return subprocess.run([sys.executable, "-m", "pino_kernel.cli", *args], capture_output=True, text=True, **kw)
@@ -1478,23 +1508,23 @@ def test_serve_answers_in_order_and_survives_bad_lines(make_project, fixture_lib
 def test_version(fixture_libs): assert json.loads(run_cli("version").stdout)["schema"] == "pino.build/1"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run --directory kernel pytest tests/test_cli.py -v`
 Expected: FAIL with `No module named pino_kernel.cli`
 
-- [ ] **Step 3: Write the CLI, the README and the CI jobs**
+- [x] **Step 3: Write the CLI, the README and the CI jobs**
 
 - `cli.py` with `argparse`; `serve` reads `sys.stdin` line by line and writes through one `sys.stdout.write(...); flush()`.
 - `kernel/README.md`: what the engine does, how to run (`uv run --directory kernel pino-kernel build <dir>`), the serve protocol above, library discovery and the `PINO_KICAD_*` variables, `PINO_KICAD_CLI`, the build folder layout, the result schema file, the pcbnew list ("pcbnew: none. Zone fill uses kicad-cli. Nothing to replace in KiCad 11."), the pcb-kit notice pointer. Run the humanizer skill on it.
 - CI: job `kernel` (ubuntu-latest, `astral-sh/setup-uv`, `uv run --directory kernel pytest -m "not kicad_cli and not kicad_libs"`) and job `kernel-kicad` in container `kicad/kicad:10.0.6-full` running the whole suite; both on the shell stage's `changes` filter. `app/src/ci.test.ts`: the case "no kernel job yet" now expects both jobs.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --directory kernel pytest tests/test_cli.py -v && pnpm -C app test -- ci.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/src/pino_kernel/cli.py kernel/README.md kernel/tests/test_cli.py .github/workflows/ci.yml app/src/ci.test.ts
@@ -1515,7 +1545,7 @@ git commit -m "kernel: pino-kernel build and serve, README and CI jobs"
 
 The board (spec section 6, parts only from KiCad's shipped libraries, LCSC fields empty): the spike schematic circuit (`spike-schematic:spike/schematic/board.py`) rewritten on the `pino` API, plus a second LED. Blocks `usb` (J1 `Connector:USB_C_Receptacle_USB2.0_16P` with footprint `Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12`, F1 polyfuse, R9 0R DNP across it, CC resistors, shield RC), `reg` (U2 `Regulator_Linear:AP2112K-3.3`, C3, C4), `mcu` (U1 `RF_Module:ESP32-C6-MINI-1`, decoupling, EN and BOOT pull-ups, SW1 `Switch:SW_Push` on `Button_Switch_SMD:SW_SPST_TL3342`, D1 status LED on IO8 with R6, D2 power LED on +3V3 with R7, `id="power-led"`). `outline.json`: 56 x 44 mm, corner radius 2, mounts H1 to H4 at (±24.5, ±18.5), hole 3.2, boss 5.0. Intent: `b.place(u1, edge="top", center=True)`, `b.place(j1, edge="bottom", center=True)`, `b.place(u2, near=j1, side="top")`, `b.place(sw1, edge="left")`, group `leds` (D1, R6, D2, R7) near U1 on the right. Rules: `b.zone("GND", layer="B.Cu")`, `b.net_class("power", ["VBUS", "+3V3"], width=0.5)`, `b.expect_path(j1["VBUS"], u2["VIN"], through=[f1])`, `b.expect_path(j1["D+"], u1["IO13"])`, `b.expect_path(j1["D-"], u1["IO12"])`, `b.expect_path(u2["VOUT"], u1["3V3"])`, `b.expect_apart(j1["D+"], j1["D-"])`.
 
-- [ ] **Step 1: Write the fixture and the failing test**
+- [x] **Step 1: Write the fixture and the failing test**
 
 ```python
 pytestmark = [pytest.mark.kicad_cli, pytest.mark.kicad_libs]
@@ -1559,21 +1589,21 @@ def test_ref_rename_with_id_keeps_the_link(ref):
 def test_serve_builds_the_reference(ref): ...       # one serve session: ping, build, shutdown; result verdict "ok"
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run --directory kernel pytest tests/test_reference_build.py -v`
 Expected: FAIL on the first real gap (or SKIPPED with "kicad-cli not found: install KiCad 10 to run this test" on a machine without KiCad)
 
-- [ ] **Step 3: Fix what the end-to-end build finds**
+- [x] **Step 3: Fix what the end-to-end build finds**
 
 Each fix goes into the module that owns it, with a unit test there first. Look at `schematic.svg` (rendered to PNG with `rsvg-convert`) and `svg/board-F_Cu.svg` yourself and say in the report what you saw and what they do not show.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `uv run --directory kernel pytest -v`
 Expected: PASS, with the kicad tests run (not skipped) on this machine
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add kernel/tests/fixtures/reference kernel/tests/test_reference_build.py
@@ -1581,6 +1611,19 @@ git commit -m "kernel: the reference board built end to end"
 ```
 
 ---
+
+> **Plan fixes (Task 18, during the build), each found by building the reference board:**
+> - DRC parity wants the symbol's Datasheet and Description on the footprint too: `PartSpec` carries both and the
+>   board writer writes them.
+> - The ESP32-C6-MINI-1 courtyard is a T that includes the antenna clearance. An edge part meets the edge on its face
+>   line: where its own face-side keep-out begins (the clearance then lies past the edge), else its courtyard's face
+>   side; it moves in until its pads keep the fab's copper-to-edge distance. A part placed near it gathers round its
+>   on-board body. Satellites and group members that find no room by their anchor fall back to the rest rule.
+> - KiCad saves a footprint's angle in (-180, 180] (270 is written -90).
+> - kicad-cli stamps the run's time into SVG titles, ERC/DRC JSON, the netlist and the GLB, the input's absolute path
+>   into the netlist, and its threaded DRC names either of two stacked pads in the unconnected list. `normalize.py`
+>   takes these out so a build folder is the same bytes in any copy of the project.
+> - `test_exported_names_and_parity` allows KiCad's `unconnected-(...)` nets beside board.py's.
 
 ## Self-review
 
