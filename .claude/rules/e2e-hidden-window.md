@@ -51,8 +51,9 @@ The person is working on this desktop. No test, script or check may put a window
   `X-Pino-Session` header, or every request is 404) and the config file (`configPath()`).
 - `page.mouse` and `page.keyboard` work on the hidden window.
 - A test works on a temporary folder (`tempProject`), never on a real project.
-- Never click "Open folder" unless main runs with `PINO_TEST=1`: only then is the folder dialog replaced by
-  `globalThis.__pinoMain.pickFolder` (the folder to answer with, or null), and `picks` counts the times it was asked.
+- Never click "Choose folder…" or "Open workspace…" unless main runs with `PINO_TEST=1`: only then is the folder
+  dialog replaced by `globalThis.__pinoMain.pickFolder` (the folder to answer with, or null), and `picks` counts the
+  times it was asked. "Use ~/boards" makes a folder in main's home: a spec checks that it is the run's own first.
 - A test kills only processes it or its app started, by pid. `agentsIn(folder)` (`e2e/terminal.ts`) finds the
   stand-ins running in a folder.
 - `PINO_TEST=1` also skips the single-instance lock, so test launches can run side by side.

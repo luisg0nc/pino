@@ -217,6 +217,17 @@ button.crumb[aria-expanded='true'] {
   color: var(--muted);
 }
 
+/* "current" or "empty", at the end of a project's row. */
+.project-said {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.menu-item.project-item:disabled {
+  color: var(--muted);
+}
+
 /* The session signs of the folder's other projects: a pill each, at most two, then +N. */
 .title-signs {
   display: flex;

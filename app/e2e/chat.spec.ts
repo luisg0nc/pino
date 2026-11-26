@@ -54,7 +54,7 @@ test("Claude calls pino's one tool through the real MCP server, and its card sho
     await expect(card).toHaveAttribute('data-state', 'done')
     await expect(card.locator('.chat-tool-label')).toContainText('pino · project')
     await card.locator('.chat-tool-line').click()
-    await expect(card).toContainText(`Project blinky in ${dir}. board.py: absent. brief.md: absent.`)
+    await expect(card).toContainText(`Project blinky in ${dir}. board.py: absent. brief.md: present.`)
   } finally {
     await app.close()
   }
@@ -245,8 +245,8 @@ test('closing the project in the middle of a turn ends the session, and its toke
     await expect(status(page)).toHaveText('Working')
     await expect.poll(() => agentsIn(dir)).toHaveLength(1)
     await page.getByRole('button', { name: 'Project blinky' }).click()
-    await page.getByRole('menuitem', { name: 'Close project' }).click()
-    await expect(page.locator('.plate')).toBeVisible()
+    await page.getByRole('menuitem', { name: 'All projects' }).click()
+    await expect(page.getByRole('main', { name: 'All projects' })).toBeVisible()
     await expect.poll(() => agentsIn(dir), { timeout: 10_000 }).toEqual([])
     const after = tree(dir)
     const stamps = after.map((path) => statSync(join(dir, path)).mtimeMs)

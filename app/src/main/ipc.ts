@@ -1,7 +1,8 @@
 import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import type { ArtifactName } from '../shared/build'
 import type { MarkPatch, NewMark } from '../shared/marks'
-import type { ProjectInfo, RecentFolder } from '../shared/project'
+import type { ProjectInfo } from '../shared/project'
+import type { Opened } from './opened'
 import { readArtifact, readRouteFile, resultOfBuild, type RouteFile } from './artifacts'
 import type { Builds } from './builds'
 import type { EngineInfo } from '../shared/ready'
@@ -17,7 +18,8 @@ import type { Trust } from './trust'
 import { takeAnswer, type ViewHolder } from './view'
 
 // The channels the window may ask on (src/preload/index.ts, `shared/bridge.ts`):
-//   invoked: project:pick, project:open, project:current, project:recent, project:close,
+//   invoked: workspace:current, workspace:pick, workspace:open, workspace:suggested, workspace:useSuggested,
+//            workspace:recent, workspace:list, project:open, project:close,
 //            session:current, session:start, session:trust, session:stop,
 //            chat:history, chat:lastConversation, chat:send, chat:interrupt, chat:setModel, chat:setMode,
 //            chat:setEffort, chat:models,
@@ -30,20 +32,9 @@ import { takeAnswer, type ViewHolder } from './view'
 //            view:ask (view.ts), window:maximized (index.ts)
 // What the window names (a project, a session) is not taken at its word: a project must be the one that is open.
 
-/** What main holds of the open project, as the window may ask for it. */
-export interface Projects {
-  /** The project that is open. */
-  open(): ProjectInfo | undefined
-  pick(): Promise<ProjectInfo | null>
-  openAt(dir: string): Promise<ProjectInfo>
-  /** The open project; rejects once with why the folder pino was started with could not be opened. */
-  current(): Promise<ProjectInfo | null>
-  recent(): Promise<RecentFolder[]>
-  close(): Promise<void>
-}
-
 export interface IpcDeps {
-  projects: Projects
+  /** The open workspace and its open project. */
+  opened: Opened
   sessions: Sessions
   trust: Trust
   models: KnownModels
@@ -65,7 +56,7 @@ export function broadcast(channel: string, message: unknown): void {
   }
 }
 
-export function registerIpc({ projects, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo }: IpcDeps): void {
+export function registerIpc({ opened, sessions, trust, models, builds, views, marks, routing, fab, showFolder, engineInfo }: IpcDeps): void {
   /** Only a page of one of pino's own windows is heard: the one local page, and its main frame. */
   const ours = (event: IpcMainEvent | IpcMainInvokeEvent): boolean => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -78,7 +69,7 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
     })
   }
   const projectOf = (id: unknown): ProjectInfo | undefined => {
-    const open = projects.open()
+    const open = opened.project()
     return open && open.id === id ? open : undefined
   }
   const mustBeOpen = (id: unknown): ProjectInfo => {
@@ -87,11 +78,17 @@ export function registerIpc({ projects, sessions, trust, models, builds, views, 
     return project
   }
 
-  handle('project:pick', () => projects.pick())
-  handle('project:open', (dir: unknown) => projects.openAt(String(dir)))
-  handle('project:current', () => projects.current())
-  handle('project:recent', () => projects.recent())
-  handle('project:close', () => projects.close())
+  handle('workspace:current', () => opened.current())
+  handle('workspace:pick', () => opened.pickWorkspace())
+  // A folder the window names is looked at like any other; the home folder and the root are refused.
+  handle('workspace:open', (root: unknown) => opened.openWorkspace(String(root)))
+  handle('workspace:suggested', () => opened.suggested())
+  handle('workspace:useSuggested', () => opened.useSuggested())
+  handle('workspace:recent', () => opened.recent())
+  handle('workspace:list', () => opened.list())
+  // By name: only a project the open workspace lists.
+  handle('project:open', (name: unknown) => opened.openProject(String(name)))
+  handle('project:close', () => opened.closeProject())
 
   handle('session:current', (id: unknown) => {
     const project = projectOf(id)

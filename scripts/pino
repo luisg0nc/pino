@@ -59,7 +59,7 @@ usage() {
   echo "usage: $app_name [folder]"
   echo "       $app_name --print-command [folder]"
   echo "       $app_name --print-desktop | --install-desktop | --uninstall-desktop"
-  echo "  folder               a project folder to open (default: the one open last)"
+  echo "  folder               a folder of boards, or one board in it, to open (default: what was open last)"
   echo "  --print-command      print the command that would be started, one argument a line, and start nothing"
   echo "  --print-desktop      print the desktop entry for this script, and write nothing"
   echo "  --install-desktop    write that entry to \${XDG_DATA_HOME:-~/.local/share}/applications/$app_name.desktop"

@@ -8,12 +8,17 @@ import type { FabProfile, FabState } from '../../shared/fab'
 import type { Mark } from '../../shared/marks'
 import type { ProjectInfo, RecentFolder } from '../../shared/project'
 import { DEFAULT_LOOK, type BoardLook, type Selection, type ViewTab } from '../../shared/view'
+import type { WorkspaceInfo } from '../../shared/workspace'
 
 export type { ViewTab }
 
 export interface PinoState {
-  page: 'first' | 'project'
+  /** The first screen with no workspace, the page of projects with no project open, or the project. */
+  page: 'first' | 'projects' | 'project'
+  /** The open folder of boards, as main last listed it. */
+  workspace: WorkspaceInfo | null
   project: ProjectInfo | null
+  /** The workspaces opened lately. */
   recent: RecentFolder[]
   tab: ViewTab
   /** The build loop of the open project, as main last told it. */
@@ -48,23 +53,35 @@ export interface PinoState {
   session: { sessionId: string; status: SessionStatus } | null
   /** What the status line says once of the open project: a folder pino may not write into, a folder that did not open. */
   notice: string | null
-  /** What the first screen says under its way in: why a folder could not be opened. */
+  /** What the first screen and the page of projects say: why a folder could not be opened. */
   problem: string | null
 }
 
-export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabProfiles: [], fabOpen: false, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
+export const store: StoreApi<PinoState> = createStore<PinoState>(() => ({ page: 'first', workspace: null, project: null, recent: [], tab: 'schematic', build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabProfiles: [], fabOpen: false, marks: [], tool: 'select', heldMark: null, hotMark: null, session: null, notice: null, problem: null }))
 
 /** What of the views belongs to one project, and is not the next one's. */
 const NO_VIEW = { build: null, shown: null, selection: null, look: DEFAULT_LOOK, hotFinding: null, hotBlock: null, keptStale: null, fab: null, fabOpen: false, marks: [] as Mark[], tool: 'select' as MarkTool, heldMark: null, hotMark: null }
 
 export const actions = {
+  /** A workspace is opened: its page of projects. */
+  openWorkspace(workspace: WorkspaceInfo): void {
+    store.setState({ page: 'projects', workspace, project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+  },
+  /** The open workspace as listed again; another one's listing, come late, is dropped. */
+  setWorkspace(workspace: WorkspaceInfo): void {
+    if (store.getState().workspace?.root === workspace.root) store.setState({ workspace })
+  },
+  /** No workspace is open: the first screen. */
+  closeWorkspace(): void {
+    store.setState({ page: 'first', workspace: null, project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+  },
   /** A project is on show. What was said of another one, and the view chosen in it, are not this one's. */
   openProject(project: ProjectInfo): void {
     const other = store.getState().project?.id !== project.id
     store.setState({ page: 'project', project, problem: null, ...(other ? { notice: null, session: null, tab: 'schematic' as const, ...NO_VIEW } : {}) })
   },
   closeProject(): void {
-    store.setState({ page: 'first', project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
+    store.setState({ page: 'projects', project: null, session: null, notice: null, problem: null, tab: 'schematic', ...NO_VIEW })
   },
   setRecent(recent: RecentFolder[]): void {
     store.setState({ recent })

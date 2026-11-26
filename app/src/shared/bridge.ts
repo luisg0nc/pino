@@ -7,6 +7,7 @@ import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
 import type { EngineInfo } from './ready'
 import type { BoardLook, LookRequest, LookResult, Selection, ViewTab } from './view'
+import type { WorkspaceInfo } from './workspace'
 
 /** `chat`: Claude Code run headless, drawn by pino. `terminal`: as a terminal would run it; pino has no such view yet. */
 export type AgentView = 'chat' | 'terminal'
@@ -22,15 +23,25 @@ export type StartResult =
 export interface PinoBridge {
   /** The person's home folder, which the chat writes as `~`. */
   home: string
-  project: {
-    /** Asks the person for a folder and opens it; null when they choose none. */
-    pick(): Promise<ProjectInfo | null>
-    /** Opens a folder as the project, ending the session of the one that was open. Rejects with why it cannot. */
-    open(dir: string): Promise<ProjectInfo>
-    /** The project that is open. Rejects, once, with why the folder pino was started with could not be opened. */
-    current(): Promise<ProjectInfo | null>
+  workspace: {
+    /** What is open. Rejects, once, with why the folder pino was started with could not be opened. */
+    current(): Promise<{ workspace: WorkspaceInfo | null; project: ProjectInfo | null }>
+    /** Asks the person for a folder of boards and opens it; null when they choose none. */
+    pick(): Promise<WorkspaceInfo | null>
+    /** Opens a folder of boards, ending the session of the project that was open. Rejects with why it cannot. */
+    open(root: string): Promise<WorkspaceInfo>
+    /** The folder of boards suggested on a first run, `~/boards`, and whether it is there. */
+    suggested(): Promise<{ path: string; exists: boolean }>
+    /** Makes the suggested folder if it is not there, and opens it. */
+    useSuggested(): Promise<WorkspaceInfo>
     recent(): Promise<RecentFolder[]>
-    /** Ends the project's session and leaves the first screen. */
+    /** The open workspace listed again. */
+    list(): Promise<WorkspaceInfo>
+  }
+  project: {
+    /** Opens a project the workspace lists, ending the session of the one that was open. Rejects with why it cannot. */
+    open(name: string): Promise<ProjectInfo>
+    /** Ends the project's session and leaves the page of projects. */
     close(): Promise<void>
   }
   window: {

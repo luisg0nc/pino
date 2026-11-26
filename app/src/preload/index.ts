@@ -23,11 +23,17 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 const bridge: PinoBridge = {
   home: process.env.HOME ?? '',
+  workspace: {
+    current: () => invoke('workspace:current'),
+    pick: () => invoke('workspace:pick'),
+    open: (root) => invoke('workspace:open', root),
+    suggested: () => invoke('workspace:suggested'),
+    useSuggested: () => invoke('workspace:useSuggested'),
+    recent: () => invoke('workspace:recent'),
+    list: () => invoke('workspace:list')
+  },
   project: {
-    pick: () => invoke('project:pick'),
-    open: (dir) => invoke('project:open', dir),
-    current: () => invoke('project:current'),
-    recent: () => invoke('project:recent'),
+    open: (name) => invoke('project:open', name),
     close: () => invoke('project:close')
   },
   window: {

@@ -8,7 +8,7 @@
  */
 
 /** Where the sheet lists a row. */
-export type KeyContext = 'Everywhere' | 'The views' | 'Session' | 'In a field, a menu or a sheet'
+export type KeyContext = 'Everywhere' | 'All projects' | 'The views' | 'Session' | 'In a field, a menu or a sheet'
 
 /**
  * Where a key is listened to. Two rows of one scope would answer the same press.
@@ -16,10 +16,10 @@ export type KeyContext = 'Everywhere' | 'The views' | 'Session' | 'In a field, a
  * - `window`: everywhere outside a field. Nobody else's either.
  * - `composer`: in the box a chat prompt is written in. `ask`: on a card of the chat that asks the person.
  * - `tabs`: on a focused tab of the views. `view`: over a view of the board, outside a field.
- * - `separator`: on the focused edge of the session dock.
+ * - `separator`: on the focused edge of the session dock. `cards`: on a focused card of the page of projects.
  * - `field`, `menu`, `sheet`: in a field, an open menu, a sheet or a question.
  */
-export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'separator' | 'field' | 'menu' | 'sheet'
+export type KeyScope = 'global' | 'window' | 'composer' | 'ask' | 'tabs' | 'view' | 'separator' | 'cards' | 'field' | 'menu' | 'sheet'
 
 interface Row<Id extends string> {
   id: Id
@@ -37,6 +37,8 @@ const row = <Id extends string>(id: Id, keys: readonly string[], does: string, c
 const ROWS = [
   row('view.prev', ['Left'], 'On a tab of the views: the view before', 'Everywhere', 'tabs'),
   row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
+
+  row('boards.move', ['Left', 'Right', 'Up', 'Down'], 'On a board of the page: the card that way', 'All projects', 'cards'),
 
   row('board.layer', ['1', '2', '3', '4', '5', '6', '7', '8'], 'Board: look at the copper layer of that number, from the top', 'The views', 'view'),
   row('board.fit', ['F'], 'Fit the whole drawing in the view', 'The views', 'view'),
@@ -74,6 +76,7 @@ export const KEYS: readonly KeyRow[] = ROWS
 /** The groups of the sheet, in its order, each with when its keys are listened to. */
 export const CONTEXTS: ReadonlyArray<{ name: KeyContext; when: string }> = [
   { name: 'Everywhere', when: 'Also while typing' },
+  { name: 'All projects', when: 'On the page of projects' },
   { name: 'The views', when: 'Over a view, outside a field' },
   { name: 'Session', when: 'In the chat' },
   { name: 'In a field, a menu or a sheet', when: 'Where something is typed, chosen or asked' }

@@ -1,5 +1,6 @@
 import { existsSync, rmSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme, shell } from 'electron'
 import { APP, envName, toolName } from '../shared/app'
@@ -9,7 +10,7 @@ import { Builds } from './builds'
 import { PinoDomain } from './domain'
 import { frameOptions, MIN_WINDOW, SURFACE, windowSize } from './frame'
 import { startHttp } from './http'
-import { broadcast, type Projects, registerIpc } from './ipc'
+import { broadcast, registerIpc } from './ipc'
 import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
 import { applyLoginPath } from './loginPath'
 import { MarkStore } from './marks/store'
@@ -18,7 +19,7 @@ import { type BuildModel, Models } from './model'
 import { onNotOwn } from './own'
 import { resultOfBuild } from './artifacts'
 import type { LookResult } from '../shared/view'
-import { openProject, workspaceOf } from './project'
+import { type Opened, openedHolder, SUGGESTED } from './opened'
 import { systemPrompt } from './prompt'
 import { quitGate } from './quit'
 import { readEngine, versionCommand } from './engineInfo'
@@ -27,7 +28,7 @@ import { agentEnv } from './sessions/agentEnv'
 import { findCommand } from './sessions/choice'
 import { Routing } from './routing'
 import { Fab } from './fab'
-import { type Config, configOf, listed, recentWith } from './recent'
+import { type Config, configOf } from './recent'
 import { claudeAdapter } from './sessions/claude'
 import { Sessions } from './sessions/manager'
 import { KnownModels } from './sessions/models'
@@ -89,15 +90,15 @@ if (!isFirst) {
 // Text fields keep copy, paste, select all and undo without it.
 Menu.setApplicationMenu(null)
 
-// The project last opened is remembered in ~/.config/pino/config.json and opened again at the next start, and the
-// file keeps those opened lately for the first screen. A test run neither reads nor writes the person's own file:
+// The workspace and the project open last are remembered in ~/.config/pino/config.json and opened again at the next
+// start, and the file keeps the workspaces opened lately. A test run neither reads nor writes the person's own file:
 // only one it names itself.
 const configPath: string | null = env('CONFIG') ?? (isTest ? null : join(app.getPath('appData'), APP.configDir, 'config.json'))
 
 async function readConfig(): Promise<Config> {
   if (!configPath) return { workspaces: [] }
   try {
-    return configOf(JSON.parse(await readFile(configPath, 'utf8')), app.getPath('home'))
+    return configOf(JSON.parse(await readFile(configPath, 'utf8')), homedir())
   } catch {
     return { workspaces: [] } // no file yet, or not one of ours
   }
@@ -149,90 +150,21 @@ async function drawnModel(project: ProjectInfo): Promise<BuildModel | null> {
 }
 const marks = new MarkStore({ model: drawnModel })
 
-/** The one project open, and the rules of opening and closing it. */
-function projectHolder(sessions: () => Sessions): Projects & { startAt(dir: string, said: boolean): Promise<void> } {
-  let open: ProjectInfo | undefined
-  let startProblem: string | undefined
-  /** One opening or closing at a time. */
-  let turn: Promise<unknown> = Promise.resolve()
-  const inTurn = <T>(change: () => Promise<T>): Promise<T> => {
-    const done = turn.then(change)
-    turn = done.catch(() => {})
-    return done
+/** The folder dialog for a folder of boards; under test, what a test said it answers. */
+async function pickWorkspaceFolder(): Promise<string | null> {
+  if (isTest) {
+    testHooks.picks += 1
+    return testHooks.pickFolder
   }
-  const openAt = (dir: string): Promise<ProjectInfo> =>
-    inTurn(async () => {
-      // Looked at first, so that a folder that cannot be opened leaves everything as it was.
-      const next = await openProject(dir)
-      if (open && open.id !== next.id) {
-        // No start is taken for the old project from here on, and `stopAll` waits for one under way.
-        routing.drop(open.id)
-        fab.drop(open.id)
-        builds.close(open.id)
-        open = undefined
-        await sessions().stopAll()
-      }
-      open = next
-      builds.open(next)
-      const parent = workspaceOf(next.dir, app.getPath('home'))
-      await changeConfig((config) => ({
-        ...(parent ? { workspace: parent } : {}),
-        project: next.dir,
-        workspaces: parent ? recentWith(config.workspaces, parent) : config.workspaces
-      }))
-      return next
-    })
-
-  const picked = async (): Promise<string | null> => {
-    if (isTest) {
-      testHooks.picks += 1
-      return testHooks.pickFolder
-    }
-    const win = BrowserWindow.getAllWindows()[0]
-    const options: Electron.OpenDialogOptions = { title: 'Open folder', buttonLabel: 'Open', properties: ['openDirectory', 'createDirectory'] }
-    const chosen = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
-    return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
+  const win = BrowserWindow.getAllWindows()[0]
+  const options: Electron.OpenDialogOptions = {
+    title: 'Choose a folder for your boards',
+    buttonLabel: 'Open',
+    defaultPath: join(homedir(), SUGGESTED),
+    properties: ['openDirectory', 'createDirectory']
   }
-
-  return {
-    open: () => open,
-    openAt,
-    async pick() {
-      const dir = await picked()
-      return dir === null ? null : openAt(dir)
-    },
-    async current() {
-      await turn
-      if (startProblem !== undefined) {
-        const problem = startProblem
-        startProblem = undefined
-        throw new Error(problem)
-      }
-      return open ?? null
-    },
-    async recent() {
-      await configWritten
-      return listed((await readConfig()).workspaces)
-    },
-    close: () =>
-      inTurn(async () => {
-        if (open) {
-          routing.drop(open.id)
-          fab.drop(open.id)
-          builds.close(open.id)
-        }
-        open = undefined
-        await sessions().stopAll()
-        await changeConfig(({ project: _closed, ...config }) => config)
-      }),
-    async startAt(dir, said) {
-      // A folder named at this start that cannot be opened is said; a remembered one that is gone is only listed as missing.
-      await openAt(dir).catch((e: Error) => {
-        console.error(e.message)
-        if (said) startProblem = e.message
-      })
-    }
-  }
+  const chosen = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+  return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
 }
 
 /** What a test needs of main that it cannot reach through the window. `pickFolder` is what the folder dialog answers. */
@@ -319,9 +251,9 @@ function createWindow(): BrowserWindow {
 }
 
 let sessions: Sessions | undefined
-let projects: (Projects & { startAt(dir: string, said: boolean): Promise<void> }) | undefined
+let opened: Opened | undefined
 
-/** Another pino was started: come to the front, and open the folder it was given if none is open here. */
+/** Another pino was started: come to the front, and open the folder it was given if no project is open here. */
 app.on('second-instance', (_event, _argv, _cwd, data) => {
   const handed = (data as { project?: unknown } | null)?.project
   const win = BrowserWindow.getAllWindows()[0]
@@ -329,11 +261,12 @@ app.on('second-instance', (_event, _argv, _cwd, data) => {
   if (win.isMinimized()) win.restore()
   win.show()
   win.focus()
-  if (typeof handed !== 'string' || !handed || !projects) return
+  if (typeof handed !== 'string' || !handed || !opened) return
   // Opening another project ends the open one's session: that is not done on the word of a command line.
-  if (projects.open()) {
-    if (projects.open()!.dir !== handed) broadcast('notice', { text: `${APP.name} is already running. To work on ${handed}, open it from the menu beside the project's name.` })
-  } else void projects.openAt(handed).then(() => win.webContents.reload()).catch((e: Error) => broadcast('notice', { text: e.message }))
+  const project = opened.project()
+  if (project) {
+    if (project.dir !== handed) broadcast('notice', { text: `${APP.name} is already running. To work on ${handed}, open it from the menus at the top of the window.` })
+  } else void opened.startAt(handed, true).then(() => win.webContents.reload())
 })
 
 void app.whenReady().then(async () => {
@@ -342,8 +275,25 @@ void app.whenReady().then(async () => {
   await applyLoginPath()
   // What the agent's CLI talks to: its hooks, and the MCP server through which it asks pino.
   const http = await startHttp()
-  const holder = (projects = projectHolder(() => sessions!))
-  openProjectId = () => holder.open()?.id
+  const holder = (opened = openedHolder({
+    // `HOME`, which a test run has of its own.
+    home: homedir(),
+    readConfig: async () => {
+      await configWritten
+      return readConfig()
+    },
+    changeConfig,
+    pickFolder: pickWorkspaceFolder,
+    stopAll: () => sessions!.stopAll(),
+    // No start is taken for a project that has been left, and `stopAll` waits for one under way.
+    closed: (project) => {
+      routing.drop(project.id)
+      fab.drop(project.id)
+      builds.close(project.id)
+    },
+    opened: (project) => builds.open(project)
+  }))
+  openProjectId = () => holder.project()?.id
   // The files an agent is given by path (its MCP server's, which holds no secret): what a pino that crashed left is of no use.
   const configDir = join(app.getPath('userData'), 'agent')
   rmSync(configDir, { recursive: true, force: true })
@@ -355,13 +305,13 @@ void app.whenReady().then(async () => {
     builds,
     marks,
     view: () => {
-      const open = holder.open()
+      const open = holder.project()
       return open ? views.of(open.id) : null
     },
     toolName
   })
   mountMcp(http, {
-    project: (id) => (holder.open()?.id === id ? holder.open() : undefined),
+    project: (id) => (holder.project()?.id === id ? holder.project() : undefined),
     state: (id) => builds.state(id),
     model: drawnModel,
     marks,
@@ -401,11 +351,11 @@ void app.whenReady().then(async () => {
       ...said,
       claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
     })))
-  registerIpc({ projects: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path) })
+  registerIpc({ opened: holder, sessions, trust, models, builds, views, marks, routing, fab, engineInfo, showFolder: isTest ? () => {} : (path) => shell.showItemInFolder(path) })
   // Every build that drew something has the marks found again on it.
   builds.onResult((projectId, result) => {
     fab.buildLanded(projectId)
-    const project = holder.open()
+    const project = holder.project()
     if (!project || project.id !== projectId || !result.hash) return
     void buildModels
       .get(project, result)
@@ -416,8 +366,11 @@ void app.whenReady().then(async () => {
   testHooks.mcpFor = (projectId) => ({ url: http.url(`/mcp/${projectId}`), token: http.grant([`/mcp/${projectId}`]) })
   if (isTest) Object.assign(globalThis, { [APP.mainHook]: testHooks })
 
-  const remembered = askedAtStart ?? (await readConfig()).project
-  if (remembered) await holder.startAt(remembered, askedAtStart !== undefined)
+  // The folder named at this start, else the project open last, else the workspace on its page.
+  const config = await readConfig()
+  if (askedAtStart) await holder.startAt(askedAtStart, true)
+  else if (config.project) await holder.startAt(config.project, false)
+  else if (config.workspace) await holder.openWorkspace(config.workspace).catch((e: Error) => console.error(e.message))
   createWindow()
 })
 

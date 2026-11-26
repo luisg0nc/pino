@@ -1,6 +1,6 @@
 // The one way a spec starts pino (.claude/rules/e2e-hidden-window.md): hidden, with a profile, a config file and a
 // home of its own in the temporary folder, and never with the real claude.
-import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
@@ -27,10 +27,14 @@ export function tempFolder(label: string): string {
   return dir
 }
 
-/** A new, empty project folder with this name. */
+/**
+ * A new project folder with this name, in a workspace of its own. It holds a brief and no board: that makes it a
+ * project by the launcher's rule, so `PINO_PROJECT` opens it, not its page of projects.
+ */
 export function tempProject(name = 'blinky'): string {
   const dir = join(tempFolder('project'), name)
   mkdirSync(dir)
+  writeFileSync(join(dir, 'brief.md'), `# ${name}\n`)
   return dir
 }
 

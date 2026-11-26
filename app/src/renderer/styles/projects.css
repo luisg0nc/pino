@@ -1,0 +1,127 @@
+/* ---- The page of projects (ui/ProjectsPage.tsx): the title bar, then the workspace's boards as cards ---- */
+
+/* No card, dock or status line: one column under the title bar. Named with `.shell` to come after its grid. */
+.shell.shell-projects {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--title-h) minmax(0, 1fr);
+}
+
+.projects-page {
+  grid-area: 2 / 1 / -1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.projects-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.projects-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-filter {
+  width: 240px;
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--field-edge);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+  color: var(--ink);
+  font: inherit;
+}
+
+.projects-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  align-content: start;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border: var(--divider);
+  border-radius: var(--radius-float);
+  background: var(--panel);
+  text-align: left;
+}
+
+.project-card:hover:enabled {
+  border-color: var(--accent);
+  background: var(--raise);
+}
+
+.project-card:disabled {
+  color: var(--muted);
+}
+
+/* Where the board's picture goes, 3 by 2. */
+.project-picture {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--board-paper);
+  color: var(--muted);
+  font-size: 28px;
+}
+
+.project-card-new .project-picture {
+  border: 1px dashed var(--field-edge);
+  background: transparent;
+}
+
+.project-card-name {
+  min-width: 0;
+  padding: 0 var(--space-1);
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card-said {
+  padding: 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.projects-empty {
+  color: var(--muted);
+}
+
+.projects-problem {
+  color: var(--fail);
+  text-wrap: pretty;
+}
+
+/* What is missing on the machine, at the foot of the page. */
+.welcome-ready.projects-ready {
+  margin-top: auto;
+}

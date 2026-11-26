@@ -18,26 +18,46 @@ paths:
   - "app/src/renderer/styles/plate.css"
   - "app/src/renderer/styles/welcome.css"
   - "app/e2e/welcome.spec.ts"
+  - "app/src/main/opened.ts"
+  - "app/src/main/opened.test.ts"
+  - "app/src/main/workspace.ts"
+  - "app/src/main/workspace.test.ts"
+  - "app/src/renderer/ui/ProjectsPage.tsx"
+  - "app/src/renderer/styles/projects.css"
+  - "app/e2e/workspace.spec.ts"
 ---
 
-# The first screen, the title bar, recent folders
+# The first screen, the workspace, the title bar, the page of projects
+
+## The workspace and its projects
+
+- A **workspace** is one folder of boards; its projects are its direct subfolders that are not hidden and not links
+  (`main/workspace.ts`), by name. A board is one that holds `board.py` as a plain file; one with `brief.md` alone has
+  no board yet; one with neither is empty. The home folder and `/` are never a workspace, so they are never listed.
+- `main/opened.ts` holds the open workspace and its one open project, and every rule of opening and leaving them. The
+  window names a project and is given only one the workspace lists. A project is opened by its real path
+  (`main/project.ts`), with an id that is a hash of it, so no path reaches a URL.
+- pino's own config file (`~/.config/pino/config.json`, or `PINO_CONFIG`; `main/recent.ts`) holds `workspace` and
+  `project`, the ones to open at the next start, and `workspaces`, those opened lately: the newest first, eight at
+  most. Never in a project. A config from before there were workspaces has `recent` project folders: their parents
+  become `workspaces`, once. A test run reads and writes no config file but one it names with `PINO_CONFIG`.
+- **A folder named at start** (`PINO_PROJECT`, the launcher's argument) that is a project (`board.py` or `brief.md`)
+  opens its parent as the workspace, on it; any other folder is a workspace. The project open last is opened again as
+  a project whatever it holds, so an empty board is not taken for a workspace. A project directly in the home folder
+  (or at `/`) leaves the first screen, which says why. A folder named at start that cannot be opened is said too; a
+  remembered one that is gone is quiet, and the remembered workspace is shown.
+- Opening another project or workspace, or going to All projects, ends the session first (`stopAll`, which also waits
+  for one that is starting). All projects closes the project: one is open at a time. A second pino opens the folder it
+  was given only when no project is open in the first, and otherwise says so in a notice.
 
 ## The first screen
 
-- The folders opened lately are `recent` in pino's own config file (`~/.config/pino/config.json`, or `PINO_CONFIG`;
-  `src/main/recent.ts`): the newest first, eight at most, beside `project`, the one to open at the next start. Never
-  in a project. One that is no longer a folder is shown struck as "Not found" and cannot be pressed. A test run reads
-  and writes no config file but one it names with `PINO_CONFIG`.
-- A project is one folder (`main/project.ts`): opened by its real path, with an id that is a hash of it, so no path
-  reaches a URL. A folder named at start (`PINO_PROJECT`) that cannot be opened is said on the first screen; a
-  remembered one that is gone is only listed as missing. "Close project" forgets `project`.
-- Opening another project, or closing the open one, ends the session first (`stopAll`, which also waits for one that
-  is starting). A second pino opens the folder it was given only when none is open in the first, and otherwise says
-  so in a notice.
-- With no project open the window is `ui/Welcome.tsx`, two halves of one grid (`welcome.css`) to the window's edges:
-  at the left the dyed plate (`ui/plate/Plate.tsx`, its children on `--dye`), at the right, on `--surface`, the one
-  way in, "Open folder", and what pino needs. Coming back, "Recent folders" stands where the first
-  run's sentence does. The error of a folder that did not open is one `role="alert"` line.
+- With no workspace the window is `ui/Welcome.tsx`, two halves of one grid (`welcome.css`) to the window's edges: at
+  the left the dyed plate (`ui/plate/Plate.tsx`, its children on `--dye`), at the right, on `--surface`, the ways in,
+  "Use ~/boards" ("Open ~/boards" when it is there; made if it is not, refused if a link or a file stands there) and
+  "Choose folder…", and what pino needs. Coming back, "Recent workspaces" stands where the first run's sentence does;
+  one that is gone is struck as "Not found" and cannot be pressed. The error of a folder that did not open is one
+  `role="alert"` line.
 - **The first screen has no title bar and the window no frame**, so the top 40 px (`welcome-drag`) is a drag strip
   over both halves, and the window controls (`BareControls`) stand over its right end. pino draws the three controls
   itself everywhere (`ui/WindowControls.tsx`): it is Linux only.
@@ -49,12 +69,21 @@ paths:
   there, redraw `scripts/pino.png` with `rsvg-convert -w 512 -h 512 scripts/pino.svg -o scripts/pino.png`.
 - Under the way in, three lines say whether Claude Code, KiCad and the engine are there (`shared/ready.ts`). Main
   asks the engine `version` once a run (`main/engineInfo.ts`), only when the screen asks.
-- With a project open, the title bar (`ui/TitleBar.tsx`) has the logo, the project's crumb and its menu
-  (`ui/FolderMenu.tsx`, `useMenu` for its keys): the recent folders (the open one marked "current"), "Open folder…"
-  and "Close project". The menu and its rows are `.menu` and `.menu-item` (`viewbars.css`), as are the view cube's. A
-  recent folder's row is two lines (name, path), so its style is `.menu-item.folder-item` (`titlebar.css`):
-  `.folder-item` alone loses its height and padding to `.menu-item`, which comes later in the cascade
-  (`e2e/menus.spec.ts` holds the rows apart).
+
+## The title bar and the page of projects
+
+- With a workspace open, the title bar (`ui/TitleBar.tsx`) has the logo and the workspace's crumb
+  (`ui/FolderMenu.tsx`; button "Workspace <name>", menu "Workspaces": the recent workspaces, the open one marked
+  "current", and "Open workspace…"). On a project, a slash and its crumb ("Project <name>", menu "Projects": "New
+  project…", disabled until its page is there, "All projects", then every project, the open one "current", an empty one
+  "empty"). Both lists are read when the menu opens (`useMenu` for the keys). The menus and their rows are `.menu` and
+  `.menu-item` (`viewbars.css`), as are the view cube's. A recent workspace's row is two lines (name, path), so its
+  style is `.menu-item.folder-item` (`titlebar.css`): `.folder-item` alone loses its height and padding to
+  `.menu-item`, which comes later in the cascade (`e2e/menus.spec.ts` holds the rows apart).
+- With a workspace and no project, `ui/ProjectsPage.tsx` (`projects.css`; `main` "All projects", the list "Projects in
+  <workspace>"): New project first, then a card a board, "No board yet" or "Empty" where there is no `board.py`. Arrows
+  move between cards (`boards.move`), Enter opens, a typed letter goes to "Filter projects", Escape clears it. The
+  listing is read again whenever the window is come back to. What pino needs and does not have stands at the foot.
 
 ## Quitting
 

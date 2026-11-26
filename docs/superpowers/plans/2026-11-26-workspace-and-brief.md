@@ -229,7 +229,7 @@ git commit -m "A workspace lists its boards; recent folders become recent worksp
   - `state/store.ts`: `page: 'first' | 'projects' | 'project'` (Task 10 adds `'new'`), `workspace: WorkspaceInfo | null`; actions `openWorkspace(ws)`, `setWorkspace(ws)`, `closeWorkspace()`; `recent` holds recent workspaces.
   - Selectors: crumbs `button[name="Workspace <name>"]` (menu `Workspaces`) and `button[name="Project <name>"]` (menu `Projects`); the page `main[aria-label="All projects"]`, each project a `button` named by the project's name in `role="list"` `Projects in <workspace>`.
 
-- [ ] **Step 1: Write the failing unit tests**
+- [x] **Step 1: Write the failing unit tests**
 
 ```ts
 // main/opened.test.ts: real temp folders, a fake config and session stop counter
@@ -262,23 +262,23 @@ it('a project in the home folder opens the first screen and says why', async () 
 it('closeProject ends the session and keeps the workspace', async () => { /* stopAll once; workspace kept; config project removed */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/opened.test.ts`
 Expected: FAIL with "Cannot find module './opened'"
 
-- [ ] **Step 3: Write `openedHolder`, wire it in `index.ts` and `ipc.ts`, change the bridge and preload**
+- [x] **Step 3: Write `openedHolder`, wire it in `index.ts` and `ipc.ts`, change the bridge and preload**
 
 Move the body of `index.ts`'s `projectHolder` (its one-change-at-a-time `inTurn`, the start problem said once, the order "look at the folder first, then close the old one") into `openedHolder`; `index.ts` passes the config functions, `routing.drop`, `fab.drop`, `builds.close`, `builds.open` and the dialog (`title: 'Choose a folder for your boards'`, `properties: ['openDirectory', 'createDirectory']`, `defaultPath` the suggested folder; under test `testHooks.pickFolder`). `useSuggested` makes the folder with `mkdir` (not recursive), refusing one that `lstat` says is a link or a file. The second-instance handler opens what it is handed by the same `startAt` rule when no project is open. `scripts/pino` usage: `folder  a folder of boards, or one board in it, to open (default: what was open last)`.
 
-- [ ] **Step 4: Write the window: first screen, crumbs and menus, the page of projects**
+- [x] **Step 4: Write the window: first screen, crumbs and menus, the page of projects**
 
 - `Welcome.tsx`, first run: title `Choose a folder for your boards`, lead `Each board is a folder in it. Nothing is written there until you start a board.`, buttons `Use ~/boards` (primary; `Open ~/boards` when it exists; the path from `workspace:suggested`, `~` for the home) and `Choose folder…`. Coming back: the navigation `Recent workspaces` stands where the lead does. The ready lines and the `role="alert"` problem stay. Foot: `pino writes only into a .pino folder inside each board, and makes a board's folder when you start one.`
 - `TitleBar.tsx`: logo, workspace crumb, then on a project the project crumb, then the window controls. The workspace menu: `Recent workspaces` (the open one marked `current`, a gone one struck `Not found`), rule, `Open workspace…`. The project menu: `New project…` (disabled until Task 10), `All projects`, rule, each project of the listing (the open one marked `current`, an empty one marked `empty`). Both lists are read when the menu opens (`workspace:list`, `workspace:recent`).
 - `ProjectsPage.tsx` (pino's own, written after torno's `ShowPage.tsx` without its bench, shelves, git or session signs): `main` labelled `All projects`, heading the workspace's name, a `New project` card first (disabled until Task 10) and a card per project with its name and `No board yet` (a `brief.md` alone) or `Empty`; arrows move between cards, Enter opens, typing filters by name (`role="searchbox"` `Filter projects`), Escape clears the filter. An empty workspace says `No boards here yet.` The ready lines that are not ok stand at its foot (`shared/ready.ts`). Reads the listing again on window focus.
 - `App.tsx`: `page` `first` (no workspace), `projects` (a workspace, no project), `project`. `All projects` calls `project:close`.
 
-- [ ] **Step 5: Write the failing e2e spec, and change the specs that opened a folder**
+- [x] **Step 5: Write the failing e2e spec, and change the specs that opened a folder**
 
 `launch.ts`: `tempProject(name)` also writes `brief.md` (`# <name>\n`), so `PINO_PROJECT` names a project; add `pickFiles` to the hooks list in its comment. `boot.spec.ts`: the empty-views case first presses the `Schematic` tab (Task 7 makes the Brief the first tab: write the click now, it is harmless before); "Close project" becomes "All projects ends the project and shows the page". `chat.spec.ts`: `brief.md: absent.` becomes `brief.md: present.`; "closing the project in the middle of a turn" uses `All projects`. `welcome.spec.ts`: Open folder becomes Choose folder; Recent folders becomes Recent workspaces.
 
@@ -302,12 +302,12 @@ test('a launcher folder that is a project opens its parent on it, and starts the
 test('All projects in the middle of a turn ends the session and shows the page', async () => { /* agent: true; slow 30; agentsIn(dir) [] within 10 s; the page visible */ })
 ```
 
-- [ ] **Step 6: Run the unit tests and the e2e suite**
+- [x] **Step 6: Run the unit tests and the e2e suite**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm test:e2e`
 Expected: PASS, with `workspace.spec.ts` in the list
 
-- [ ] **Step 7: Update `first-screen.md` (paths: `main/opened.ts`, `main/workspace.ts`, `ui/ProjectsPage.tsx`, `styles/projects.css`, `e2e/workspace.spec.ts`; the rules above) and the manifest, and commit**
+- [x] **Step 7: Update `first-screen.md` (paths: `main/opened.ts`, `main/workspace.ts`, `ui/ProjectsPage.tsx`, `styles/projects.css`, `e2e/workspace.spec.ts`; the rules above) and the manifest, and commit**
 
 ```bash
 git add -A app/src app/e2e scripts/pino shared-from-torno.json .claude/rules/first-screen.md

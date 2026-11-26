@@ -2,7 +2,7 @@
 // each is a card over what is under it, its rows plain until pointed at, and no row's words lie over another's.
 
 import { writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { expect, test, type Locator } from '@playwright/test'
 import { newSession, waitForBuild } from './helpers'
 import { launch, referenceProject, tempFolder, tempProject } from './launch'
@@ -26,15 +26,16 @@ async function isACard(menu: Locator): Promise<void> {
 }
 
 // torno's #330: the rows were held to a menu item's 26 px, so each folder's path lay over its name and the focus ring cut the row under it.
-test('the folder menu is a card, each recent folder two lines of its own: nothing overlaps, and the focus ring keeps off the other rows', async () => {
+test('the workspace menu is a card, each recent workspace two lines of its own: nothing overlaps, and the focus ring keeps off the other rows', async () => {
   const open = tempProject('blinky')
+  const workspace = dirname(open)
   const other = tempFolder('a-folder-with-a-long-name')
   const config = join(tempFolder('config'), 'config.json')
-  writeFileSync(config, JSON.stringify({ project: open, recent: [open, other, join(other, 'gone')] }))
+  writeFileSync(config, JSON.stringify({ workspace, project: open, workspaces: [workspace, other, join(other, 'gone')] }))
   const { app, page } = await launch({ env: { PINO_CONFIG: config } })
   try {
-    await page.getByRole('button', { name: 'Project blinky' }).click()
-    const menu = page.getByRole('menu', { name: 'Projects' })
+    await page.getByRole('button', { name: `Workspace ${basename(workspace)}` }).click()
+    const menu = page.getByRole('menu', { name: 'Workspaces' })
     await expect(menu.locator('.folder-row')).toHaveCount(3)
     await isACard(menu)
     const laid = await menu.evaluate((el) => {
