@@ -25,6 +25,7 @@ from typing import Callable
 from . import __version__
 from .build import BuildOptions, build
 from .fab import PROFILES
+from .ops import extra_op
 from .result import SCHEMA
 
 SERVE_VERSION = 3
@@ -199,7 +200,7 @@ class Server:
         # op -> handler(req) returning a reply dict, or None when a job was started
         self.ordered: dict[str, Callable[[dict], dict | None]] = {
             "ping": self.ping, "build": self.build, "route_status": self.route_status, "route": self.route,
-            "fab_profiles": self.fab_profiles}
+            "fab_profiles": self.fab_profiles, "diff": extra_op}
         self.extend()
 
     def extend(self) -> None:

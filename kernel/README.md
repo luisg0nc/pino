@@ -40,14 +40,16 @@ to stderr.
 {"id": 7, "op": "fab_profiles"}
 {"id": 8, "op": "release_status", "project": "/path/to/project"}
 {"id": 9, "op": "release", "project": "/path/to/project", "options": {"bump": null, "network": true}}
-{"id": 10, "op": "shutdown"}
+{"id": 10, "op": "diff", "project": "/path/to/project", "from": "0123456789ab", "to": "ba9876543210"}
+{"id": 11, "op": "shutdown"}
 ```
 
 Ordered ops are answered in request order: `ping` gives `{"id": 1, "ok": true, "pong": {"kernel": "0.3.0",
 "schema": "pino.build/1", "serve": 3, "route_schema": "pino.route/1", "parts_schema": "pino.parts/1",
 "release_schema": "pino.release/1"}}`, `build` gives `{"id": 2, "ok": true, "result": {...}}`, `route_status` gives
 `{"id": 4, "ok": true, "status": {...}}` (the `routing` field of the latest build), `fab_profiles` gives the fab's
-limits, `release_status` says whether a release would go through, and `shutdown` gives `{"id": 10, "ok": true}`.
+limits, `release_status` says whether a release would go through, `diff` gives what changed between two kept builds
+(`{"id": 10, "ok": true, "changes": {...}}`), and `shutdown` gives `{"id": 11, "ok": true}`.
 
 Job ops (`route`, `parts`, `release`) run in child processes and do not hold up the ordered ops. Their progress
 comes back as `{"id": 3, "event": {...}}` lines and their end as one `{"id": 3, "ok": true, "result": {...}}`.
@@ -186,6 +188,10 @@ worked out from EIA-481-D tape orientations; its docstring and `NOTICE` say how)
 checked in JLC's placement preview yet, so release lists every part whose rotation could matter. Look at each one in
 the preview before you pay.
 
+`diff` compares two build folders that are still kept and answers
+`{"id": 4, "ok": true, "changes": {"circuit": [...], "layout": [...]}}`, in the words a build's own `changes` uses.
+A folder that was pruned answers `build <hash> is no longer kept`.
+
 ## Libraries and kicad-cli
 
 The engine reads KiCad's symbol, footprint and 3D model libraries itself. For each kind it takes
@@ -212,7 +218,9 @@ project.
   board.kicad_sch  board.kicad_pcb  board.kicad_pro  board.kicad_dru  sym-lib-table  fp-lib-table
   filled/                     a copy of the project, with the board's zones filled by kicad-cli
   erc.json  netlist.xml  drc.json
-  schematic.svg  svg/board-<layer>.svg  board.glb  render-top.png (with --render)
+  schematic.svg               the sheet without KiCad's drawing sheet (no border or title block)
+  sheet.json                  where each symbol, pin, wire, label and block frame is, in sheet mm
+  svg/board-<layer>.svg  board.glb  render-top.png (with --render)
   result.json
 ```
 
@@ -223,7 +231,8 @@ folders are kept.
 
 ## The result
 
-`schema/build-result-1.schema.json` describes `pino.build/1` exactly. A result has a verdict (`ok`, `errors` or
+`schema/build-result-1.schema.json` describes `pino.build/1` exactly, and `schema/sheet-1.schema.json` describes
+`sheet.json`. A result has a verdict (`ok`, `errors` or
 `failed`), a headline such as `On h4: 0 errors, 2 warnings, 18 unrouted`, counts, at most 200 findings (the rest
 counted in `truncated`), artifact paths relative to the project, timings per step, what changed since the previous
 build in words, the placement score and what still waits (`routing: not started`).

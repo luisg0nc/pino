@@ -7,16 +7,18 @@ software on its own and is written when the stage before it has taught what it n
 
 | Stage | Plan | Depends on | State |
 |---|---|---|---|
-| 1. Spikes: router, board writer, schematic writer, 2D board view | briefs in `.worktrees/spike-*.brief.md` (not committed) | spec | running |
-| 2. App shell: torno's copied parts, green accent, first screen, session dock, server, guard, CI | `2026-11-26-pino-shell.md` | spec | being written |
-| 3. Design mocks: three directions each for the board view, marks on the board, the logo and first screen; the person's mark colour | written after stage 1 | shell | not started |
-| 4. Engine: `board.py` library, schematic writer, board writer, placement, fast build loop | written from spikes 2 and 3 | spikes, shell | not started |
-| 5. Views: Schematic, Board (2D) and 3D tabs, changes highlighted | written from spike 4 and the mocks | engine, mocks | not started |
-| 6. Marks and MCP tools (look, measure, check, diff, nets, ratsnest, parts, route, point) | written after stage 5 | views | not started |
-| 7. Routing in the background, DRC, copper checks | written from spike 1 | engine | not started |
+| 1. Spikes: router, board writer, schematic writer, 2D board view | briefs in `.worktrees/spike-*.brief.md` (not committed) | spec | done: all four passed (router: KiCadRoutingTools, 77 to 92 percent of nets, Claude finishes the rest) |
+| 2. App shell: torno's copied parts, green accent, first screen, session dock, server, guard, CI | `2026-11-26-pino-shell.md` | spec | built, reviewed, CI green: PR #1 waits for Luis to merge |
+| 3. Design mocks: three directions each for the board view, marks on the board, the logo and first screen; the person's mark colour | picks in `docs/superpowers/specs/2026-11-26-pino-design-picks.md` | spikes | done: drafting board view, pencil marks, the sheet, probe logo, violet marks |
+| 4. Engine: `board.py` library, schematic writer, board writer, placement, fast build loop | `2026-11-26-pino-engine.md` | spikes | built, reviewed: PR #2 (247 tests, reference board 0 errors) waits for Luis to merge |
+| 5. Views: Schematic, Board (2D) and 3D tabs, changes highlighted | `2026-11-26-pino-views-marks.md` | engine, mocks | built, reviewed: draft PR #4 |
+| 6. Marks and MCP tools (look, measure, check, diff, nets, ratsnest, parts, route, point) | `2026-11-26-pino-views-marks.md` | views | built with stage 5, in PR #4 (`parts` waits for stage 8) |
+| 7. Routing in the background, DRC, copper checks | `2026-11-26-pino-routing.md` | engine | PR #3 open, stacked on `engine`; the app side is in PR #4 |
 | 8. Parts (KiCad libraries, EasyEDA fallback, jlcsearch), fab limits in the Brief, release to JLC fab files | written after stage 7 | engine | not started |
 
-Each stage runs on its own branch with one whole-branch review at the end (Opus), per Luis's lean-review rule.
+Each stage runs on its own branch with one whole-branch review at the end (Opus), per Luis's lean-review rule. The
+auto-mode classifier refuses `gh pr merge` for the director, so Luis merges; later stages stack on the branch they
+need and their PRs target it.
 
 ## Design bar (Luis, 2026-11-26)
 

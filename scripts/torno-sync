@@ -1,0 +1,104 @@
+#!/usr/bin/env node
+// Drift between pino's copied files and torno, both ways. `shared-from-torno.json` lists the copies.
+//   node scripts/torno-sync [--torno <dir>] [--pino <dir>] [--json]
+// Exit 0: nothing drifted. 1: something did. 2: it could not tell.
+// torno is only ever read: rev-parse, cat-file and show, nothing that writes there.
+'use strict'
+
+const { spawnSync } = require('node:child_process')
+const fs = require('node:fs')
+const path = require('node:path')
+
+function fail(reason) {
+  process.stderr.write(`torno-sync: ${reason}\n`)
+  process.exit(2)
+}
+
+function parseArgs(argv) {
+  const opts = { json: false }
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]
+    if (a === '--json') opts.json = true
+    else if ((a === '--torno' || a === '--pino') && argv[i + 1] !== undefined) opts[a.slice(2)] = argv[++i]
+    else fail('usage: torno-sync [--torno <dir>] [--pino <dir>] [--json]')
+  }
+  return opts
+}
+
+function git(dir, ...args) {
+  const r = spawnSync('git', ['-C', dir, ...args], { maxBuffer: 64 * 1024 * 1024, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } })
+  return { ok: r.status === 0, out: r.stdout }
+}
+
+/** PINO_TORNO_DIR, else `torno` beside pino's main checkout: from a worktree, `../torno` would point elsewhere. */
+function defaultTorno(pino) {
+  if (process.env.PINO_TORNO_DIR) return process.env.PINO_TORNO_DIR
+  const common = git(pino, 'rev-parse', '--path-format=absolute', '--git-common-dir')
+  const checkout = common.ok ? path.dirname(common.out.toString().trim()) : pino
+  return path.join(checkout, '..', 'torno')
+}
+
+function readManifest(pino) {
+  const file = path.join(pino, 'shared-from-torno.json')
+  try {
+    const files = JSON.parse(fs.readFileSync(file, 'utf8')).files
+    if (!Array.isArray(files)) throw new Error('no "files" list')
+    for (const f of files) {
+      if (!f || typeof f.pino !== 'string' || typeof f.torno !== 'string' || !/^[0-9a-f]{40}$/.test(f.commit) || !['as-is', 'adapted'].includes(f.mode))
+        throw new Error(`a bad entry: ${JSON.stringify(f)}`)
+    }
+    return files
+  } catch (err) {
+    return fail(`cannot read shared-from-torno.json: ${String(err.message).split('\n')[0]}`)
+  }
+}
+
+function bytesOf(file) {
+  try {
+    return fs.readFileSync(file)
+  } catch {
+    return null
+  }
+}
+
+const opts = parseArgs(process.argv.slice(2))
+const pino = path.resolve(opts.pino ?? path.join(__dirname, '..'))
+const torno = path.resolve(opts.torno ?? defaultTorno(pino))
+
+// A folder inside some other repository is not torno: the top level has to be the folder itself.
+const top = git(torno, 'rev-parse', '--show-toplevel')
+if (!top.ok || fs.realpathSync(top.out.toString().trim()) !== fs.realpathSync(torno)) fail(`${torno} is not a git repository (set PINO_TORNO_DIR or --torno)`)
+const headRead = git(torno, 'rev-parse', '--verify', 'HEAD')
+if (!headRead.ok) fail(`${torno} is not a git repository with a commit`)
+const head = headRead.out.toString().trim()
+
+const entries = readManifest(pino).map((f) => {
+  if (!git(torno, 'cat-file', '-e', `${f.commit}^{commit}`).ok) fail(`unknown commit ${f.commit} (named for ${f.pino})`)
+  const was = git(torno, 'show', `${f.commit}:${f.torno}`)
+  if (!was.ok) fail(`${f.torno} is not in torno at ${f.commit.slice(0, 7)}`)
+  const now = git(torno, 'show', `${head}:${f.torno}`)
+  const mine = f.mode === 'as-is' ? bytesOf(path.join(pino, f.pino)) : null
+  return {
+    pino: f.pino,
+    torno: f.torno,
+    mode: f.mode,
+    commit: f.commit,
+    pinoChanged: f.mode === 'as-is' && (mine === null || !mine.equals(was.out)),
+    tornoChanged: now.ok && !now.out.equals(was.out),
+    tornoRemoved: !now.ok
+  }
+})
+
+const drifted = entries.filter((e) => e.pinoChanged || e.tornoChanged || e.tornoRemoved)
+if (opts.json) {
+  process.stdout.write(`${JSON.stringify({ head, entries }, null, 2)}\n`)
+} else {
+  for (const e of drifted) {
+    if (e.pinoChanged) console.log(`pino-changed ${e.pino}`)
+    if (e.tornoChanged)
+      console.log(`torno-changed ${e.torno} ${e.commit.slice(0, 7)}..${head.slice(0, 7)}  (git -C ${torno} diff ${e.commit.slice(0, 7)} HEAD -- ${e.torno})`)
+    if (e.tornoRemoved) console.log(`torno-removed ${e.torno}`)
+  }
+  console.log(`${entries.length} files, ${drifted.length} drifted`)
+}
+process.exitCode = drifted.length ? 1 : 0

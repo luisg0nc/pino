@@ -1,0 +1,27 @@
+// What a session asks of the app's own domain. The session manager is plumbing shared with torno in shape: what a
+// board needs the agent to know, and when a turn may end, is answered here (main/domain.ts), without the manager
+// knowing anything of boards.
+import type { ProjectInfo } from '../../shared/project'
+
+export interface PromptContext {
+  /** Added to the prompt through its UserPromptSubmit hook (additionalContext); '' adds nothing. */
+  text: string
+  /** The marks the text carries: they stand beside the prompt in the chat. */
+  sentMarkIds: string[]
+  /** Called once the hook has its answer: the agent has the context then. */
+  delivered?: () => Promise<void>
+}
+
+export interface SessionDomain {
+  promptContext(project: ProjectInfo, prompt: string): Promise<PromptContext>
+  /** The Stop hook's answer: null lets the turn end; a block sends the agent on with the reason. */
+  stopAnswer(project: ProjectInfo): Promise<{ decision: 'block'; reason: string } | null>
+}
+
+const NOTHING = (): PromptContext => ({ text: '', sentMarkIds: [] })
+
+/** A domain that adds nothing and holds no turn back. */
+export const NO_DOMAIN: SessionDomain = {
+  promptContext: async () => NOTHING(),
+  stopAnswer: async () => null
+}

@@ -161,7 +161,9 @@ class KicadCli:
         return self._call("netlist", ("sch", "export", "netlist"), ["--format", "kicadxml"], out, sch)
 
     def sch_svg(self, sch: Path, out_dir: Path) -> CliRun:
-        return self._call("schematic svg", ("sch", "export", "svg"), [], out_dir, sch, output_is_dir=True)
+        # no drawing sheet: the views draw the blocks on their own paper, without KiCad's border and title block
+        return self._call("schematic svg", ("sch", "export", "svg"), ["--exclude-drawing-sheet"], out_dir, sch,
+                          output_is_dir=True)
 
     def drc(self, pcb: Path, out: Path, *, refill: bool = False, save: bool = False, parity: bool = False,
             cancel=None) -> CliRun:

@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+app/e2e/.results/
+
+# Worktrees, Claude Code's own files, profiler dumps
+.worktrees/
+.claude/worktrees/
+.claude/settings.local.json
+.superpowers/
+*.prof

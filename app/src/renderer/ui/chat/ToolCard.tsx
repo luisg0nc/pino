@@ -1,0 +1,138 @@
+import { memo, useMemo, useState } from 'react'
+import { type ChatItem, type ChatWhere, shownPath, toolLabel } from '../../../shared/chat'
+import { toolName } from '../../../shared/app'
+import { useStore } from '../../state/store'
+import { MarkChip } from '../MarkChip'
+import { numbered } from '../numbered'
+import { chipsFor, pointedIds } from './markChips'
+import { Diff } from './Diff'
+import { editHunks, type Hunk, limitHunks } from './lineDiff'
+import { useChatPlace } from './place'
+
+type Tool = Extract<ChatItem, { kind: 'tool' }>
+
+/** A tool that went well says nothing: only the others, and one under way, keep their word. */
+const STATE_WORD: Record<Tool['state'], string> = { running: 'running', done: '', error: 'failed', stopped: 'stopped', denied: 'denied', cancelled: 'cancelled' }
+/** How much of an input or a result is shown before "Show all". */
+const SHOWN_LINES = 12
+/** Past this, even "Show all" shows no more: the item holds no more than 50,000 characters, and a page of them is slow to lay out. */
+const SHOW_ALL_LIMIT = 20_000
+
+function inputText(input: unknown): string {
+  if (typeof input === 'string') return input
+  if (input === undefined || input === null) return ''
+  try {
+    return JSON.stringify(input, null, 2) ?? ''
+  } catch {
+    return String(input)
+  }
+}
+
+/** Lines of monospace text, the first few, with a way to see them all. */
+function Lines({ label, text }: { label: string; text: string }) {
+  const [all, setAll] = useState(false)
+  if (text === '') return null
+  const lines = text.split('\n')
+  const more = lines.length > SHOWN_LINES
+  const shown = all || !more ? text : lines.slice(0, SHOWN_LINES).join('\n')
+  return (
+    <div className="chat-lines">
+      <p className="chat-lines-label">{label}</p>
+      <pre className="chat-pre selectable">
+        {shown.length > SHOW_ALL_LIMIT ? `${shown.slice(0, SHOW_ALL_LIMIT)}…` : shown}
+      </pre>
+      {more && !all && (
+        <button type="button" className="chat-more" onClick={() => setAll(true)}>
+          Show all {numbered(`${lines.length} lines`)}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** What an `Edit` or a `MultiEdit` changed, as lines removed and added: the first few, with a way to see them all. */
+function Changes({ hunks, input, where }: { hunks: Hunk[]; input: unknown; where: ChatWhere }) {
+  const [all, setAll] = useState(false)
+  const path = typeof (input as { file_path?: unknown }).file_path === 'string' ? (input as { file_path: string }).file_path : undefined
+  const shown = limitHunks(hunks, SHOWN_LINES, all)
+  return (
+    <div className="chat-lines">
+      <p className="chat-lines-label">Input</p>
+      {path !== undefined && (
+        <p className="chat-ask-lead selectable" title={path}>
+          {shownPath(path, where)}
+        </p>
+      )}
+      <Diff hunks={shown.hunks} />
+      {shown.more > 0 && (
+        <button type="button" className="chat-more" onClick={() => setAll(true)}>
+          Show all {numbered(`${shown.more} more changed lines`)}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** A tool's line in three: what stands before the word that carries it, that word in bold, and what follows. `Read` carries its file; pino's tools carry their name; the others their own. */
+export function labelParts(name: string, label: string, own: boolean): [string, string, string] {
+  if (own) {
+    const at = label.indexOf(' (')
+    return at < 0 ? ['', label, ''] : ['', label.slice(0, at), label.slice(at)]
+  }
+  if (name === 'Read') {
+    const at = label.indexOf(' ')
+    return at < 0 ? ['', label, ''] : [label.slice(0, at + 1), label.slice(at + 1), '']
+  }
+  const word = /^[^\s:]+/.exec(label)?.[0] ?? label
+  return ['', word, label.slice(word.length)]
+}
+
+/**
+ * A tool the agent used, as a chip: what it did, and how it went. It opens to its input and its result. One of pino's
+ * own is on the accent wash with its name in the accent.
+ */
+export const ToolCard = memo(function ToolCard({ item, beat }: { item: Tool; beat: boolean }) {
+  const [open, setOpen] = useState(false)
+  const marks = useStore((s) => s.marks)
+  const pointed = item.name === toolName('point') && item.state === 'done' ? chipsFor(pointedIds(item.result), marks, false) : []
+  const where = useChatPlace()
+  const label = useMemo(() => toolLabel(item.name, item.input, where), [item.name, item.input, where])
+  const full = useMemo(() => toolLabel(item.name, item.input), [item.name, item.input])
+  const [lead, strong, tail] = useMemo(() => labelParts(item.name, label, item.own), [item.name, label, item.own])
+  // Only an open card needs its input as text.
+  const hunks = useMemo(() => (open ? editHunks(item.name, item.input) : undefined), [open, item.name, item.input])
+  const input = useMemo(() => (open && !hunks ? inputText(item.input) : ''), [open, hunks, item.input])
+  return (
+    <div className="chat-item chat-tool" data-kind="tool" data-own={item.own ? '' : undefined} data-state={item.state} data-open={open ? '' : undefined}>
+      <div className="chat-tool-row">
+        <button type="button" className="chat-tool-line" title={full} aria-label={full} aria-expanded={open} onClick={() => setOpen(!open)} />
+        <span className="chat-tool-label">
+          {lead !== '' && numbered(lead)}
+          <b>{numbered(strong)}</b>
+          {numbered(tail)}
+        </span>
+        {item.steps !== undefined && <span className="chat-tool-steps">{numbered(`${item.steps} ${item.steps === 1 ? 'step' : 'steps'}`)}</span>}
+        <span className="chat-tool-state">
+          {item.state === 'running' && <span className="chat-dot" data-beat={beat ? undefined : 'off'} aria-hidden="true" />}
+          {STATE_WORD[item.state]}
+        </span>
+      </div>
+      {pointed.length > 0 && (
+        // What Claude has just pointed at, in its orange: a chip lights the mark in the view.
+        <div className="chat-tool-marks">
+          {pointed.map((chip) => (
+            <MarkChip key={chip.id} chip={chip} />
+          ))}
+        </div>
+      )}
+      {open && (
+        <div className="chat-tool-body">
+          {hunks ? <Changes hunks={hunks} input={item.input} where={where} /> : <Lines label="Input" text={input} />}
+          {item.inside !== undefined && item.inside.length > 0 && <Lines label="Inside" text={item.inside.join('\n')} />}
+          <Lines label="Result" text={item.result ?? ''} />
+          {item.result === undefined && item.state !== 'running' && <p className="chat-lines-label">No result</p>}
+        </div>
+      )}
+    </div>
+  )
+})

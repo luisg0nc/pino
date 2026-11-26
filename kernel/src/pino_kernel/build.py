@@ -459,6 +459,7 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
         edges = [[e[0], list(e[1]), list(e[2]), e[3]] for e in ratsnest(nets, planes)]
         placement_doc = {"poses": json.loads(placement_to_json(placed_result.placement)), "edges": edges}
         _write(tmp / "placement.json", json.dumps(placement_doc, indent=1, sort_keys=True) + "\n")
+        _write(tmp / "sheet.json", json.dumps(sch.sheet, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
         _write(tmp / "board.kicad_sch", sch.kicad_sch)
         _write(tmp / "sym-lib-table", sch.sym_lib_table)
         _write(tmp / "fp-lib-table", sch.fp_lib_table)
@@ -574,7 +575,8 @@ def _build_into(project, tmp, final, digest, number, circuit, circuit_json, libs
                       ("board", "board.kicad_pcb"), ("project", "board.kicad_pro"), ("rules", "board.kicad_dru"),
                       ("sym_lib_table", "sym-lib-table"), ("fp_lib_table", "fp-lib-table"),
                       ("filled", "filled/board.kicad_pcb"), ("erc", "erc.json"), ("netlist", "netlist.xml"),
-                      ("drc", "drc.json"), ("schematic_svg", "schematic.svg"), ("glb", "board.glb"),
+                      ("drc", "drc.json"), ("schematic_svg", "schematic.svg"), ("sheet", "sheet.json"),
+                      ("glb", "board.glb"),
                       ("render", "render-top.png")):
         if (tmp / name).is_file():
             artifacts[key] = rel(name)

@@ -1,0 +1,33 @@
+/* ---- The route card (ui/card/RouteCard.tsx): the project read top to bottom ----
+   The column holds the head slot (or the On block) and the bench. Their looks are in card-hand, card-on,
+   card-parts, card-checks, card-marks and card-misc, which come after this. */
+
+.route-card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: var(--divider);
+  background: var(--panel);
+}
+
+/* What is in your hand, pinned above the scroll. It grows to fit, up to 60 % of the card, and scrolls inside itself beyond that. */
+.route-hand {
+  flex: none;
+  max-height: 60%;
+  overflow-y: auto;
+}
+
+/* What a section has to do in its own head, until its restyling puts that in the head's line: Show all, Import scan… */
+.route-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 var(--space-2) var(--space-1) var(--space-4);
+}
+
+.route-tools:empty {
+  display: none;
+}

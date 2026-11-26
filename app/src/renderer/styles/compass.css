@@ -1,0 +1,228 @@
+/* ---- The compass of the 3D tab: the cube, the projection and Fit, at the top right of the view (ui/view/Compass.tsx) ---- */
+
+/* Items right-aligned, 7 px apart. Only what is drawn takes the pointer: between and beside it, it is the view's. */
+.compass {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 6;
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.compass > * {
+  pointer-events: auto;
+}
+
+/* ---- The cube: a tile of 118 x 112 holding a still iso picture ---- */
+
+.cube {
+  position: relative;
+  width: 118px;
+  height: 112px;
+  border-radius: var(--radius-sheet);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: var(--float-shadow);
+}
+
+.cube-picture {
+  position: absolute;
+  top: 8px;
+  left: 11px;
+  width: 96px;
+  height: 96px;
+}
+
+.cube-picture svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cube .face {
+  fill: var(--panel);
+  stroke: var(--field-edge);
+  stroke-width: 1;
+}
+
+.cube [data-on] .face {
+  fill: var(--accent-wash);
+  stroke: var(--accent);
+}
+
+.cube text {
+  fill: var(--ink);
+  font: 10px var(--font-ui);
+  text-anchor: middle;
+}
+
+.cube text.k {
+  fill: var(--muted);
+  font: 9px var(--font-mono);
+}
+
+.cube .corner {
+  fill: var(--accent);
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+
+/* The buttons over the picture, each cut to its face. */
+.cube-face {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cube-face:hover,
+.cube-face:focus-visible {
+  background: var(--accent-wash);
+}
+
+/* The corner: Iso. */
+.cube-corner {
+  position: absolute;
+  top: calc(52% - 10px);
+  left: calc(50% - 10px);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cube-corner:hover,
+.cube-corner:focus-visible {
+  background: var(--accent-wash);
+}
+
+/* "···": Back, Left and Bottom. */
+.cube-more {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+}
+
+.cube-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.cube-dots:hover,
+.cube-dots[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+.compass .cube-more .menu {
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+}
+
+/* ---- Pills ---- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: var(--float-shadow);
+  color: var(--ink);
+  font-size: var(--text-row);
+  white-space: nowrap;
+}
+
+.pill:hover {
+  color: var(--accent);
+}
+
+.pill[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.pill[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+/* The key cap beside a name. */
+.pill kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-inline);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 400;
+}
+
+.pill[aria-pressed='true'] kbd {
+  border-color: color-mix(in srgb, var(--on-accent) 45%, transparent);
+  background: transparent;
+  color: var(--on-accent);
+}
+
+.pill .num {
+  margin-inline: 0;
+}
+
+/* Perspective / Ortho: a segment in a pill. */
+.pill-seg {
+  gap: 0;
+  padding: 0 3px;
+}
+
+.pill-seg .seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-row);
+}
+
+.pill-seg .seg:hover {
+  color: var(--ink);
+}
+
+.pill-seg .seg[aria-pressed='true'] {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+/* Fit, in its row. */
+.compass-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}

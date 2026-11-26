@@ -1,0 +1,588 @@
+{
+ "artifacts": {
+  "board": ".pino/build/31ea11f6a0ae/board.kicad_pcb",
+  "filled": ".pino/build/31ea11f6a0ae/filled/board.kicad_pcb",
+  "schematic_svg": ".pino/build/31ea11f6a0ae/schematic.svg",
+  "sheet": ".pino/build/31ea11f6a0ae/sheet.json",
+  "circuit": ".pino/build/31ea11f6a0ae/circuit.json",
+  "placement": ".pino/build/31ea11f6a0ae/placement.json",
+  "drc": ".pino/build/31ea11f6a0ae/drc.json",
+  "glb": ".pino/build/31ea11f6a0ae/board.glb"
+ },
+ "cached": false,
+ "changes": {
+  "circuit": [
+   "first build"
+  ],
+  "layout": []
+ },
+ "counts": {
+  "crossings": 4,
+  "errors": 0,
+  "infos": 2,
+  "nets": 14,
+  "parts": 22,
+  "unrouted": 80,
+  "warnings": 31
+ },
+ "findings": [
+  {
+   "at": {
+    "layer": "B.Cu",
+    "space": "board",
+    "x": 28,
+    "y": 20
+   },
+   "code": "isolated_copper",
+   "message": "Isolated copper fill: Zone 'GND_B.Cu' [GND] on B.Cu, priority 0",
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "Edge.Cuts",
+    "space": "board",
+    "x": 26,
+    "y": 22
+   },
+   "code": "silk_edge_clearance",
+   "message": "Silkscreen clipped by board edge: Segment on Edge.Cuts; Segment of U1 on F.Silkscreen",
+   "refs": [
+    "U1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "Edge.Cuts",
+    "space": "board",
+    "x": 26,
+    "y": 22
+   },
+   "code": "silk_edge_clearance",
+   "message": "Silkscreen clipped by board edge: Segment on Edge.Cuts; Segment of U1 on F.Silkscreen",
+   "refs": [
+    "U1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -4.61,
+    "y": -1.2
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of C3; Pad 1 [VBUS] of C1 on F.Cu",
+   "refs": [
+    "C3",
+    "C1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -8.56,
+    "y": 19.25
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of C5; Pad 1 [+3V3] of C6 on F.Cu",
+   "refs": [
+    "C5",
+    "C6"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -8.56,
+    "y": 15.75
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of C7; Pad 1 [+3V3] of R4 on F.Cu",
+   "refs": [
+    "C7",
+    "R4"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -4.1,
+    "y": -10.85
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of F1; Pad 1 [VBUS_IN] of R9 on F.Cu",
+   "refs": [
+    "F1",
+    "R9"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -4.1,
+    "y": -10.85
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of F1; Pad 2 [VBUS] of R9 on F.Cu",
+   "refs": [
+    "F1",
+    "R9"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": 0,
+    "y": -12.205
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of J1; Pad 2 [GND] of R1 on F.Cu",
+   "refs": [
+    "J1",
+    "R1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": 0.58,
+    "y": -11.3
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of R2; Pad 2 [GND] of R1 on F.Cu",
+   "refs": [
+    "R2",
+    "R1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -6.97,
+    "y": -14.2
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of R3; Pad 1 [SHIELD] of C2 on F.Cu",
+   "refs": [
+    "R3",
+    "C2"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -6.97,
+    "y": -14.2
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of R3; Pad 2 [GND] of C2 on F.Cu",
+   "refs": [
+    "R3",
+    "C2"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -8.9,
+    "y": 17.92
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of R4; Pad 1 [+3V3] of C6 on F.Cu",
+   "refs": [
+    "R4",
+    "C6"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -3.4,
+    "y": -0.55
+   },
+   "code": "silk_over_copper",
+   "message": "Silkscreen clipped by solder mask: Reference field of U2; Pad 2 [GND] of C3 on F.Cu",
+   "refs": [
+    "U2",
+    "C3"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -7.96,
+    "y": -14.25
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of C2; Reference field of R3",
+   "refs": [
+    "C2",
+    "R3"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -4.61,
+    "y": -1.2
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of C3; Segment of C1 on F.Silkscreen",
+   "refs": [
+    "C3",
+    "C1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -8.56,
+    "y": 19.25
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of C5; Reference field of R4",
+   "refs": [
+    "C5",
+    "R4"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -8.56,
+    "y": 19.25
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of C5; Segment of C6 on F.Silkscreen",
+   "refs": [
+    "C5",
+    "C6"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": 0,
+    "y": -12.205
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of J1; Reference field of R2",
+   "refs": [
+    "J1",
+    "R2"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": 0,
+    "y": -12.205
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of J1; Segment of R1 on F.Silkscreen",
+   "refs": [
+    "J1",
+    "R1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -0.25,
+    "y": -10.63
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of R1; Reference field of R2",
+   "refs": [
+    "R1",
+    "R2"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -5.12,
+    "y": -10.8
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of R9; Reference field of F1",
+   "refs": [
+    "R9",
+    "F1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "space": "board",
+    "x": -3.4,
+    "y": -0.55
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Reference field of U2; Segment of C3 on F.Silkscreen",
+   "refs": [
+    "U2",
+    "C3"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "F.Silkscreen",
+    "space": "board",
+    "x": -6.44,
+    "y": -14.3578
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Segment of C2 on F.Silkscreen; Reference field of R3",
+   "refs": [
+    "C2",
+    "R3"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "F.Silkscreen",
+    "space": "board",
+    "x": -7.16,
+    "y": -14.3578
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Segment of C2 on F.Silkscreen; Reference field of R3",
+   "refs": [
+    "C2",
+    "R3"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "F.Silkscreen",
+    "space": "board",
+    "x": -3.81,
+    "y": -1.3078
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Segment of C3 on F.Silkscreen; Reference field of U2",
+   "refs": [
+    "C3",
+    "U2"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "F.Silkscreen",
+    "space": "board",
+    "x": -9.0536,
+    "y": 16.37
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Segment of R4 on F.Silkscreen; Reference field of C7",
+   "refs": [
+    "R4",
+    "C7"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "F.Silkscreen",
+    "space": "board",
+    "x": -3.57,
+    "y": -10.9536
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Segment of R9 on F.Silkscreen; Reference field of F1",
+   "refs": [
+    "R9",
+    "F1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "at": {
+    "layer": "F.Silkscreen",
+    "space": "board",
+    "x": -4.33,
+    "y": -10.9536
+   },
+   "code": "silk_overlap",
+   "message": "Silkscreen clearance: Segment of R9 on F.Silkscreen; Reference field of F1",
+   "refs": [
+    "R9",
+    "F1"
+   ],
+   "severity": "warning",
+   "source": "drc"
+  },
+  {
+   "code": "model3d_missing",
+   "message": "J1: 3D model not found: ${KICAD10_3DMODEL_DIR}/Connector_USB.3dshapes/USB_C_Receptacle_HRO_TYPE-C-31-M-12.step",
+   "refs": [
+    "J1"
+   ],
+   "severity": "warning",
+   "source": "model3d"
+  },
+  {
+   "code": "model3d_missing",
+   "message": "U1: 3D model not found: ${KICAD10_3DMODEL_DIR}/RF_Module.3dshapes/ESP32-C6-MINI-1.step",
+   "refs": [
+    "U1"
+   ],
+   "severity": "warning",
+   "source": "model3d"
+  },
+  {
+   "at": {
+    "file": "board.py",
+    "line": 33,
+    "space": "source"
+   },
+   "code": "nc_rest",
+   "message": "U1: 25 pins left open by nc_rest: 4 (NC), 5 (IO2), 6 (IO3), 7 (NC), 9 (IO4), 10 (IO5), 12 (IO0), 13 (IO1), 15 (IO6), 16 (IO7), 19 (IO14), 20 (IO15), 21 (NC), 24 (IO18), 25 (IO19), 26 (IO20), 27 (IO21), 28 (IO22), 29 (IO23), 30 (RXD0), 31 (TXD0), 32 (NC), 33 (NC), 34 (NC), 35 (NC)",
+   "refs": [
+    "U1"
+   ],
+   "severity": "info",
+   "source": "board.py"
+  },
+  {
+   "at": {
+    "file": "board.py",
+    "line": 29,
+    "space": "source"
+   },
+   "code": "nc_rest",
+   "message": "U2: 1 pin left open by nc_rest: 4 (NC)",
+   "refs": [
+    "U2"
+   ],
+   "severity": "info",
+   "source": "board.py"
+  }
+ ],
+ "hash": "31ea11f6a0ae",
+ "headline": "On h1: 0 errors, 31 warnings, 80 unrouted",
+ "kernel_version": "0.1.0",
+ "kicad_cli": "10.0.6",
+ "number": 1,
+ "placement": {
+  "crossings": 4,
+  "length_mm": 205.27,
+  "score": 81.054
+ },
+ "schema": "pino.build/1",
+ "timings": [
+  {
+   "seconds": 0,
+   "step": "libraries"
+  },
+  {
+   "seconds": 0.502,
+   "step": "run board.py"
+  },
+  {
+   "seconds": 0.433,
+   "step": "hash"
+  },
+  {
+   "seconds": 3.15,
+   "step": "place"
+  },
+  {
+   "seconds": 0.046,
+   "step": "write schematic"
+  },
+  {
+   "seconds": 0.017,
+   "step": "write board"
+  },
+  {
+   "seconds": 0.796,
+   "step": "erc"
+  },
+  {
+   "seconds": 0.47,
+   "step": "netlist"
+  },
+  {
+   "seconds": 0.462,
+   "step": "schematic svg"
+  },
+  {
+   "seconds": 0.602,
+   "step": "drc"
+  },
+  {
+   "seconds": 0.622,
+   "step": "svg"
+  },
+  {
+   "seconds": 1.288,
+   "step": "glb"
+  },
+  {
+   "seconds": 0.094,
+   "step": "checks"
+  },
+  {
+   "seconds": 0,
+   "step": "diff"
+  }
+ ],
+ "truncated": 0,
+ "verdict": "ok",
+ "waiting": [
+  "routing: not started"
+ ]
+}

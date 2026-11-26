@@ -1,0 +1,245 @@
+/* The three views over the board, their floating tabs and what stands over a view (`ui/ViewPane.tsx`): torno's view,
+   a surface with its controls floating on it. */
+
+.views {
+  position: relative;
+  overflow: hidden;
+}
+
+.views-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.views-tabs {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  left: 14px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+}
+
+.views-tab {
+  padding: 4px 11px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-row);
+}
+
+.views-tab:hover {
+  background: var(--surface);
+}
+
+.views-tab[aria-selected='true'] {
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* An empty view is the dye, with its words at its foot as on the first screen, at a view's size. */
+.views-panel .plate {
+  gap: var(--space-2);
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+.views-empty-title {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.views-panel .plate-lead {
+  max-width: 54ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---- what is true of the whole view: one band at its foot ---- */
+
+.band {
+  position: absolute;
+  z-index: 6;
+  bottom: 14px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100% - 28px);
+  min-height: 36px;
+  padding: 5px 6px 5px 14px;
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  font-size: var(--text-row);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: band-drop 0.32s var(--ease) both;
+}
+
+.band-words {
+  min-width: 0;
+  padding-right: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.band-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fail);
+}
+
+.band[data-band='stale'] .band-dot {
+  background: var(--warn);
+}
+
+.band-progress {
+  flex: none;
+  width: 120px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--hairline);
+}
+
+.band-progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s var(--ease);
+}
+
+.band-clock {
+  flex: none;
+  min-width: 4ch;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.band-button {
+  flex: none;
+  height: 26px;
+  padding: 0 11px;
+  border: var(--divider);
+  border-radius: var(--radius-control);
+  background: var(--raise);
+}
+
+.band-button[data-primary] {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+/* The band takes the hint's place while it is there. */
+.views:has(.band) .hint {
+  visibility: hidden;
+}
+
+@keyframes band-drop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .band {
+    animation: none;
+  }
+
+  .band-progress i {
+    transition: none;
+  }
+}
+
+/* ---- the hint at the foot of a view ---- */
+
+.hint {
+  position: absolute;
+  z-index: 6; /* over the pins and the chips, which move under it as the view is panned */
+  bottom: 12px;
+  left: 50%;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  color: var(--muted);
+  font-size: var(--text-small);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* ---- tags: a reading beside what it is about, tied by a leader ---- */
+
+.tag {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  max-width: 320px;
+  padding: 6px 10px;
+  border-radius: var(--radius-float);
+  background: var(--raise);
+  box-shadow: var(--float-shadow);
+  font-size: var(--text-small);
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.tag-head {
+  font-weight: 500;
+}
+
+.tag-more {
+  color: var(--muted);
+  font: 400 10.5px / 1.5 var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* The status line: the notice takes what room is left and is cut before anything else is; the session stands at the right. */
+.status-notice {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--warn);
+  text-overflow: ellipsis;
+}
+
+.status-session[data-status='needs_input'] {
+  color: var(--warn);
+  font-weight: 500;
+}
+
+.status-session[data-status='working'] {
+  color: var(--accent);
+}
+
+/* The dock is the grid's right column: its head, then what the session is. */
+.dock {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The files named by the question about a folder's own Claude Code settings. */
+.ask-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}

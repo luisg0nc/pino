@@ -1,0 +1,110 @@
+name: CI
+
+# The app's unit tests, its typecheck and the Bash guard's cases, then the Playwright suite, which drives Electron in
+# a hidden window (.claude/rules/e2e-hidden-window.md) under xvfb. The specs use the stand-in agent. A change of only
+# the docs runs none of the suites: `changes` says so, and the jobs it gates are skipped (which a required check
+# accepts). A runner has no torno checkout beside pino, so the one test that reads it is skipped there.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Is there a changed file that is not the docs'? Any doubt (no base, a failed diff) says yes.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          code=true
+          if [ "$EVENT" = pull_request ]; then
+            range="origin/$BASE_REF...HEAD"
+          else
+            range="$BEFORE..$SHA"
+            case "$BEFORE" in 0000000*) range= ;; esac
+          fi
+          if [ -n "$range" ] && files=$(git diff --name-only "$range") && [ -n "$files" ]; then
+            code=false
+            while IFS= read -r f; do
+              case "$f" in
+                docs/*|LICENSE|NOTICE) ;;
+                CLAUDE.md) code=true ;;
+                */*) code=true ;;
+                *.md) ;;
+                *) code=true ;;
+              esac
+            done <<< "$files"
+          fi
+          echo "code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  app:
+    name: App (unit, typecheck, guard)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C app typecheck
+      - run: pnpm test
+      - run: bash .claude/hooks/guard-bash.test.sh
+
+  # The whole Playwright suite, app/e2e/*.spec.ts. Every launch sets PINO_TEST=1 (hidden window) and the specs use the
+  # stand-in agent.
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Electron downloads its binary on first use: done here, so that a failed download reads as one.
+      - run: pnpm -C app exec install-electron
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: pnpm -C app build
+      # 1920 × 1080: the default screen is 1280 wide, and a window never opens larger than its screen.
+      - run: xvfb-run -a -s '-screen 0 1920x1080x24' pnpm -C app exec playwright test
+        env:
+          PINO_TEST: '1'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: pino-e2e-results
+          path: app/e2e/.results
+          retention-days: 7
+          if-no-files-found: ignore
+          include-hidden-files: true

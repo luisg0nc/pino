@@ -77,6 +77,8 @@ New pino files (not in the manifest): `shared/app.ts`, `shared/project.ts`, `sha
 
 ### Task 1: Repo scaffold, manifest and drift report
 
+> **Note from the build:** torno is found by `scripts/torno-sync` and its test as `$PINO_TORNO_DIR`, else `torno` beside the main checkout (the parent of the git common dir): from a worktree, `../torno` from the repo root points elsewhere. `tornoSync.test.ts` also holds every as-is copy against the real torno, and skips with a message where there is none. The guard test also lost torno's grep case that named a person.
+
 **Files:**
 - Create: `package.json`, `pnpm-workspace.yaml`, `.gitignore`, `NOTICE`, `README.md`, `CLAUDE.md`, `shared-from-torno.json`, `scripts/torno-sync`
 - Copy as-is: `LICENSE`, `app/tsconfig.json`
@@ -114,7 +116,7 @@ Decisions:
 
 - `scripts/torno-sync`: CommonJS (`#!/usr/bin/env node`, `require` only, no extension). Default `--pino` is the folder above the script, default `--torno` is `<pino>/../torno`. For each entry: `pinoChanged` (as-is only) is pino's bytes against `git show <commit>:<torno path>`; `tornoChanged` is `git show <commit>:<path>` against `git show HEAD:<path>`; `tornoRemoved` when HEAD has no such path. Text output, one line each: `pino-changed <pino path>`, `torno-changed <torno path> <commit7>..<head7>  (git -C <torno> diff <commit7> HEAD -- <path>)`, `torno-removed <torno path>`, then `<n> files, <k> drifted`. `--json` prints `{ head, entries: [{ pino, torno, mode, commit, pinoChanged, tornoChanged, tornoRemoved }] }`. Exit 2 with one plain line on stderr when torno is not a git repo, the manifest does not parse, or a commit is unknown.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `app/src/tornoSync.test.ts` builds, in a temp folder, a fake torno repo (`git -c user.name=t -c user.email=t@example.invalid`, files `a.ts`, `b.ts`, `c.ts`, commit X, then edit `b.ts` and delete `c.ts`, commit Y) and a fake pino root with a manifest and copies. It runs `node <repo>/scripts/torno-sync --torno <t> --pino <p> --json`.
 
@@ -136,19 +138,19 @@ it('keeps torno\'s paths: pino path is the torno path, with torno in a file name
 it('names only files that are tracked in pino', () => { /* git ls-files --cached --others --exclude-standard contains every pino path */ })
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm install && pnpm -C app exec vitest run src/tornoSync.test.ts src/manifest.test.ts`
 Expected: FAIL, script and manifest missing.
 
-- [ ] **Step 3: Write the scaffold files, the manifest and `scripts/torno-sync` as decided above, copy `LICENSE` and `app/tsconfig.json` as-is, adapt `vitest.config.ts` and the guard hook and its test**
+- [x] **Step 3: Write the scaffold files, the manifest and `scripts/torno-sync` as decided above, copy `LICENSE` and `app/tsconfig.json` as-is, adapt `vitest.config.ts` and the guard hook and its test**
 
-- [ ] **Step 4: Run the tests and the guard cases**
+- [x] **Step 4: Run the tests and the guard cases**
 
 Run: `pnpm test && bash .claude/hooks/guard-bash.test.sh && node scripts/torno-sync`
 Expected: vitest PASS; guard test prints no FAIL line and exits 0; torno-sync prints `<n> files, 0 drifted` and exits 0 (it reads the real torno, read-only).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Scaffold pino: workspace, docs, guard hook, torno manifest and drift report"
@@ -157,6 +159,8 @@ git add -A && git commit -m "Scaffold pino: workspace, docs, guard hook, torno m
 ---
 
 ### Task 2: App prefix and the local HTTP server
+
+> **Note from the build:** The names test takes out only comments that open their own line (and JSX ones), so a `//` in an address or a `/*` in a glob is never read as a comment and cannot hide code.
 
 **Files:**
 - Create: `app/src/shared/app.ts`, `app/src/shared/app.test.ts`, `app/src/names.test.ts`
@@ -173,7 +177,7 @@ git add -A && git commit -m "Scaffold pino: workspace, docs, guard hook, torno m
 
 `names.test.ts` reads `git ls-files --cached --others --exclude-standard` under `app/src`, `app/e2e`, `app/test` (not `app/test/fixtures/`), `scripts`, `.github`, `.claude/hooks`. It strips comments (`//` lines and `/* */` in ts/tsx/mjs/js/css, `#` lines in sh and yml) and checks the code that is left. Allowed to name torno: `scripts/torno-sync`, `app/src/tornoSync.test.ts`, `app/src/manifest.test.ts`, `app/src/names.test.ts`, `app/src/shared/app.ts`, `.claude/hooks/guard-bash.sh`, `.claude/hooks/guard-bash.test.sh`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // shared/app.test.ts
@@ -188,19 +192,19 @@ it('says project, never object, in identifiers', () => { expect(offenders(/\b(ob
 it('reads the token from X-Pino-Session', () => { expect(SESSION_HEADER).toBe('X-Pino-Session') })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/app.test.ts src/names.test.ts src/main/http.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Write `shared/app.ts` and `names.test.ts`; copy `http.ts` and `http.test.ts` and make the named adaptation; add both to the manifest as adapted**
+- [x] **Step 3: Write `shared/app.ts` and `names.test.ts`; copy `http.ts` and `http.test.ts` and make the named adaptation; add both to the manifest as adapted**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the app prefix and torno's local HTTP server with per-session tokens"
@@ -227,7 +231,7 @@ git add -A && git commit -m "Add the app prefix and torno's local HTTP server wi
 
 The one tool is `project`: no input (`inputSchema` empty object, unknown keys refused by zod `.strict()`), `_meta: { 'anthropic/alwaysLoad': true }`. It answers one text block: `Project <name> in <dir>. board.py: <present|absent>. brief.md: <present|absent>. pino has no engine yet: nothing is built or drawn.` An id with no open project is an `isError` result: `No project <id> is open in pino.` `SERVER_INSTRUCTIONS` is two sentences saying the server is pino's, for the open project, and that only `project` exists for now. `SYSTEM_PROMPT` says pino is a workbench where Claude designs printed circuit boards from `board.py`, that this build has no engine, and that Claude says so instead of pretending to build.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `server.test.ts` starts `startHttp()`, mounts with a `ToolDeps` of one temp project, grants a token for `/mcp/<id>`, and talks with the SDK's `Client` over `StreamableHTTPClientTransport` with the header.
 
@@ -244,19 +248,19 @@ it('the tools loaded up front are [project], in at most 33,000 characters of nam
 it('the text pino adds to the system prompt, with its server\'s instructions, is under 12,000 characters', () => { expect(SYSTEM_PROMPT.length + SERVER_INSTRUCTIONS.length).toBeLessThan(12_000) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/mcp/server.test.ts src/main/turncost.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy and adapt `server.ts` and `turncost.test.ts`; write `project.ts`, `tools.ts`, `schemas.ts`, `prompt.ts`**
+- [x] **Step 3: Copy and adapt `server.ts` and `turncost.test.ts`; write `project.ts`, `tools.ts`, `schemas.ts`, `prompt.ts`**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Mount pino's MCP server per project with one tool, and hold the turn's cost"
@@ -265,6 +269,8 @@ git add -A && git commit -m "Mount pino's MCP server per project with one tool, 
 ---
 
 ### Task 4: The `.pino/` write guard
+
+> **Note from the build:** `atomic.test.ts`, `own.order.test.ts` and `rules.test.ts` are adapted, not as-is: the first two name torno's folder (the second cannot pass against `.pino`), and the third wants more than 40 rules.
 
 **Files:**
 - Copy adapted: `app/src/main/own.ts` (`FOLDER = APP.folder`; `ownTorno` renamed `ownFolder`; messages name `APP.name`), `app/src/main/ignored.ts` (names), `app/src/main/own.test.ts` (keep the generic cases; drop views, exports and scans), `app/src/main/ignored.test.ts` (names)
@@ -276,7 +282,7 @@ git add -A && git commit -m "Mount pino's MCP server per project with one tool, 
 - Consumes: `APP` (Task 2).
 - Produces: `FOLDER`, `ownFolder(dir: string, ...inside: string[]): Promise<string>`, `writeOwn(dir: string, name: string, data: string | Uint8Array): Promise<void>`, `onNotOwn(cb: NotOwnListener | null): void`, `writeFileAtomic(path, data): Promise<void>`, `ensureIgnored(dir: string, lines: readonly string[]): Promise<void>`.
 
-- [ ] **Step 1: Copy the tests and adapt them as named**
+- [x] **Step 1: Copy the tests and adapt them as named**
 
 Kept from torno's `own.test.ts`, in pino's words: "answers with the folder when there is none yet, and when it is a real folder", "refuses a link in its place, and a file, with a plain reason", "tells of a folder once, whoever was refused there and however often", "is the one rule: a linked .pino is refused in the same words, and the window is told". Add:
 
@@ -288,19 +294,19 @@ it('writes nothing where a linked .pino leads, and the project keeps no new file
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/own.test.ts src/main/own.order.test.ts src/main/atomic.test.ts src/main/ignored.test.ts src/rules.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy the modules and the rule, make the named adaptations, list them in the manifest**
+- [x] **Step 3: Copy the modules and the rule, make the named adaptations, list them in the manifest**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test`
 Expected: PASS (rules.test finds `workspace-writes.md` and every glob in it matches a tracked file).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's write guard as the .pino folder guard"
@@ -309,6 +315,12 @@ git add -A && git commit -m "Copy torno's write guard as the .pino folder guard"
 ---
 
 ### Task 5: Claude Code launch, stream and the stand-in agent
+
+> **Note from the build:** `stream.test.ts`, `inside.test.ts` and `trust.test.ts` are adapted, not as-is: their temp folder names torno, which the names test refuses.
+>
+> **Note from the build:** `agentEnv.test.ts` builds the sibling variable name from `SIBLING_PREFIXES`, so the names allowlist stays as Task 2 lists it.
+>
+> **Note from the build:** `reach.ts` also resolves a relative path against the project folder: as copied, a relative write was read as one under `.pino/` and refused.
 
 **Files:**
 - Copy as-is: `app/src/main/sessions/transport.ts`, `stream.ts`, `stream.test.ts`, `signals.ts`, `permissions.ts`, `permissions.test.ts`, `inside.ts`, `inside.test.ts`, `app/src/main/trust.ts`, `app/src/main/trust.test.ts`, `app/test/fixtures/claude-stream.jsonl`, `claude-stream-asks.jsonl`, `RECORDING.md`
@@ -345,7 +357,7 @@ git add -A && git commit -m "Copy torno's write guard as the .pino folder guard"
 
 `adapter.ts` imports `Effort` from `shared/chat.ts`, so this task copies `shared/chat.ts` with the adaptation Task 6 describes (it is types and pure rules, with no dependency on the transport). Task 6 owns its tests.
 
-- [ ] **Step 1: Copy the tests (as-is and adapted), and add**
+- [x] **Step 1: Copy the tests (as-is and adapted), and add**
 
 ```ts
 // agentEnv.test.ts
@@ -365,19 +377,19 @@ it('names pino\'s server and tools, and keeps the token out of every argument an
 it('the stand-in agent names the app as shared/app.ts does', () => { expect(readFileSync(fake, 'utf8')).toMatch(/^const APP = 'pino'$/m) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/sessions src/main/trust.test.ts src/shared/app.test.ts`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy the files and make the named adaptations, list them in the manifest**
+- [x] **Step 3: Copy the files and make the named adaptations, list them in the manifest**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS. The as-is tests pass unchanged. If one fails only for a missing pino module, that test file becomes adapted, with the reason in `change`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's Claude Code launch, stream, trust and the stand-in agent"
@@ -386,6 +398,16 @@ git add -A && git commit -m "Copy torno's Claude Code launch, stream, trust and 
 ---
 
 ### Task 6: Chat items, transcript, chat log and models
+
+> **Note from the build:** `models.test.ts` is adapted, not as-is (its temp folder names torno).
+>
+> **Note from the build:** pino has no terminal view, so the failed-login note has no button and its words say to sign in from a terminal; the `action` field of a note is gone from `shared/chat.ts` and from `chatlog.ts`.
+>
+> **Note from the build:** The recordings stay as-is: `transcript.test.ts` reads the app name each was recorded with from its `init` and reads it as pino.
+>
+> **Note from the build:** The caption that named onboarding pictures is cut with its test: pino has no onboarding.
+>
+> **Note from the build:** `chatlog.ts` also loses `readPrompts` and `conversations`, which only torno's prompt list used.
 
 **Files:**
 - Copy adapted (`shared/chat.ts` was copied in Task 5 with this adaptation; this task checks it):
@@ -403,7 +425,7 @@ git add -A && git commit -m "Copy torno's Claude Code launch, stream, trust and 
 - Consumes: Task 5 transport types and `shared/chat.ts`, `ownFolder`, `writeFileAtomic`, `ensureIgnored`.
 - Produces: `ChatItem`, `ChatImage`, `ChatMeta`, `ChatHistory`, `ChatCommand`, `ChatModel`, `ChatAnswer`, `Effort`, `Mode`, `EFFORTS`, `MODES`, `MODE_NOTE`, `MAX_ITEMS`, `isEffort`, `isMode`, `isAppTool`, `toolLabel`, `shownPath`, `agentChoiceOf`; `Transcript` (torno's options and methods minus `toolContext`); `appendItems`, `readLog`, `lastConversation`, `trimLog`; `KnownModels`, `modelsOf`.
 
-- [ ] **Step 1: Copy and trim the tests as named, and add**
+- [x] **Step 1: Copy and trim the tests as named, and add**
 
 ```ts
 // transcript.test.ts
@@ -420,19 +442,19 @@ it('keeps the log under .pino/chat and nowhere else in the project', async () =>
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/sessions/transcript.test.ts src/main/sessions/chatlog.test.ts src/main/sessions/models.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt as named**
+- [x] **Step 3: Copy and adapt as named**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's chat items, transcript, chat log and models, without the CAD seams"
@@ -441,6 +463,12 @@ git add -A && git commit -m "Copy torno's chat items, transcript, chat log and m
 ---
 
 ### Task 7: Session manager with a domain seam
+
+> **Note from the build:** `manager.test.ts` has more cases than listed, among them: what the agent started ends with the session (the manager now kills the agent's process group when it ends a session; torno only kills it when the agent hangs), a stop while a session is still starting, and a linked `.pino`.
+>
+> **Note from the build:** The stop path also puts the write of `session.json` in the session's line of writes, so nothing lands after `stop` resolves. `killAll` is new, for a quit that will wait no longer.
+>
+> **Note from the build:** Claude Code is looked for on PATH before the trust question: there is nothing to trust a folder for when it cannot start.
 
 **Files:**
 - Create: `app/src/main/sessions/domain.ts`, `app/src/main/sessions/manager.test.ts`
@@ -487,7 +515,7 @@ Cut from torno's `manager.ts`: node-pty and the terminal view (`write`, `resize`
 
 Kept: one session per project; a token granted for `/mcp/<projectId>` and `/hooks/<sessionId>`, revoked at exit; the MCP config file written in `configDir` and removed at exit; `agentEnv`; `findCommand` before start (refused: `Claude Code was not found on PATH. Install it, or start pino from a terminal where claude runs.`); `Trust.pending` before the first chat (refused with the trust question); `refusalOf` on PreToolUse; `reduceStatus`; the transcript; `appendItems` (redacted) to `.pino/chat/`; `storeConversation` and resume; and stop (end, SIGTERM to the group after 2 s, SIGKILL after 4 s).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `manager.test.ts` uses a real `startHttp()`, `claudeAdapter('node <abs>/test/fake-agent.mjs')`, a temp project, a temp `configDir` and a `Trust(null, tempHome)`. It never spawns the real CLI.
 
@@ -504,19 +532,19 @@ it('writes only under .pino: the chat log, the session file and .pino/.gitignore
 it('resumes the stored conversation with --resume', ...)
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/sessions/manager.test.ts`
 Expected: FAIL, `Sessions` missing.
 
-- [ ] **Step 3: Write `domain.ts`; copy `manager.ts`, cut it as listed, wire the seam; copy and adapt the rule**
+- [x] **Step 3: Write `domain.ts`; copy `manager.ts`, cut it as listed, wire the seam; copy and adapt the rule**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS, with no stand-in left running (`pgrep -f fake-agent.mjs` shows none in the temp folders).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Cut torno's session manager to its plumbing behind a SessionDomain seam"
@@ -525,6 +553,14 @@ git add -A && git commit -m "Cut torno's session manager to its plumbing behind 
 ---
 
 ### Task 8: Electron main, preload, bridge and opening a project
+
+> **Note from the build:** The check of `SURFACE` against `tokens.css` is left out of `window.test.ts`: the sheet comes in Task 10, whose `contrast.test.ts` keeps that line.
+>
+> **Note from the build:** `StartResult` lives in `shared/bridge.ts` (the window needs it too); `manager.ts` exports it from there. `Sessions` gains `busy`, for the quit gate.
+>
+> **Note from the build:** A second pino opens the folder it was given only when none is open in the first; otherwise it says so in a notice, since opening it would end a session on the word of a command line.
+>
+> **Note from the build:** `project.current()` rejects once with why a folder named at start (`PINO_PROJECT`) could not be opened, so the first screen can say it.
 
 **Files:**
 - Copy as-is: `app/electron.vite.config.ts`, `app/src/main/quit.ts`, `app/src/main/quit.test.ts`, `app/src/renderer/ui/openFolder.ts`, `app/src/renderer/ui/openFolder.test.ts`
@@ -565,7 +601,7 @@ notices: { onNotice(cb: (m: { text: string }) => void): () => void }
 - `main/index.ts` environment switches, said in a comment block as torno's: `PINO_TEST=1` (hidden window, temp profile, no single-instance lock, test hooks), `PINO_PROJECT=<path>` (project to open at start), `PINO_CONFIG=<path>` (config file; none under test unless given), `PINO_AGENT_CMD=<cmd>` (the stand-in), `PINO_DEBUG=1`. It calls `app.setName(APP.name)` and `setDesktopName('pino.desktop')`. The window is 1440 by 900, `show: false`, and shown on `ready-to-show` only outside test. It has `contextIsolation: true`, `nodeIntegration: false`, `backgroundThrottling: false`, `backgroundColor` from `SURFACE`, and `disable-frame-rate-limit` under test. It calls `Menu.setApplicationMenu(null)` and `applyLoginPath()` before the first session. Then `startHttp`, `mountMcp` with `ToolDeps.project` (the open project or undefined), `Sessions` with `NO_DOMAIN`, `systemPrompt(toolName)`, `Trust(<userData>/trusted.json)` and `KnownModels(<userData>/models.json)`. `onNotOwn` sends a notice to the window. `before-quit` runs `stopAll` through `quitGate(3000)`. `project.close` and opening another project stop the current session first.
 - `globalThis.__pinoMain` (test only): `pickFolder: string | null`, `picks: number`, `mcpFor(projectId): { url: string; token: string }`, `configPath(): string | null`.
 
-- [ ] **Step 1: Copy the tests named above, and write `project.test.ts`**
+- [x] **Step 1: Copy the tests named above, and write `project.test.ts`**
 
 ```ts
 it('opens a real folder by its real path, with a stable id', async () => { expect(p).toEqual({ id: projectIdOf(real), dir: real, name: basename(real) }) })
@@ -575,19 +611,19 @@ it('refuses a file and a missing path in plain words', async () => { await expec
 it('makes ids that are one URL segment', () => { expect(projectIdOf('/a b/ç')).toMatch(/^p[0-9a-f]{12}$/) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/main/project.test.ts src/main/recent.test.ts src/main/window.test.ts src/main/loginPath.test.ts src/main/testProfile.test.ts src/main/quit.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt the modules; write `project.ts`, `bridge.ts`, `ipc.ts`, `preload/index.ts`, `index.ts`, the placeholder `App.tsx`**
+- [x] **Step 3: Copy and adapt the modules; write `project.ts`, `bridge.ts`, `ipc.ts`, `preload/index.ts`, `index.ts`, the placeholder `App.tsx`**
 
-- [ ] **Step 4: Run to verify they pass, and that it builds**
+- [x] **Step 4: Run to verify they pass, and that it builds**
 
 Run: `pnpm test && pnpm -C app typecheck && pnpm -C app build`
 Expected: PASS; `app/out/main/index.js`, `out/preload/index.js`, `out/renderer/index.html` exist.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add pino's Electron main, preload and bridge, and project opening"
@@ -596,6 +632,10 @@ git add -A && git commit -m "Add pino's Electron main, preload and bridge, and p
 ---
 
 ### Task 9: The e2e harness in a hidden window
+
+> **Note from the build:** Every launch also gets a `HOME` and XDG folders of its own, and a run with no stand-in asked for gets an agent command that is not there, so no spec can reach the real `claude`. `src/e2e.test.ts` holds both.
+>
+> **Note from the build:** The Electron binary of this version downloads on first use (`pnpm -C app exec install-electron`).
 
 **Files:**
 - Copy adapted:
@@ -612,7 +652,7 @@ git add -A && git commit -m "Add pino's Electron main, preload and bridge, and p
   - `tempProject(name?: string): string` makes a temp project under `realpathSync(tmpdir())`.
   - `agentsIn(dir)`, `cwdOf(pid)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // app/src/e2e.test.ts: the hidden-window rule, held by reading the specs
@@ -624,19 +664,19 @@ test('starts with its window hidden', async () => { expect(await app.evaluate(({
 test('keeps its profile in a temp folder, not under the person\'s config', async () => { expect(await app.evaluate(({ app }) => app.getPath('userData'))).toMatch(/\/pino-test-\d+-/) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/e2e.test.ts && pnpm test:e2e`
 Expected: FAIL, harness missing.
 
-- [ ] **Step 3: Copy and adapt the config, `terminal.ts` and the rule; write `launch.ts` and `boot.spec.ts`**
+- [x] **Step 3: Copy and adapt the config, `terminal.ts` and the rule; write `launch.ts` and `boot.spec.ts`**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS, and no window appears on the desktop.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the hidden-window e2e harness"
@@ -645,6 +685,17 @@ git add -A && git commit -m "Add the hidden-window e2e harness"
 ---
 
 ### Task 10: Design tokens, fonts, contrast and style tests
+
+> **Note from the build:** `layout.css` and the other as-is sheets are unchanged. `chat.css` is adapted: its own-tool rules select `[data-own]`, not torno's name.
+>
+> **Note from the build:** The undefined-variable check accepts a `var()` with a fallback: `controls.css` reads `--stem` that way, set from `Popover.tsx`.
+>
+> **Note from the build:** Every pino colour passed torno's contrast thresholds unchanged.
+>
+> **Note from the build:** The design mocks then picked the person's mark: `#6440C4` in light and `#A88BFA` in dark,
+> in place of the placeholder violet above. In light it is 1.11:1 from `--fail`, so the check that `--fail` and the
+> mark are 1.5:1 apart is now a check of hue (60 degrees at least). torno's mark is red, a failure's hue, so there only
+> lightness could tell them apart.
 
 **Files:**
 - Copy adapted:
@@ -670,7 +721,7 @@ git add -A && git commit -m "Add the hidden-window e2e harness"
 - Keep "app.css is the list", the rule reader, "animates nothing without end", "dims no text by opacity", "uses radii from the tokens", "has one shadow" and "says what it does for less motion".
 - Drop the palette-shadow legacy, the card and dock sizes, and the macOS title bar cases.
 
-- [ ] **Step 1: Copy the tests, adapt them as named, and add**
+- [x] **Step 1: Copy the tests, adapt them as named, and add**
 
 ```ts
 // contrast.test.ts
@@ -683,21 +734,21 @@ it('reads only custom properties that tokens.css or the sheet itself defines', (
 it('has no blue of torno\'s accent left in a sheet', () => { expect(sheetsMatching(/#1D46B8|#7C9BF7/i)).toEqual([]) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared src/renderer/styles`
 Expected: FAIL, sheets missing.
 
-- [ ] **Step 3: Copy the sheets and modules, adapt as named, list them in the manifest**
+- [x] **Step 3: Copy the sheets and modules, adapt as named, list them in the manifest**
 
 If a copied sheet reads a dropped token, delete those rules from it and mark it adapted.
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app build`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's design tokens and sheets with a solder-mask green accent"
@@ -706,6 +757,16 @@ git add -A && git commit -m "Copy torno's design tokens and sheets with a solder
 ---
 
 ### Task 11: First screen and title bar
+
+> **Note from the build:** `shared/keys.ts` and its test come in here, not in Task 12: `useMenu.ts`, copied as-is, imports them.
+>
+> **Note from the build:** The recent list has no thumbnail and no Remove button: there is no drawing yet, and the bridge has nothing to forget a folder with.
+>
+> **Note from the build:** `layout.css` and `welcome.css` are adapted: the thin themed scrollbar and `.welcome-note` come from torno's `late.css`, which pino does not copy.
+>
+> **Note from the build:** The first screen also says that this version has no engine.
+>
+> **Note from the build:** A refusal of main's already names the folder, so it is shown as it is; other failures go through `openProblem`.
 
 **Files:**
 - Copy adapted:
@@ -734,7 +795,7 @@ export function useStore<T>(pick: (s: PinoState) => T): T
 // window.__pinoTest (PINO_TEST only): { state(): PinoState }
 ```
 
-- [ ] **Step 1: Write the failing specs**
+- [x] **Step 1: Write the failing specs**
 
 ```ts
 // welcome.spec.ts
@@ -753,19 +814,19 @@ test('the accent is solder-mask green in light and in dark', async () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm test:e2e`
 Expected: FAIL, no first screen.
 
-- [ ] **Step 3: Copy and adapt the components and the rule; write `store.ts`; make `App.tsx` show the first screen or the project page**
+- [x] **Step 3: Copy and adapt the components and the rule; write `store.ts`; make `App.tsx` show the first screen or the project page**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the first screen and title bar in torno's language, with pino's placeholder wordmark"
@@ -774,6 +835,10 @@ git add -A && git commit -m "Add the first screen and title bar in torno's langu
 ---
 
 ### Task 12: The project grid: route card, view tabs, status line
+
+> **Note from the build:** `keys.ts` and its test came in with Task 11. `view.prev` and `view.next` have a scope of their own, `tabs`: in `window` they would clash with the menu's arrows.
+>
+> **Note from the build:** The store also holds the session the dock shows, which the status line says. `ui/sessionWords.ts` holds the status words for both.
 
 **Files:**
 - Copy adapted: `app/src/shared/keys.ts`. Keep the mechanics (`KeyPress`, `pressOf`, `keyName`, `domKey`, `which`, `pressed`, `hint`, `typed`, `keyClashes`, `cheatSheet`). Keep only the scopes `global`, `window`, `composer`, `ask`, `field`, `menu`, `sheet`, and only the rows pino uses (this task adds `view.prev` and `view.next` for Left and Right on a focused tab; Task 13 adds the chat rows). Drop the tool, view, gizmo and scan tables.
@@ -790,7 +855,7 @@ Copy, exact:
 - Each view tab's empty panel sits on the dye: "Nothing to draw yet." and "Claude writes board.py. pino draws the schematic, the board and the 3D view here on every save."
 - Status line: the project folder name in `num`, then "No build yet", then the session's status word at the right (`Idle`, `Working`, `Needs you`, `Starting`, `Ended`, or `No session`).
 
-- [ ] **Step 1: Write the failing specs and tests**
+- [x] **Step 1: Write the failing specs and tests**
 
 ```ts
 // boot.spec.ts
@@ -806,19 +871,19 @@ test('Close project goes back to the first screen', ...)
 it('has no two rows on one key in one scope', () => { expect(keyClashes()).toEqual([]) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/shared/keys.test.ts && pnpm test:e2e`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt `keys.ts`; write the four components and their sheets**
+- [x] **Step 3: Copy and adapt `keys.ts`; write the four components and their sheets**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Add the project grid: route card with an empty Brief, three empty views, status line"
@@ -827,6 +892,12 @@ git add -A && git commit -m "Add the project grid: route card with an empty Brie
 ---
 
 ### Task 13: Chat pieces
+
+> **Note from the build:** `fold.ts`, `fold.test.ts`, `taskList.test.ts` and `ask.test.ts` are adapted, not as-is: they use torno's item field and tool names. `app/src/test/plainText.ts` is copied too: `Diff.test.ts` imports it.
+>
+> **Note from the build:** `chat.complete` is not added: Task 14 drops slash completion, so nothing would listen to it. `ask.option` is added: the question card of `AskCard.tsx` reads it.
+>
+> **Note from the build:** `chat.stop` is Esc and Ctrl+C: Task 14 asks for Esc, and torno's key is Ctrl+C.
 
 **Files:**
 - Copy as-is: `app/src/renderer/ui/Popover.tsx`, `ui/popoverPlace.ts`, `ui/popoverPlace.test.ts`, `ui/numbered.tsx`, `ui/numbered.test.ts`, `ui/typing.ts`, and in `ui/chat/`: `Diff.tsx`, `Diff.test.ts`, `lineDiff.ts`, `lineDiff.test.ts`, `fold.ts`, `fold.test.ts`, `taskList.ts`, `taskList.test.ts`, `Tasks.tsx`, `ask.ts`, `ask.test.ts`, `place.ts`, `typing.ts`, `typing.test.ts`, `ago.ts`, `ago.test.ts`, `modelWords.ts`, `AskTakeover.tsx`
@@ -846,23 +917,23 @@ git add -A && git commit -m "Add the project grid: route card with an empty Brie
 - Consumes: `ChatItem` and friends (Task 6), `PinoBridge.chat` (Task 8), `pressed`, `which`, `hint` (Task 12).
 - Produces: `chatStore`, `useChat(sessionId)`, `chatActions`, `connectChat(): () => void`, `Markdown`, `ToolCard`, `AskCard`, `AskSession`, `ModelButton`, `Popover`, `foldRuns`, `TasksCard`, with torno's props minus the dropped ones.
 
-- [ ] **Step 1: Copy the tests (as-is and adapted)**
+- [x] **Step 1: Copy the tests (as-is and adapted)**
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/renderer`
 Expected: FAIL, modules missing.
 
-- [ ] **Step 3: Copy the modules and adapt as named**
+- [x] **Step 3: Copy the modules and adapt as named**
 
 As-is files must pass unchanged. One that needs an edit becomes adapted, with the reason in `change`.
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm -C app typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's chat pieces: store, markdown, diffs, tool and ask cards, model menus"
@@ -871,6 +942,16 @@ git add -A && git commit -m "Copy torno's chat pieces: store, markdown, diffs, t
 ---
 
 ### Task 14: The session dock, end to end
+
+> **Note from the build:** The end of a turn stays as one plain line (`.chat-turn`, which the plan lists among the selectors): done, stopped, or failed with why. Without it an API error would end a turn with nothing said. The rest of `TurnEnd` is gone.
+>
+> **Note from the build:** What pino adds to a prompt still shows under it with "Show text": the engine stage will use it.
+>
+> **Note from the build:** "More" also offers "Resume" once a session has ended: a stopped conversation could otherwise only be resumed by opening the project again.
+>
+> **Note from the build:** `chat.spec.ts` has more cases than listed: a reload keeps the running session, a later launch offers to resume, closing the project mid-turn, and quitting with a stand-in that will not leave.
+>
+> **Note from the build:** `ask Write` in the stand-in writes nothing itself, so the permission case asserts what the tool was answered with.
 
 **Files:**
 - Copy adapted:
@@ -890,7 +971,7 @@ git add -A && git commit -m "Copy torno's chat pieces: store, markdown, diffs, t
 
 Copy, exact: the trust question reads "This folder has Claude Code settings of its own" with the files listed in `num`, and the buttons "Trust and start" and "Not now". Not found: the refusal text from Task 7. A notice from `onNotOwn` is shown once in the status line.
 
-- [ ] **Step 1: Write the failing specs**
+- [x] **Step 1: Write the failing specs**
 
 ```ts
 // chat.spec.ts (launch({ project, agent: true }))
@@ -909,19 +990,19 @@ test('closing the window ends the session: no stand-in is left running in the fo
 test('the MCP address answers 404 without the token, 403 to a request from a web page, and lists project with it', ...) // __pinoMain.mcpFor(id); Origin header gives 403
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm test:e2e`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt the components, helpers and rule; fill `SessionDock`**
+- [x] **Step 3: Copy and adapt the components, helpers and rule; fill `SessionDock`**
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && pnpm test:e2e`
 Expected: PASS. Afterwards, `pgrep -af fake-agent.mjs` lists nothing under the test temp folders.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Run a Claude Code chat in the session dock, end to end against the stand-in"
@@ -930,6 +1011,12 @@ git add -A && git commit -m "Run a Claude Code chat in the session dock, end to 
 ---
 
 ### Task 15: Launcher and desktop entry
+
+> **Note from the build:** Electron cannot decode SVG (`nativeImage` gives an empty image), so the window's icon is `scripts/pino.png`, the placeholder drawn at 512 px with `rsvg-convert`. The desktop entry names the SVG. Tests hold the PNG's size and that Electron reads it.
+>
+> **Note from the build:** `--` ends the launcher's options, for a folder that begins with a dash.
+>
+> **Note from the build:** The launcher test keeps the install, uninstall, root and replace cases too.
 
 **Files:**
 - Copy adapted:
@@ -944,7 +1031,7 @@ git add -A && git commit -m "Run a Claude Code chat in the session dock, end to 
 - Consumes: the built app, `PINO_PROJECT` (Task 8).
 - Produces: `scripts/pino [folder]`, `--print-command`, `--print-desktop`, `--install-desktop`, `--uninstall-desktop`.
 
-- [ ] **Step 1: Copy and adapt the test, and add**
+- [x] **Step 1: Copy and adapt the test, and add**
 
 ```ts
 it('names the app as shared/app.ts does', () => { expect(readFileSync(script, 'utf8')).toMatch(new RegExp(`^app_name=${APP.name}$`, 'm')) })
@@ -954,21 +1041,21 @@ it('passes a folder with spaces, unicode or a leading dash to the app as PINO_PR
 it('has no macOS branch', () => { expect(readFileSync(script, 'utf8')).not.toMatch(/Darwin|darwin|macOS/) })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `pnpm -C app exec vitest run src/launcher.test.ts`
 Expected: FAIL, the script is missing.
 
-- [ ] **Step 3: Copy and adapt the script, entry and rule; draw the placeholder icon**
+- [x] **Step 3: Copy and adapt the script, entry and rule; draw the placeholder icon**
 
 `run()` keeps torno's temp `HOME` and `XDG_DATA_HOME`. No test runs the launcher against the person's home or starts the real app.
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `pnpm test && sh scripts/pino --print-command /tmp`
 Expected: PASS; the printed command starts with `PINO_PROJECT=/tmp` and nothing is started.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "Copy torno's launcher as scripts/pino, Linux only, with a placeholder icon"
@@ -977,6 +1064,12 @@ git add -A && git commit -m "Copy torno's launcher as scripts/pino, Linux only, 
 ---
 
 ### Task 16: CI, README and the closing checks
+
+> **Note from the build:** `ci.test.ts` also runs the workflow's own `changes` script against lists of changed files.
+>
+> **Note from the build:** CI downloads the Electron binary in a step of its own.
+>
+> **Note from the build:** `scripts/torno-sync` gets its executable bit.
 
 **Files:**
 - Copy adapted: `.github/workflows/ci.yml`
@@ -991,7 +1084,7 @@ git add -A && git commit -m "Copy torno's launcher as scripts/pino, Linux only, 
 - Consumes: every suite above.
 - Produces: green CI on the branch; the finished README.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 it('runs the unit tests, the typecheck, the guard cases and the e2e suite, and no kernel job yet', () => {
@@ -1001,21 +1094,21 @@ it('runs the unit tests, the typecheck, the guard cases and the e2e suite, and n
 })
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C app exec vitest run src/ci.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Copy and adapt the workflow; finish the README**
+- [x] **Step 3: Copy and adapt the workflow; finish the README**
 
 The README says what pino is in two plain sentences, that stage 2 is the shell with no engine, the requirements (Linux, Node 22.12+, pnpm, Claude Code signed in), how to run (`scripts/pino [folder]`, `--install-desktop`), the tests, that parts come from torno (`shared-from-torno.json`, `scripts/torno-sync`), and the license (Apache-2.0, see NOTICE). Run the humanizer skill on it.
 
-- [ ] **Step 4: Run every suite and the drift report**
+- [x] **Step 4: Run every suite and the drift report**
 
 Run: `pnpm -C app typecheck && pnpm test && pnpm test:e2e && bash .claude/hooks/guard-bash.test.sh && node scripts/torno-sync`
 Expected: all PASS. torno-sync exits 0, or exits 1 listing only `torno-changed` lines if torno moved since the plan (report them; do not port them in this stage).
 
-- [ ] **Step 5: Leak audit before anything leaves the machine**
+- [x] **Step 5: Leak audit before anything leaves the machine**
 
 Run, and read every hit:
 
@@ -1025,7 +1118,7 @@ git grep -nE "/home/|/Users/|@gmail|192\.168\.|10\.[0-9]+\.[0-9]+\.|BEGIN (RSA|O
 
 Then search the same commits for the user name, the machine names and the e-mail kept in Luis's knowledge base. Do not write them into this repo. Expected: no personal path, host, address or secret.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A && git commit -m "Add CI for unit, typecheck, guard and e2e; finish the README"
@@ -1051,5 +1144,6 @@ git add -A && git commit -m "Add CI for unit, typecheck, guard and e2e; finish t
 - **Type names checked across tasks:** `ProjectInfo`, `RecentFolder`, `StartResult`, `SessionDomain`, `NO_DOMAIN`, `ownFolder`, `isAppTool`, `TOOL_PREFIX`, `envName`, `PinoBridge`, `ViewTab`, `launch`, `tempProject`, `agentsIn`.
 - **Open calls for Luis**, also in the final report:
   - The diff "added" wash keeps the accent wash and drops one hue check against `--ok`, since green accent and green verdict now share a hue.
-  - The person's mark is a placeholder violet.
+  - The person's mark is the violet of the design mocks. In light it is close to `--fail` in lightness, and the two
+    are told apart by hue.
   - Stage 2 has no terminal view.
