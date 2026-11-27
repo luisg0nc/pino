@@ -863,7 +863,7 @@ export class Transcript {
     }
     const usage = this.usageOf(m)
     this.noHooks()
-    const builds = this.turnBuilds?.(this.turnStarted ?? this.now() - took)
+    const builds = this.buildsSince(this.turnStarted ?? this.now() - took)
     this.put({ kind: 'turn', id: this.newId('i'), ok, stopped, seconds: seconds(took), pulled: this.pulled, ...(usage ? { usage } : {}), ...(builds ? { builds } : {}), ...(error !== undefined ? { error: this.redact(error) } : {}) })
     this.pulled = {}
     this.denials(m.permission_denials)
@@ -875,6 +875,16 @@ export class Transcript {
     this.turnStarted = null
     this.unconfirmed.clear()
     this.blocks.clear()
+  }
+
+  /** The turn's builds. A domain that throws is logged, and the turn ends all the same. */
+  private buildsSince(since: number): TurnBuilds | undefined {
+    try {
+      return this.turnBuilds?.(since)
+    } catch (e) {
+      console.error(`the builds of the turn cannot be told: ${e instanceof Error ? e.message : String(e)}`)
+      return undefined
+    }
   }
 
   /**

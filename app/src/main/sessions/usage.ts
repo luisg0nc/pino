@@ -1,5 +1,5 @@
 import type { ChatItem } from '../../shared/chat'
-import { addUsageFacts, addUsage, isResumedTurn, medianCost, usageFacts, usageOf, type ProjectUsage, type UsageRow } from '../../shared/usage'
+import { addUsageFacts, addUsage, isResumedTurn, LARGE_AFTER, medianCost, usageFacts, usageOf, type ProjectUsage, type UsageRow } from '../../shared/usage'
 import { readLog } from './chatlog'
 import { listPrompts } from './prompts'
 
@@ -58,6 +58,8 @@ export async function listUsage(dir: string): Promise<ProjectUsage> {
   const took = new Map<string, Map<string, Took>>()
   for (const conversation of conversations) took.set(conversation, tookOf(await readLog(dir, conversation, ALL)))
   const rows: UsageRow[] = prompts.map((p) => ({ ...p, ...(took.get(p.conversation)?.get(p.id) ?? { facts: { pictures: {}, builds: { count: 0 } }, turns: [] }) }))
-  const median = medianCost(rows)
+  // No usual turn from fewer known costs than the first prompts and one: older logs may number a prompt far past them
+  // while almost none of those before it said a cost.
+  const median = rows.filter((r) => r.usage?.costUsd !== undefined).length > LARGE_AFTER ? medianCost(rows) : undefined
   return { rows, ...(median !== undefined ? { median } : {}) }
 }

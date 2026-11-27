@@ -29,7 +29,7 @@ if (underTest && window.__pinoTest) {
   Object.assign(window.__pinoTest, {
     screenOf: (target: Target) => {
       const { tab } = store.getState()
-      return !isViewTab(tab) ? null :(views.get(tab)?.screenOf(target) ?? null)
+      return !isViewTab(tab) ? null : (views.get(tab)?.screenOf(target) ?? null)
     },
     drawn: () => Object.fromEntries([...views].map(([tab, hooks]) => [DRAWN_AS[tab], hooks.drawn()]))
   })

@@ -267,7 +267,7 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
     const project = projectOf(id)
     return project ? sessions.usage(project) : { rows: [] }
   })
-  handle('view:tell',(id: unknown, view: unknown) => {
+  handle('view:tell', (id: unknown, view: unknown) => {
     const project = projectOf(id)
     if (project) views.tell(project.id, view)
   })

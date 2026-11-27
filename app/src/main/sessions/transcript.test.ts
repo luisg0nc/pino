@@ -454,6 +454,44 @@ describe('results', () => {
   })
 })
 
+describe('the builds of a turn', () => {
+  const ran = { count: 2, from: 1, to: 3 }
+
+  it('asks for the builds since the turn began, at its init, and keeps them on its end', () => {
+    let now = 1000
+    const turnBuilds = vi.fn(() => ran)
+    const t = new Transcript({ now: () => now, turnBuilds })
+    t.userSent(text('go'), false)
+    now = 5000
+    t.message(init())
+    now = 9000
+    t.message(result({ duration_ms: 100 }))
+    expect(turnBuilds).toHaveBeenCalledExactlyOnceWith(5000)
+    expect(of(t, 'turn')[0].builds).toEqual(ran)
+  })
+
+  it('counts back by how long the turn took when no init said it began', () => {
+    const turnBuilds = vi.fn(() => undefined)
+    const t = new Transcript({ now: () => 9000, turnBuilds })
+    t.message(result({ duration_ms: 1500 }))
+    expect(turnBuilds).toHaveBeenCalledExactlyOnceWith(7500)
+    expect(of(t, 'turn')[0]).not.toHaveProperty('builds')
+  })
+
+  it('ends the turn all the same when they cannot be told', () => {
+    const said = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const t = new Transcript({
+      turnBuilds: () => {
+        throw new Error('no')
+      }
+    })
+    t.message(result())
+    expect(of(t, 'turn')).toHaveLength(1)
+    expect(said).toHaveBeenCalledOnce()
+    said.mockRestore()
+  })
+})
+
 describe('the end of a turn', () => {
   it('says how long it took, by the CLI\'s own clock', () => {
     const t = new Transcript()

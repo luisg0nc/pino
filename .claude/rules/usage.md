@@ -16,7 +16,8 @@ paths:
 # What Claude Code spent: the turn's line, why a turn was large, the Usage page
 
 torno's, with Luis's picks for it of 2026-11-26: the numbers said in words, dollars first with tokens beside, and a turn
-is large at 3 times the project's median turn cost, never within its first 3 prompts.
+is large at 3 times the project's median turn cost, never within its first 3 prompts. There is no median until more
+than 3 prompts have said their cost (`listUsage`): older logs of pino kept none.
 
 - **Only the CLI's numbers.** Every cost, count of tokens and of calls is the `usage` a turn item carries (the
   `result`'s, `TurnUsage`) or a sum of them. Pictures are counts of the log's own items, by the tool that brought them

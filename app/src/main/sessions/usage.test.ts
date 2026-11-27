@@ -76,7 +76,13 @@ describe('listUsage', () => {
   })
 
   it("gives the median cost of the project's prompts whose cost is known", async () => {
-    await appendItems(dir, A, [user('a1', 1000), turn('e1', usage({ costUsd: 1 })), user('a2', 2000), turn('e2', usage({ costUsd: 5 })), user('a3', 3000), turn('e3', usage({ costUsd: 2 })), user('a4', 4000), turn('e4', usage({ costUsd: undefined }))])
-    expect((await listUsage(dir)).median).toBe(2)
+    await appendItems(dir, A, [user('a1', 1000), turn('e1', usage({ costUsd: 1 })), user('a2', 2000), turn('e2', usage({ costUsd: 5 })), user('a3', 3000), turn('e3', usage({ costUsd: 2 })), user('a4', 4000), turn('e4', usage({ costUsd: undefined })), user('a5', 5000), turn('e5', usage({ costUsd: 3 }))])
+    expect((await listUsage(dir)).median).toBe(2.5)
+  })
+
+  it('gives no median until more than 3 prompts said their cost, however many came before them without one', async () => {
+    const bare = [1, 2, 3, 4, 5].flatMap((n) => [user(`o${n}`, n * 100), turn(`oe${n}`, usage({ costUsd: undefined, sessionCostUsd: undefined }))])
+    await appendItems(dir, A, [...bare, user('a1', 1000), turn('e1', usage()), user('a2', 2000), turn('e2', usage()), user('a3', 3000), turn('e3', usage({ costUsd: 4 }))])
+    expect(await listUsage(dir)).not.toHaveProperty('median')
   })
 })

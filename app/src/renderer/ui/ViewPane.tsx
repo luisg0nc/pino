@@ -67,7 +67,7 @@ export function ViewPane() {
         {chosen === 'brief' ? <BriefPage /> : chosen === 'usage' ? <UsagePage /> : model ? <Drawn tab={chosen} model={model} /> : <Empty />}
       </div>
       {/* Which build the copper is from, as Claude is told it; else (a run begun with it stale) the build the route names. */}
-      {model && isViewTab(chosen) &&<ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
+      {model && isViewTab(chosen) && <ViewBandfrom={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
     </main>
   )
 }

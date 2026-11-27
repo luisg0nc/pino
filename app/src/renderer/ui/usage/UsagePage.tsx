@@ -104,10 +104,10 @@ function WentTo({ rows }: { rows: UsageRow[] }) {
         <thead>
           <tr>
             <th>Turns, by their pictures</th>
-            <th>turns</th>
-            <th>calls</th>
-            <th>cost</th>
-            <th>share</th>
+            <th>Turns</th>
+            <th>Calls</th>
+            <th>Cost</th>
+            <th>Share</th>
           </tr>
         </thead>
         <tbody>
@@ -142,11 +142,11 @@ function Conversations({ list, max }: { list: ConversationUsage[]; max: number }
       <thead>
         <tr>
           <th>Conversations</th>
-          <th>prompts</th>
-          <th>calls</th>
-          <th>pictures</th>
-          <th>each prompt</th>
-          <th>cost</th>
+          <th>Prompts</th>
+          <th>Calls</th>
+          <th>Pictures</th>
+          <th>Each prompt</th>
+          <th>Cost</th>
         </tr>
       </thead>
       <tbody>
@@ -296,11 +296,11 @@ function Ledger({ usage, conversation }: { usage: ProjectUsage; conversation: st
           <tr>
             <th aria-label="Prompt number" />
             <th>Prompt</th>
-            <th>calls</th>
-            <th>pictures</th>
-            <th>builds</th>
+            <th>Calls</th>
+            <th>Pictures</th>
+            <th>Builds</th>
             <th aria-label="Cost against the others" />
-            <th>cost</th>
+            <th>Cost</th>
           </tr>
         </thead>
         <tbody>{body}</tbody>
