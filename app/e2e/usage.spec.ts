@@ -1,7 +1,8 @@
 // What Claude Code spent: the sentence under a turn's end, why a large turn was large, and the Usage page with a
 // conversation's ledger. The project's earlier conversation is a chat log written by the spec, with the CLI's numbers
 // on its turns, as the transcript keeps them; the live turns are the stand-in's, which says they cost nothing, over the
-// engine's stand-in: one resumes the earlier conversation, one calls `look` for real and saves a file that is built.
+// engine's stand-in: one resumes the earlier conversation, one calls `look` for real and saves a file that is built,
+// while the spec saves another by hand, which is not the turn's.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
@@ -13,6 +14,7 @@ const EARLIER = '5f0c1d2e-0000-4000-8000-00000000aaaa'
 test.describe.configure({ mode: 'serial' })
 
 let open: Launched
+let dir: string
 const dockOf = (page: Page): Locator => page.locator('[data-region="session"]')
 const composer = (page: Page): Locator => page.locator('[data-chat-composer]')
 const usagePage = (page: Page): Locator => page.locator('main .usage-page')
@@ -44,7 +46,7 @@ function writeEarlier(dir: string): void {
 }
 
 test.beforeAll(async () => {
-  const dir = referenceProject()
+  dir = referenceProject()
   writeEarlier(dir)
   open = await launch({ project: dir, agent: true })
   await waitForBuild(open.page, 1)
@@ -87,8 +89,14 @@ test('the end of a live turn says what it took, and its pictures and builds are 
   await expect.poll(async () => (await state(page)).session?.sessionId).not.toBe(before)
   await expect.poll(async () => (await state(page)).session?.status).toBe('idle')
   await expect(composer(page)).toBeEnabled()
-  // The save is built while the turn is still at work.
-  await say(page, 'tool mcp__pino__look {}\nwrite extra.py a = 1\nslow 3')
+  // Claude's save is built while the turn is still at work, and so is one the person makes meanwhile: the turn's
+  // builds are Claude's alone.
+  const built = async (cause: string) => ((await state(page)).build?.history ?? []).filter((e) => e.cause === cause && e.verdict !== 'running').length
+  await say(page, 'tool mcp__pino__look {}\nwrite extra.py a = 1\nwork 8')
+  await expect.poll(() => built('agent'), { timeout: 30_000 }).toBe(1)
+  writeFileSync(join(dir, 'mine.py'), 'b = 2\n')
+  await expect.poll(() => built('person'), { timeout: 30_000 }).toBe(1)
+  expect((await state(page)).session?.status).toBe('working')
   const line = dockOf(page).locator('.chat .chat-turn .chat-turn-usage')
   await expect(line).toHaveText('$0 for 1 call: 0 of context read again, 1 new to it, 1 written.', { timeout: 30_000 })
   await tab(page, 'Usage').click()

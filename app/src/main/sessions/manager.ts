@@ -20,6 +20,7 @@ import { sessionRules } from './permissions'
 import { deniedAnswer, refusalOf } from './reach'
 import { SESSION_FILE, storeConversation, storedConversation, UUID } from './resume'
 import { listUsage } from './usage'
+import { type ClaudesSave, ClaudeWrites } from './writes'
 import type { ProjectUsage } from '../../shared/usage'
 import { HOOK_EVENTS, reduceStatus } from './status'
 import type { AgentAsk, AgentTransport, AskAnswer, PromptBlock } from './transport'
@@ -146,6 +147,8 @@ export class Sessions {
   private readonly records = new Map<string, ChatRecord>()
   /** By project: a session that is being started there. */
   private readonly starting = new Map<string, Promise<StartResult>>()
+  /** What Claude's tool calls wrote, so that a save can be said to be its or the person's. */
+  private readonly writes = new ClaudeWrites()
   private readonly listeners: { [E in keyof Events]: Set<(m: Events[E]) => void> } = { status: new Set(), item: new Set(), meta: new Set(), capabilities: new Set() }
 
   constructor(private readonly deps: SessionsDeps) {
@@ -231,7 +234,7 @@ export class Sessions {
         prefix: `${id.slice(0, 6)}-`,
         redact: http.redact,
         resumed: stored !== null,
-        turnBuilds: (since) => this.deps.domain.turnBuilds?.(project, since),
+        turnBuilds: (since, prompts) => this.deps.domain.turnBuilds?.(project, since, prompts),
         ...(adapter.tested ? { tested: adapter.tested } : {}),
         ...(isEffort(choice.effort) ? { effort: choice.effort } : {}),
         emit: (item) => {
@@ -298,10 +301,20 @@ export class Sessions {
     for (const s of this.sessions.values()) {
       if (s.project.id !== projectId || s.killTimer) continue
       if (s.status !== 'working' && s.status !== 'needs_input') return undefined
-      const taken = s.chat.transcript.taken()
-      return taken ? { prompt: taken.item, conversation: s.conversationId } : undefined
+      return this.turnOf(s)
     }
     return undefined
+  }
+
+  /** The prompt a session took up last, as a card or a build names it. */
+  private turnOf(s: Session): CardTurn | undefined {
+    const taken = s.chat.transcript.taken()
+    return taken ? { prompt: taken.item, conversation: s.conversationId } : undefined
+  }
+
+  /** Whether the save of `path` just heard in a project is one of Claude's tool calls, and of which prompt. */
+  wroteBy(projectId: string, path: string): ClaudesSave | undefined {
+    return this.writes.by(projectId, path)
   }
 
   /** A prompt for a session's agent, which queues it if it is at work. Rejects for a session that has ended. */
@@ -340,6 +353,9 @@ export class Sessions {
   }
 
   private respond(s: Session, requestId: string, response: AskAnswer): void {
+    // Before the CLI is told: an allowed call may write as soon as it hears.
+    const toolUseId = s.asks.get(requestId)?.toolUseId
+    if (toolUseId !== undefined) this.writes[response.behavior === 'allow' ? 'allowed' : 'refused'](s.id, toolUseId)
     s.asks.delete(requestId)
     s.agent.answer(requestId, response)
     s.chat.transcript.answered(requestId, response.behavior === 'allow' ? 'allowed' : 'denied', response.behavior === 'allow' ? answersText(response.updatedInput) : response.message)
@@ -470,12 +486,16 @@ export class Sessions {
         // After the microtasks of this read, so that the answer to an interrupt that came in the same chunk has been
         // taken into account (`control`).
         queueMicrotask(() => this.afterResult(session))
+        this.writes.over(session.id)
       }
+      // A call's result ends it however it ended: one that failed, or that the CLI denied by itself, has no `PostToolUse`.
+      for (const result of toolResults(message)) this.writes.ended(session.id, result.id, result.ok)
       session.chat.transcript.message(message)
     })
     agent.on('ask', (request) => {
       session.activity += 1
       session.asks.set(request.requestId, request)
+      if (request.toolUseId !== undefined) this.writes.waits(session.id, request.toolUseId)
       session.chat.transcript.asked(request)
       this.advance(session, 'ask')
     })
@@ -499,6 +519,7 @@ export class Sessions {
       this.release(session)
       // Nobody can answer what the agent was waiting for any more.
       session.asks.clear()
+      this.writes.over(session.id)
       if (!asked || (code !== null && code !== 0)) this.stoppedNote(session, code, signal)
       // What was open ends in a stated state, and the log has all of it before the session counts as gone.
       session.chat.transcript.ended()
@@ -536,7 +557,9 @@ export class Sessions {
 
   /** A request of the CLI's that waits for the person is given up: the card ends, and the status goes on from there. */
   private cancelAsk(session: Session, requestId: string): void {
+    const toolUseId = session.asks.get(requestId)?.toolUseId
     if (!session.asks.delete(requestId)) return
+    if (toolUseId !== undefined) this.writes.refused(session.id, toolUseId)
     session.chat.transcript.cancelled(requestId)
     if (session.asks.size === 0) this.advance(session, 'answered')
   }
@@ -610,14 +633,10 @@ export class Sessions {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' })
 
     // A tool hook says that the agent is at work. Its body is the tool's input or result, which may be megabytes:
-    // it is read only before a tool runs, to see what it would write, and never a reason to refuse the hook.
+    // it is read to see what the tool would write or has written, and is never a reason to refuse the hook.
     if (TOOL_EVENTS.has(event)) {
       this.advance(session, event)
       this.debug(`session ${session.id} hook ${event}`)
-      if (event !== 'PreToolUse') {
-        req.resume()
-        return sendJson(res, 200, {})
-      }
       let tool: Record<string, unknown> = {}
       try {
         const parsed: unknown = JSON.parse(await readBody(req, TOOL_BODY_LIMIT))
@@ -625,8 +644,20 @@ export class Sessions {
       } catch {
         return sendJson(res, 200, {})
       }
-      const reason = refusalOf(session.project.dir, typeof tool.tool_name === 'string' ? tool.tool_name : '', tool.tool_input)
-      return sendJson(res, 200, reason ? deniedAnswer(reason) : {})
+      const name = typeof tool.tool_name === 'string' ? tool.tool_name : ''
+      const toolUseId = typeof tool.tool_use_id === 'string' ? tool.tool_use_id : undefined
+      if (event === 'PostToolUse') {
+        if (toolUseId !== undefined) this.writes.ended(session.id, toolUseId, true)
+        return sendJson(res, 200, {})
+      }
+      const reason = refusalOf(session.project.dir, name, tool.tool_input)
+      if (reason) return sendJson(res, 200, deniedAnswer(reason))
+      // Kept before the hook is answered: the tool runs only after.
+      if (toolUseId !== undefined) {
+        const turn = this.turnOf(session)
+        this.writes.began({ session: session.id, project: session.project.id, dir: session.project.dir, id: toolUseId, tool: name, input: tool.tool_input, ...(turn ? { turn } : {}) })
+      }
+      return sendJson(res, 200, {})
     }
 
     let body: unknown
@@ -686,6 +717,16 @@ export class Sessions {
     // The agent has the context now.
     await context.delivered?.().catch((e: unknown) => console.error(`after the prompt in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`))
   }
+}
+
+/** The calls a `user` message of the stream carries the results of: each is over, and failed when its result is an error. */
+function toolResults(message: { type?: unknown; message?: unknown }): Array<{ id: string; ok: boolean }> {
+  if (message.type !== 'user') return []
+  const content = (message.message as { content?: unknown } | null | undefined)?.content
+  return (Array.isArray(content) ? content : []).flatMap((block) => {
+    const { type, tool_use_id: id, is_error: failed } = (block ?? {}) as { type?: unknown; tool_use_id?: unknown; is_error?: unknown }
+    return type === 'tool_result' && typeof id === 'string' ? [{ id, ok: failed !== true }] : []
+  })
 }
 
 /** What `initialize` answered, read for the commands and models it names, and nothing else. */

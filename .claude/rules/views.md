@@ -53,7 +53,7 @@ route's copper while there is one.
 - It is drawn only when something changed. Where there is no WebGL the tab says so: an error thrown out of an effect
   blanks the window.
 - The route card's head names the newest build in the builds timeline's words (`buildNamed`: `Latest build · prompt 5`,
-  `· saved by you`, `· routed by you`; an earlier run's is `Latest build` alone; its history id is the title only) and
+  `· saved by you`, `· route you ran`; an earlier run's is `Latest build` alone; its history id is the title only) and
   says how it stands in a word or three (`headSaid`: `routed`, `copper stale`, `checks pass`); the counts are in its
   checks. An older build on show is `Prompt 3 · older build` with Back to latest, and no word: the word is the newest's.
 - Pins nearer than `GATHER` are one pin with a count. A chip stands off what it marks: at a part's or a pad's corner.
@@ -76,7 +76,8 @@ route's copper while there is one.
   `useTimelineKey`, only with one of a project's three views on screen). Which groups show every build is the run's only.
 - The rules are `strip.ts`, pure and held by `strip.test.ts`: `stripNodes(history, at, numbering)` (one node a build,
   its caption as today: `ok`, `routed`, `stale`, `2 errors`, `failed`, `not kept`, `building`; `by`, the label:
-  `Prompt 4` for a build of a numbered prompt, `Saved by you`, `Routed by you`, `Earlier` for `unknown`, `Claude Code`
+  `Prompt 4` for a build of a numbered prompt, `Saved by you`, `Route you ran` (the person pressed Route and the router
+  laid the copper: pino has no hand routing, so never words that say they drew it), `Earlier` for `unknown`, `Claude Code`
   for a prompt with no number; a running build nothing is known of is `Building`), `stripGroups` (consecutive builds of
   one prompt, or of one other cause, are one group), `groupTitle` (the prompt's words, then its builds; never in the
   label), `buildNamed` (the route card's head) and `stripSays`. What made a build is main's (`BuildEntry.cause`, see

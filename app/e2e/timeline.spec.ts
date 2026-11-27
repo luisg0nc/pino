@@ -61,12 +61,17 @@ test('the builds of a project are a folded bar under the views, a chip for each 
   // A prompt that builds twice, and one that builds once.
   await say(['edit board.py "# step 0" "# step 1"', 'work 2', 'edit board.py "# step 1" "# step 2"'])
   await expect.poll(() => builtBy('agent'), { timeout: 30_000 }).toBe(2)
-  await say(['edit board.py "# step 2" "# step 3"'])
+  // Two saves of the person's in a row, the first while Claude's second turn still works: only its tool calls make a
+  // save Claude's.
+  const before = await turns().count()
+  await dock().locator('[data-chat-composer]').fill('edit board.py "# step 2" "# step 3"\nwork 8')
+  await dock().locator('[data-chat-composer]').press('Enter')
   await expect.poll(() => builtBy('agent'), { timeout: 30_000 }).toBe(3)
-  // Two saves of the person's in a row, once the turn has ended: a save while it works is Claude's.
-  await expect.poll(async () => (await state()).session?.status, { timeout: 30_000 }).toBe('idle')
   appendFileSync(join(dir, 'board.py'), '# a note\n')
   await expect.poll(() => builtBy('person'), { timeout: 30_000 }).toBe(1)
+  expect((await state()).session?.status).toBe('working')
+  await expect(turns()).toHaveCount(before + 1, { timeout: 30_000 })
+  await expect.poll(async () => (await state()).session?.status, { timeout: 30_000 }).toBe('idle')
   appendFileSync(join(dir, 'board.py'), '# another\n')
   await expect.poll(() => builtBy('person'), { timeout: 30_000 }).toBe(2)
 

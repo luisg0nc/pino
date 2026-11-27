@@ -4,7 +4,7 @@ import { APP } from '../../shared/app'
 import { isInsideFolder, realPathOrNearest } from './inside'
 
 /** The tools that write a file, and the key of their input that names it. */
-const WRITERS: Record<string, string> = { Write: 'file_path', Edit: 'file_path', MultiEdit: 'file_path', NotebookEdit: 'notebook_path' }
+export const WRITERS: Record<string, string> = { Write: 'file_path', Edit: 'file_path', MultiEdit: 'file_path', NotebookEdit: 'notebook_path' }
 
 /** The most links followed one after another, as Linux does: a circle of links ends there. */
 const MOST_LINKS = 40
@@ -13,7 +13,7 @@ const MOST_LINKS = 40
  * Where a write of `path` lands, by real paths: a link as its last name is followed also when what it names is not
  * there yet, since the write would make it.
  */
-function writtenAt(path: string): string {
+export function writtenAt(path: string): string {
   let at = path
   for (let hop = 0; hop < MOST_LINKS; hop++) {
     const placed = join(realPathOrNearest(dirname(at)), basename(at))

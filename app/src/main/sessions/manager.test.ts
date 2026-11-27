@@ -230,6 +230,87 @@ describe('Sessions', () => {
     expect(sessions.turnNow(project.id)).toBeUndefined()
   })
 
+  describe("which saves of a turn are Claude's", () => {
+    const file = (name = 'board.py') => join(project.dir, name)
+    /** The prompt `n` of the chat as a save names it. */
+    const promptOf = (sessions: Sessions, id: string, n = 0) => ({ turn: { prompt: of(sessions, id, 'user')[n].id, conversation: expect.any(String) } })
+    const open = (sessions: Sessions, id: string) =>
+      until(() => {
+        const ask = of(sessions, id, 'ask').find((a) => a.state === 'open')
+        expect(ask).toBeDefined()
+        return ask!
+      })
+    const over = (sessions: Sessions, turns: number, id: string) => until(() => expect(of(sessions, id, 'turn')).toHaveLength(turns))
+
+    it("is not one the person makes while the turn works, with a command that only reads under way", async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await sessions.send(id, { text: 'work 2' })
+      await until(() => expect(of(sessions, id, 'tool')).toHaveLength(1))
+      writeFileSync(file(), 'mine')
+      expect(sessions.turnNow(project.id)).toBeDefined()
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+      await over(sessions, 1, id)
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
+    it('is one its Write or Edit made, with the prompt, until the person saves over it', async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await turn(sessions, id, 'write board.py claude\nwrite extra.py x\nedit extra.py x y')
+      expect(sessions.wroteBy(project.id, file())).toEqual(promptOf(sessions, id))
+      expect(sessions.wroteBy(project.id, file('extra.py'))).toEqual(promptOf(sessions, id))
+      await new Promise((r) => setTimeout(r, 30))
+      writeFileSync(file(), 'mine, after')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
+    it('is one a command of its that may write made, and not one made while that command waited to be allowed', async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await sessions.send(id, { text: 'ask Bash {"command":"python gen.py"}' })
+      const ask = await open(sessions, id)
+      writeFileSync(file(), 'mine, while the card waits')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+      // Further from the answer than the slack an mtime is given.
+      await new Promise((r) => setTimeout(r, 50))
+      sessions.answer(id, ask.requestId, { allow: true })
+      await over(sessions, 1, id)
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+      await turn(sessions, id, 'bash printf generated > gen.py')
+      await over(sessions, 2, id)
+      expect(sessions.wroteBy(project.id, file('gen.py'))).toEqual(promptOf(sessions, id, 1))
+    })
+
+    it("is not one made after a command of its that failed ended, which only its result says", async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await sessions.send(id, { text: 'bash exit 1\nwork 2' })
+      await until(() => expect(of(sessions, id, 'tool')).toHaveLength(2))
+      await new Promise((r) => setTimeout(r, 50))
+      writeFileSync(file(), 'mine')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
+    it('is not one made after a request the person refused', async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await sessions.send(id, { text: `ask Edit ${JSON.stringify({ file_path: file(), old_string: 'a', new_string: 'b' })}\nwork 2` })
+      sessions.answer(id, (await open(sessions, id)).requestId, { allow: false, message: '' })
+      await until(() => expect(of(sessions, id, 'tool')).toHaveLength(2))
+      writeFileSync(file(), 'mine')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
+    it('is not one made after a Write of its that pino refused', async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await turn(sessions, id, 'write brief.md claude')
+      writeFileSync(file('brief.md'), 'mine')
+      expect(sessions.wroteBy(project.id, file('brief.md'))).toBeUndefined()
+    })
+  })
+
   it('sendBlocks sends text and pictures as one prompt', async () => {
     const sessions = manager()
     const id = await started(sessions)

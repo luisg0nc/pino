@@ -3,8 +3,9 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { BuildResult, BuildState, KeptCause } from '../shared/build'
 import { fx, readJson, tempProject, FAKE_KERNEL } from '../test/fixtures'
-import { Builds, readBuildHistory, watchProject, type OnChange } from './builds'
+import { Builds, causeOfSave, readBuildHistory, watchProject, type OnChange } from './builds'
 import { kernelHolder, startKernel, type KernelClient } from './kernel/client'
+import { ClaudeWrites } from './sessions/writes'
 
 let project: ReturnType<typeof tempProject>
 const done: Array<() => Promise<unknown> | void> = []
@@ -20,7 +21,7 @@ const info = () => ({ id: 'p000000000001', dir: project.dir, name: 'board' })
 /** The loop over the stand-in, with a watcher the test works by hand and a clock it moves. */
 function loop(env: () => Record<string, string> = () => ({}), deps: Partial<ConstructorParameters<typeof Builds>[0]> = {}) {
   let tell: OnChange = () => {}
-  let seen: () => void = () => {}
+  let seen: (path: string) => void = () => {}
   let time = 1_000_000
   const asked: string[] = []
   let starts = 0
@@ -62,7 +63,7 @@ function loop(env: () => Record<string, string> = () => ({}), deps: Partial<Cons
     asked,
     starts: () => starts,
     save: (names = ['board.py']) => tell(names.map((n) => join(project.dir, n))),
-    seen: () => seen(),
+    seen: (name = 'board.py') => seen(join(project.dir, name)),
     later: (ms: number) => (time += ms),
     settled: () => builds.whenSettled(info().id, time + 60_000)
   }
@@ -95,20 +96,21 @@ describe('the build loop', () => {
     expect((await l.settled()).latest!.number).toBe(1)
   })
 
-  it('says the builds that began since a time, from the one before them to the newest that drew', async () => {
-    const l = loop()
+  it("says the builds of a turn's prompts since a time, from the one before them to the newest that drew", async () => {
+    const l = loop(() => ({}), { causeNow: () => ({ cause: 'agent', turn: { prompt: 'u1' } }) })
     l.builds.open(info())
     await l.settled()
     l.later(10)
     const since = 1_000_005
-    expect(l.builds.ranSince(info().id, since)).toBeUndefined()
+    expect(l.builds.ranSince(info().id, since, ['u1'])).toBeUndefined()
     project.touch()
     l.save()
     await l.settled()
     l.save()
     await l.settled()
-    expect(l.builds.ranSince(info().id, since)).toEqual({ count: 2, from: 1, to: 3 })
-    expect(l.builds.ranSince(info().id, 0)).toEqual({ count: 3, to: 3 })
+    expect(l.builds.ranSince(info().id, since, ['u1'])).toEqual({ count: 2, from: 1, to: 3 })
+    // The opening's build is nobody's, so it is no turn's.
+    expect(l.builds.ranSince(info().id, 0, ['u1'])).toEqual({ count: 2, to: 3 })
   })
 
   it('three saves in one burst build once', async () => {
@@ -338,6 +340,60 @@ describe('the history', () => {
   })
 })
 
+describe('whose save it was, and whose count (Claude by its tool calls)', () => {
+  /** The loop told by the ledger of Claude's calls, as main wires it, during a turn that works all along. */
+  async function working() {
+    const writes = new ClaudeWrites()
+    const turn = { prompt: 'u7', conversation: 'c1' }
+    const l = loop(() => ({}), { causeNow: (id, path) => causeOfSave(writes.by(id, path)), readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    l.later(10)
+    const call = { session: 's1', project: info().id, dir: project.dir, id: 't1', tool: 'Edit', input: { file_path: join(project.dir, 'board.py') }, turn }
+    const saved = async () => {
+      l.seen()
+      l.save()
+      return (await l.settled()).history.at(-1)!
+    }
+    return { l, writes, turn, call, saved, since: 1_000_005 }
+  }
+
+  it("keeps a save the person makes during Claude's turn as theirs, and out of the turn's builds", async () => {
+    const { l, saved, since } = await working()
+    project.touch('mine\n')
+    const build = await saved()
+    expect(build).toMatchObject({ number: 2, cause: 'person' })
+    expect('turn' in build).toBe(false)
+    expect(l.builds.ranSince(info().id, since, ['u7'])).toBeUndefined()
+  })
+
+  it("keeps Claude's save as its, with the prompt, and counts it in that turn alone", async () => {
+    const { l, writes, turn, call, saved, since } = await working()
+    writes.began(call)
+    project.touch('claude\n')
+    writes.ended('s1', 't1', true)
+    expect(await saved()).toMatchObject({ number: 2, cause: 'agent', turn })
+    expect(l.builds.ranSince(info().id, since, ['u7'])).toEqual({ count: 1, from: 1, to: 2 })
+    expect(l.builds.ranSince(info().id, since, ['u8'])).toBeUndefined()
+    await new Promise((r) => setTimeout(r, 30))
+    project.touch('mine, after\n')
+    expect(await saved()).toMatchObject({ number: 3, cause: 'person' })
+    expect(l.builds.ranSince(info().id, since, ['u7'])).toEqual({ count: 1, from: 1, to: 2 })
+  })
+
+  it("counts a build Claude made where no prompt could be named, and no route of the person's or Rebuild", async () => {
+    const { l, since } = await working()
+    l.builds.rebuild(info().id, { cause: 'route' })
+    await l.settled()
+    l.builds.rebuild(info().id)
+    await l.settled()
+    expect(l.builds.ranSince(info().id, since, ['u7'])).toBeUndefined()
+    l.builds.rebuild(info().id, { cause: 'agent' })
+    await l.settled()
+    expect(l.builds.ranSince(info().id, since, ['u7'])).toMatchObject({ count: 1 })
+  })
+})
+
 describe('the watch', () => {
   it('tells once of a burst, and only of Python and the outline outside the ignored folders', async () => {
     const heard: string[][] = []
@@ -354,13 +410,13 @@ describe('the watch', () => {
     expect(heard).toEqual([['board.py', 'outline.json', 'parts/usb.py']])
   })
 
-  it('says a save at once, before the burst has settled', async () => {
+  it('says each save at once, with its file, before the burst has settled', async () => {
     const order: string[] = []
-    done.push(watchProject(project.dir, () => order.push('settled'), 150, () => order.push('seen')))
+    done.push(watchProject(project.dir, () => order.push('settled'), 150, (path) => order.push(`seen ${path.slice(project.dir.length + 1)}`)))
     await new Promise((r) => setTimeout(r, 300))
     project.touch('b = 3\n')
     await expect.poll(() => order.includes('settled'), { timeout: 3000 }).toBe(true)
-    expect(order[0]).toBe('seen')
+    expect(order[0]).toBe('seen board.py')
   })
 
   it('watches a project whose own folder is named like an ignored one', async () => {
@@ -383,7 +439,23 @@ describe('what made each build', () => {
     return { files, writeCauses: async (_dir: string, causes: ReadonlyMap<number, KeptCause>) => void files.push(new Map(causes)) }
   }
 
-  it('says a save during a turn came from the agent, with the turn', async () => {
+  it('asks of each file saved, and one of Claude\'s among them makes the build its', async () => {
+    const asked: string[] = []
+    const l = loop(() => ({}), {
+      causeNow: (_id, path) => (asked.push(path.slice(project.dir.length + 1)), path.endsWith('gen.py') ? agent : { cause: 'person' }),
+      writeCauses: written().writeCauses,
+      readCauses: async () => new Map()
+    })
+    l.builds.open(info())
+    await l.settled()
+    l.seen('board.py')
+    l.seen('gen.py')
+    l.save(['board.py', 'gen.py'])
+    expect(told(await l.settled())[1]).toEqual([2, 'agent', agent.turn])
+    expect(asked).toEqual(['board.py', 'gen.py'])
+  })
+
+  it('says a save Claude is known to have made came from the agent, with the turn', async () => {
     const w = written()
     let now: KeptCause = { cause: 'person' }
     const l = loop(() => ({}), { causeNow: () => now, writeCauses: w.writeCauses, readCauses: async () => new Map() })

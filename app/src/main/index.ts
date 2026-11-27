@@ -4,10 +4,9 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, type NativeImage, nativeTheme, shell } from 'electron'
 import { APP, envName, toolName } from '../shared/app'
-import type { KeptCause } from '../shared/build'
 import type { ProjectInfo } from '../shared/project'
 import { writeFileAtomic } from './atomic'
-import { Builds } from './builds'
+import { Builds, causeOfSave } from './builds'
 import { CardStore } from './cards/store'
 import { readBrief } from './cards/text'
 import { watchBrief } from './cards/watch'
@@ -131,13 +130,9 @@ function changeConfig(change: (config: Config) => Config): Promise<void> {
 const kernel = kernelHolder(() =>
   startKernel(kernelCommand(process.env, app.getAppPath()), { env: process.env, cwd: app.getPath('userData') })
 )
-/** What made a build, if it were made now: the turn Claude's session is at work on (named by main, never by a tool), else the person. */
-const causeNow = (projectId: string): KeptCause => {
-  const turn = sessions?.turnNow(projectId)
-  return turn ? { cause: 'agent', turn: { prompt: turn.prompt, ...(turn.conversation ? { conversation: turn.conversation } : {}) } } : { cause: 'person' }
-}
-const builds = new Builds({ kernel: () => kernel.get(), causeNow })
-const routing = new Routing({ kernel: () => kernel.get(), builds, causeNow })
+/** A save is Claude's when a tool call of its session accounts for it (never by a turn being at work), else the person's. */
+const builds = new Builds({ kernel: () => kernel.get(), causeNow: (projectId, path) => causeOfSave(sessions?.wroteBy(projectId, path)) })
+const routing = new Routing({ kernel: () => kernel.get(), builds, turnNow: (projectId) => sessions?.turnNow(projectId) })
 /** The project on show, once there is a holder of it: the fab's engine state is that project's build loop's. */
 let openProjectId: () => string | undefined = () => undefined
 const fab = new Fab({
