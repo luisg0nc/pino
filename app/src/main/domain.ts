@@ -198,11 +198,15 @@ export class PinoDomain implements SessionDomain {
     }
     const number = coming()
     if (number !== undefined) return hold('running', `h${number}, started in this turn, is still building. Wait for it, then call ${this.deps.toolName('check')}.`)
-    const own = this.deps.builds.claudesBuild(project.id, turn.startedAt, prompts)
+    let own = this.deps.builds.claudesBuild(project.id, turn.startedAt, prompts)
+    // A failure a later build has drawn past is no board of Claude's to mend any more. What it built well before that
+    // is still its own to look at.
+    if (own?.result.verdict === 'failed') {
+      if (!own.redrawn) return hold('failed', `${failedLine(own.result, state)} Fix board.py, or say it is still broken.`)
+      own = this.deps.builds.claudesBuild(project.id, turn.startedAt, prompts, { good: true })
+    }
     if (!own) return null
     const { result } = own
-    // A failure a later build has drawn past is no board of Claude's to mend any more.
-    if (result.verdict === 'failed') return own.redrawn ? null : hold('failed', `${failedLine(result, state)} Fix board.py, or say it is still broken.`)
     // The engine numbers a build it has cached anew, and its `changes` are since the last build of another hash: the
     // hash says whether this is a board Claude has seen, or the one the turn began with.
     const seen = (this.lookedAt.get(project.id) ?? -Infinity) >= own.endedAt || this.lookedHash.get(project.id) === result.hash
