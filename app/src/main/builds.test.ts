@@ -443,6 +443,50 @@ describe('what made each build', () => {
     expect(told(state)).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn]])
   })
 
+  it('puts a save heard before the engine is asked, while the build starts, on the next build', async () => {
+    // The causes on file are read before the engine is asked: held here, that is the moment an engine's first ping takes.
+    let release: () => void = () => {}
+    const held = new Promise<Map<number, KeptCause>>((resolve) => (release = () => resolve(new Map())))
+    const l = loop(() => ({}), { causeNow: () => ({ cause: 'person' }), writeCauses: written().writeCauses, readCauses: () => held })
+    l.builds.open(info())
+    l.seen()
+    l.save()
+    release()
+    await expect.poll(() => l.asked.length).toBe(2)
+    expect(told(await l.settled())).toEqual([[1, 'unknown', undefined], [2, 'person', undefined]])
+  })
+
+  it('keeps a burst that has not settled off the build that starts', async () => {
+    let release: () => void = () => {}
+    const held = new Promise<Map<number, KeptCause>>((resolve) => (release = () => resolve(new Map())))
+    const l = loop(() => ({}), { causeNow: () => agent, writeCauses: written().writeCauses, readCauses: () => held })
+    l.builds.open(info())
+    l.seen()
+    release()
+    await expect.poll(() => l.asked.length).toBe(1)
+    l.save()
+    expect(told(await l.settled())).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn]])
+  })
+
+  it('forgets what wanted a build that a folder with no board.py did not make', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    let now: KeptCause = agent
+    const l = loop(() => ({}), { causeNow: () => now, writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    // Claude saves another Python file in a turn: nothing is built.
+    l.seen()
+    l.save(['calc.py'])
+    await l.settled()
+    expect(l.starts()).toBe(0)
+    // Later the person writes board.py: its build is theirs, not that turn's.
+    now = { cause: 'person' }
+    project.touch()
+    l.seen()
+    l.save()
+    expect(told(await l.settled())).toEqual([[1, 'person', undefined]])
+  })
+
   it('tells the causes it had on file for the builds the engine lists, and none for the others', async () => {
     const l = loop(() => ({}), {
       readCauses: async () => new Map<number, KeptCause>([[1, { cause: 'person' }], [5, agent]]),

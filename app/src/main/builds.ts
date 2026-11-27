@@ -122,8 +122,10 @@ interface Entry {
   causes: Map<number, KeptCause>
   /** The causes on file have been read: nothing is written before, or the file would lose them. */
   loaded: Promise<void>
-  /** What wants the next build, folded: taken by the build that starts, and then none. */
+  /** What wants the next build, folded: taken by the build that starts (`next`), and then none. */
   pending?: KeptCause
+  /** What made the burst of saves heard and not settled yet: it joins `pending` when the burst settles, never before. */
+  burst?: KeptCause
   settled: Array<() => void>
 }
 
@@ -193,12 +195,15 @@ export class Builds {
       project.dir,
       () => {
         entry.seen = false
+        // The burst has settled: what made it wants the next build, not one already on its way.
+        entry.pending = merged(entry.pending, entry.burst ?? this.causeNow(project.id))
+        entry.burst = undefined
         this.want(entry)
       },
       DEBOUNCE_MS,
       () => {
         entry.seen = true
-        entry.pending = merged(entry.pending, this.causeNow(project.id))
+        entry.burst = merged(entry.burst, this.causeNow(project.id))
       }
     )
     void Promise.all([this.readHistory(project.dir), entry.loaded]).then(([history]) => {
@@ -315,7 +320,9 @@ export class Builds {
     if (entry.running || !entry.wanted || this.entries.get(entry.project.id) !== entry) return
     // A folder with no board yet is not built, and nothing is written into it.
     if (!existsSync(join(entry.project.dir, 'board.py'))) {
+      // What wanted it made nothing: a later build is not its.
       entry.wanted = false
+      entry.pending = undefined
       this.finish(entry)
       return
     }
@@ -335,8 +342,11 @@ export class Builds {
     entry.retry = undefined
     entry.wanted = false
     entry.running = true
+    // Whatever wanted this build is taken as it starts: a save heard from now on, even while the engine is asked, is for the next one.
+    const cause = entry.pending ?? { cause: 'unknown' }
+    entry.pending = undefined
     this.say(entry, { building: true })
-    void this.run(entry).finally(() => {
+    void this.run(entry, cause).finally(() => {
       entry.running = false
       if (this.entries.get(entry.project.id) !== entry) return
       if (entry.wanted) this.next(entry)
@@ -399,8 +409,10 @@ export class Builds {
     return client
   }
 
-  private async run(entry: Entry): Promise<void> {
+  private async run(entry: Entry, cause: KeptCause): Promise<void> {
     const open = () => this.entries.get(entry.project.id) === entry
+    // Until the engine is asked to build, a failure leaves the cause for the next attempt.
+    let asked = false
     try {
       await engineMayWrite(entry.project.dir)
       const client = await this.engine(entry)
@@ -409,9 +421,7 @@ export class Builds {
       entry.startedAt = this.now()
       const before = entry.state.history
       const number = Math.max(before.at(-1)?.number ?? 0, entry.state.latest?.number ?? 0) + 1
-      // Whatever wanted this build is taken here: a save heard from now on is for the next one.
-      const cause = entry.pending ?? { cause: 'unknown' }
-      entry.pending = undefined
+      asked = true
       this.say(entry, { history: [...before, { number, hash: null, verdict: 'running', at: new Date(entry.startedAt).toISOString(), kept: false, cause: cause.cause, ...(cause.turn ? { turn: cause.turn } : {}) }] })
       const result = await client.build(entry.project.dir)
       const history = await this.readHistory(entry.project.dir)
@@ -440,6 +450,7 @@ export class Builds {
       for (const cb of this.resultListeners) cb(entry.project.id, result)
     } catch (e) {
       if (!open()) return
+      if (!asked) entry.pending = entry.pending ? merged(cause, entry.pending) : cause
       entry.endedAt = this.now()
       const history = entry.state.history.filter((one) => one.verdict !== 'running')
       if (e instanceof EngineDown || (e instanceof KernelError && e.kind === 'stopped')) {

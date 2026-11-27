@@ -63,7 +63,8 @@ test('the builds of a project are a folded bar under the views, a chip for each 
   await expect.poll(() => builtBy('agent'), { timeout: 30_000 }).toBe(2)
   await say(['edit board.py "# step 2" "# step 3"'])
   await expect.poll(() => builtBy('agent'), { timeout: 30_000 }).toBe(3)
-  // Two saves of the person's in a row.
+  // Two saves of the person's in a row, once the turn has ended: a save while it works is Claude's.
+  await expect.poll(async () => (await state()).session?.status, { timeout: 30_000 }).toBe('idle')
   appendFileSync(join(dir, 'board.py'), '# a note\n')
   await expect.poll(() => builtBy('person'), { timeout: 30_000 }).toBe(1)
   appendFileSync(join(dir, 'board.py'), '# another\n')

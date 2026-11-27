@@ -29,8 +29,11 @@ paths:
 - Main stamps each build's cause for the builds timeline (`BuildEntry.cause`/`turn`, kept in `.pino/build-causes.json`,
   `buildCauses.ts`): `causeNow` is asked at a burst's first save (`turnNow` while a prompt's turn works, else the
   person), a route's end asks for its build with the route's cause (`route` when the person started it, the turn's when Claude did), the opening build and a Rebuild are `unknown`. Triggers that fold
-  into one build keep the highest (agent, route, person, unknown), whole; a save heard while a build runs is for the
-  next one. The window never says what made a build.
+  into one build keep the highest (agent, route, person, unknown), whole. A burst's cause joins what wants the next
+  build only when the burst settles, and a build takes what wants it as it starts (`next`), before the engine is
+  asked: a save heard after that, even during the engine's first ping, is for the next one. A cause that made no
+  build (no `board.py`) is dropped; one whose build never reached the engine is kept for the next attempt. The window
+  never says what made a build.
 - Each engine is pinged once (`Builds.pong`), whoever asks first, since a ping waits behind a build. A lookup ends a
   silent engine only if it started it, and for 10 s after a start that failed it says why and starts no other
   (`Builds.startFailure`).
