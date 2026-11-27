@@ -85,6 +85,13 @@ describe('site/index.html', () => {
     expect(readFileSync(join(site, 'assets/pino.svg'), 'utf8')).toBe(markSvg(TILE_SHAPES, 64, { ink: token('--ink'), accent: token('--accent'), tile: token('--surface') }))
   })
 
+  it('is deployed by the Pages workflow when the page or what it copies changes', () => {
+    const yml = readFileSync(join(root, '.github/workflows/pages.yml'), 'utf8')
+    expect(yml).toContain('paths: [site/**, docs/images/**, app/scripts/build-site.mjs, .github/workflows/pages.yml]')
+    expect(yml.match(/run: .+/g)).toEqual(['run: pnpm install --frozen-lockfile', 'run: node app/scripts/build-site.mjs'])
+    expect(yml).toContain('path: site\n')
+  })
+
   it('reduces motion when asked', () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)/)
   })
