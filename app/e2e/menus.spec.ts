@@ -94,6 +94,67 @@ test('the workspace menu is a card, each recent workspace two lines of its own: 
   }
 })
 
+// torno's #367: its page of projects heard every key first and kept the menu's own from it. pino's pages with the title
+// bar leave a menu its keys, and this holds them to it.
+test('on the page of projects and the New project page the folder menu has its keys: the arrows move in it, Escape closes it and the page stays', async () => {
+  const open = tempProject('blinky')
+  const workspace = dirname(open)
+  const other = tempFolder('another-workspace')
+  const config = join(tempFolder('config'), 'config.json')
+  writeFileSync(config, JSON.stringify({ workspace, workspaces: [workspace, other] }))
+  const { app, page } = await launch({ env: { PINO_CONFIG: config } })
+  try {
+    const projects = page.getByRole('main', { name: 'All projects' })
+    const fresh = page.getByRole('region', { name: 'New project' })
+    const button = page.getByRole('button', { name: `Workspace ${basename(workspace)}` })
+    const menu = page.getByRole('menu', { name: 'Workspaces' })
+    const walk = async (): Promise<void> => {
+      await button.click()
+      await expect(menu.locator('.folder-item:enabled')).toBeFocused()
+      await page.keyboard.press('ArrowDown')
+      await expect(menu.getByRole('menuitem', { name: 'Open workspace…' })).toBeFocused()
+      await page.keyboard.press('Home')
+      await expect(menu.locator('.folder-item:enabled')).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+      await expect(button).toBeFocused()
+    }
+    await expect(projects).toBeVisible()
+    await walk()
+    await expect(projects).toBeVisible()
+    await projects.getByRole('button', { name: 'New project' }).click()
+    await expect(fresh).toBeVisible()
+    await walk()
+    await expect(fresh).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+// torno's #367: the menu comes when the list of folders has been read, and the focus went into it only some time after it
+// was drawn.
+test('the folder menu has the keys as soon as it is drawn: an Escape pressed at once closes it', async () => {
+  const { app, page } = await launch({ project: tempProject('blinky') })
+  try {
+    // Escape from where the focus is, in the very task that put the menu there: no key of a person or a test can be sooner.
+    await page.evaluate(() => {
+      const seen = window as unknown as { __escaped?: boolean }
+      seen.__escaped = false
+      new MutationObserver((_changes, watching) => {
+        if (!document.querySelector('.folder-menu')) return
+        watching.disconnect()
+        document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+        seen.__escaped = true
+      }).observe(document.body, { subtree: true, childList: true })
+    })
+    await page.getByRole('button', { name: /^Workspace / }).click()
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __escaped?: boolean }).__escaped)).toBe(true)
+    await expect(page.getByRole('menu', { name: 'Workspaces' })).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
 test("the session dock's More menu is a card of rows, one under another", async () => {
   const { app, page } = await launch({ project: tempProject('blinky'), agent: true })
   try {
