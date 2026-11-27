@@ -34,7 +34,8 @@ paths:
 - The dock's left edge is its resize handle (`App.tsx`, `role="separator"`, "Resize session", `.dock-edge` in
   `layout.css`): dragged, or moved 16 px a press with Left and Right (`dock.resize`), from 320 px to what leaves the
   view 420 px beside the card. The width is the window's (`localStorage`, `pino.dock`; `state/dock.ts`), never a
-  project's; with none kept, `--dock-w` stands. A smaller window shows less and keeps what was asked for.
+  project's; with none kept, `--dock-w` stands: a drag that ends where it began with nothing kept takes the width it
+  wrote on the shell off again (`e2e/dock.spec.ts`). A smaller window shows less and keeps what was asked for.
 
 ## The chat pane (`ui/chat/`, `state/chat.ts`)
 
