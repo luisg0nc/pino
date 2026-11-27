@@ -276,6 +276,14 @@ test('the left column names the fab, and has a row with a Brief button only wher
     await waitForBuild(page, 1)
     const section = page.locator('[data-region="left"] .route-section').filter({ has: page.getByRole('heading', { name: 'Brief', exact: true }) })
     await expect(section.locator('.route-brief-fab')).toHaveText('JLC standard 2-layer')
+    // The count is in the face of numbers and still one word with "-layer": no room is drawn between the two.
+    const count = await section.locator('.route-brief-fab .num').evaluate((el) => {
+      const after = document.createRange()
+      after.selectNodeContents(el.nextSibling!)
+      return { text: el.textContent, face: getComputedStyle(el).fontFamily, gap: after.getBoundingClientRect().left - el.getBoundingClientRect().right }
+    })
+    expect(count).toMatchObject({ text: '2', face: expect.stringContaining('Martian Mono') })
+    expect(Math.abs(count.gap)).toBeLessThan(0.5)
     // The limits are the Brief page's alone.
     await expect(page.locator('[data-region="left"]')).not.toContainText('Annular ring')
     await expect(page.locator('[data-region="left"] .fab-limits')).toHaveCount(0)

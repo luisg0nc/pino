@@ -7,7 +7,7 @@ import { WRITERS, writtenAt } from './reach'
 // Which saves of a project are Claude's own, by its tool calls alone: a turn at work says nothing of who saved. A save
 // no call accounts for is the person's, also in the middle of a turn.
 
-/** How far a file's mtime may lie before the clock read just ahead of its write: the kernel stamps files by a coarser one. */
+/** How far a file's stamp may lie before the clock read just ahead of its write: the kernel stamps files by a coarser one. */
 const MTIME_SLACK_MS = 20
 /** A file that is gone has no mtime: one heard of this soon after a command ended may have been removed by it. */
 const REMOVED_HEARD_MS = 500
@@ -43,6 +43,8 @@ interface Running {
   since: number
   /** It waits for the person's answer: nothing is written meanwhile. */
   waiting: boolean
+  /** Its request was given up: whether it runs is not known until its end is told. */
+  unsure?: boolean
 }
 
 interface Run extends Running {
@@ -88,11 +90,15 @@ function filesOf(tool: string, input: unknown): string[] | undefined {
   return typeof named === 'string' && named !== '' ? [named] : []
 }
 
-/** The file as it stands: when it was saved and how long it is; undefined for one that is not there. */
-function statOf(path: string): { mtimeMs: number; size: number } | undefined {
+/**
+ * The file as it stands: when it was saved and how long it is, and when it last changed in any way (`changedMs`: a
+ * command may put a file there with an old mtime, as `cp -p`, `tar x` and `mv` do, and its ctime alone says when);
+ * undefined for one that is not there.
+ */
+function statOf(path: string): { mtimeMs: number; changedMs: number; size: number } | undefined {
   try {
-    const { mtimeMs, size } = statSync(path)
-    return { mtimeMs, size }
+    const { mtimeMs, ctimeMs, size } = statSync(path)
+    return { mtimeMs, changedMs: Math.max(mtimeMs, ctimeMs), size }
   } catch {
     return undefined
   }
@@ -135,6 +141,17 @@ export class ClaudeWrites {
     call.since = this.now()
   }
 
+  /**
+   * The CLI gave its request up. The call may have been decided elsewhere and run all the same, so it counts again
+   * from now; one whose end is never told by the end of the turn never ran (`over`).
+   */
+  cancelled(session: string, id: string): void {
+    const call = this.running.get(`${session}\n${id}`)
+    if (!call?.waiting) return
+    this.allowed(session, id)
+    call.unsure = true
+  }
+
   /** The call never runs. */
   refused(session: string, id: string): void {
     this.running.delete(`${session}\n${id}`)
@@ -158,7 +175,11 @@ export class ClaudeWrites {
 
   /** The session's turn, or the session itself, is over: no call of it runs any more. */
   over(session: string): void {
-    for (const [key, call] of this.running) if (call.session === session) this.ended(session, key.slice(session.length + 1), true)
+    for (const [key, call] of this.running) {
+      if (call.session !== session) continue
+      if (call.unsure) this.running.delete(key)
+      else this.ended(session, key.slice(session.length + 1), true)
+    }
   }
 
   /** Whether the save of `path` just heard is Claude's, and of which prompt; undefined for one that is the person's. */
@@ -169,11 +190,11 @@ export class ClaudeWrites {
     for (const call of this.running.values()) {
       if (call.project !== project || call.waiting) continue
       if (call.files?.includes(file)) return claude(call.turn)
-      if (call.files === undefined && (!stat || stat.mtimeMs >= call.since - MTIME_SLACK_MS)) return claude(call.turn)
+      if (call.files === undefined && (!stat || stat.changedMs >= call.since - MTIME_SLACK_MS)) return claude(call.turn)
     }
     const left = this.left.get(keyOf(project, file))
     if (left && stat && left.stamp === `${stat.mtimeMs}:${stat.size}`) return claude(left.turn)
-    const run = this.runs.findLast((one) => one.project === project && (stat ? stat.mtimeMs >= one.since - MTIME_SLACK_MS && stat.mtimeMs <= one.end : this.now() <= one.end + REMOVED_HEARD_MS))
+    const run = this.runs.findLast((one) => one.project === project && (stat ? stat.changedMs >= one.since - MTIME_SLACK_MS && Math.floor(stat.changedMs) <= one.end : this.now() <= one.end + REMOVED_HEARD_MS))
     return run ? claude(run.turn) : undefined
   }
 }

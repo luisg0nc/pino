@@ -184,12 +184,16 @@ describe('Sessions', () => {
   it("adds the domain's context to a prompt and takes its Stop answer", async () => {
     const prompts: string[] = []
     let stops = 0
+    const answering: string[][] = []
     const domain: SessionDomain = {
       promptContext: async (of_, prompt) => {
         prompts.push(`${of_.id} ${prompt}`)
         return { text: 'CTX', sentMarkIds: [] }
       },
-      stopAnswer: async () => (++stops === 1 ? { decision: 'block', reason: 'KEEP GOING' } : null)
+      stopAnswer: async (_project, turn) => {
+        answering.push([...turn])
+        return ++stops === 1 ? { decision: 'block', reason: 'KEEP GOING' } : null
+      }
     }
     const sessions = manager({ domain })
     const id = await started(sessions)
@@ -197,6 +201,29 @@ describe('Sessions', () => {
     expect(prompts).toEqual([`${project.id} say hello`])
     expect(of(sessions, id, 'context')).toMatchObject([{ text: 'CTX', marks: [] }])
     expect(stops).toBe(2)
+    // The Stop is answered for the prompts of the turn that ends, which is how a build of Claude's is told as its.
+    const [asked] = of(sessions, id, 'user')
+    expect(answering).toEqual([[asked.id], [asked.id]])
+  })
+
+  it('tells the domain which prompt was folded into a turn at work, and which begins one', async () => {
+    const asked: Array<[string, boolean | undefined]> = []
+    const domain: SessionDomain = {
+      promptContext: async (_project, prompt, folded) => {
+        asked.push([prompt, folded])
+        return { text: '', sentMarkIds: [] }
+      },
+      stopAnswer: async () => null
+    }
+    const sessions = manager({ domain })
+    const id = await started(sessions)
+    await sessions.send(id, { text: 'work 1' })
+    await until(() => expect(of(sessions, id, 'tool')).toHaveLength(1))
+    await sessions.send(id, { text: 'say folded in' })
+    await until(() => expect(of(sessions, id, 'turn')).toHaveLength(1))
+    await turn(sessions, id, 'say a turn of its own')
+    await until(() => expect(of(sessions, id, 'turn')).toHaveLength(2))
+    expect(asked).toEqual([['work 1', false], ['say folded in', true], ['say a turn of its own', false]])
   })
 
   it("puts the marks the domain sent on the prompt's context item, and calls delivered once the hook is answered", async () => {
@@ -287,6 +314,29 @@ describe('Sessions', () => {
       const id = await started(sessions)
       await sessions.send(id, { text: 'bash exit 1\nwork 2' })
       await until(() => expect(of(sessions, id, 'tool')).toHaveLength(2))
+      await new Promise((r) => setTimeout(r, 50))
+      writeFileSync(file(), 'mine')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
+    // torno's review of its build causes: a call nobody told over would claim every later save, for good.
+    it.each([
+      ['the person interrupted', (sessions: Sessions, id: string) => sessions.interrupt(id)],
+      ['the session was ended under', (sessions: Sessions, id: string) => sessions.stop(id)],
+      ['the CLI died in', async (sessions: Sessions) => sessions.killAll()]
+    ])('is not one made after %s a command of its that was under way', async (_how, end) => {
+      const sessions = manager()
+      const id = await started(sessions)
+      // A command that may write: one that surely writes nothing is of no account to begin with.
+      await sessions.send(id, { text: 'hold 30 python gen.py' })
+      await until(() => expect(of(sessions, id, 'tool')).toHaveLength(1))
+      // While it runs, a save is taken for its: the call is there to be told over.
+      await until(() => {
+        writeFileSync(file(), 'generated')
+        expect(sessions.wroteBy(project.id, file())).toBeDefined()
+      })
+      await end(sessions, id)
+      await until(() => expect(sessions.turnNow(project.id)).toBeUndefined())
       await new Promise((r) => setTimeout(r, 50))
       writeFileSync(file(), 'mine')
       expect(sessions.wroteBy(project.id, file())).toBeUndefined()

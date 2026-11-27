@@ -559,7 +559,7 @@ export class Sessions {
   private cancelAsk(session: Session, requestId: string): void {
     const toolUseId = session.asks.get(requestId)?.toolUseId
     if (!session.asks.delete(requestId)) return
-    if (toolUseId !== undefined) this.writes.refused(session.id, toolUseId)
+    if (toolUseId !== undefined) this.writes.cancelled(session.id, toolUseId)
     session.chat.transcript.cancelled(requestId)
     if (session.asks.size === 0) this.advance(session, 'answered')
   }
@@ -686,7 +686,7 @@ export class Sessions {
 
     // A Stop held back is no end of the turn: the agent goes on, and so does its status.
     if (event === 'Stop' && !session.killTimer) {
-      const held = await this.deps.domain.stopAnswer(session.project).catch((e: unknown) => {
+      const held = await this.deps.domain.stopAnswer(session.project, session.chat.transcript.answering()).catch((e: unknown) => {
         console.error(`no answer to the Stop in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`)
         return null
       })
@@ -705,7 +705,9 @@ export class Sessions {
 
     const prompt = typeof fields.prompt === 'string' ? fields.prompt : undefined
     // The prompt goes ahead without it rather than wait for the hook to time out.
-    const context = await this.deps.domain.promptContext(session.project, prompt ?? '').catch((e: unknown) => {
+    // Asked before the transcript hears of this prompt: a turn that has taken one up already is at work.
+    const folded = session.chat.transcript.answering().length > 0
+    const context = await this.deps.domain.promptContext(session.project, prompt ?? '', folded).catch((e: unknown) => {
       console.error(`no context for the prompt in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`)
       return { text: '', sentMarkIds: [], delivered: undefined }
     })

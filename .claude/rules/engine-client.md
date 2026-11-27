@@ -32,7 +32,8 @@ paths:
   person's, also while its turn works), a route's end asks for its build with the route's cause (`route` when the
   person started it; when Claude did, `agent` with the turn it was started in), the opening build and a Rebuild are
   `unknown`. Triggers that fold
-  into one build keep the highest (agent, route, person, unknown), whole. A burst's cause joins what wants the next
+  into one build keep the highest (agent, route, person, unknown), whole; of two that rank alike, the earlier, but a
+  save's over a rebuild that waits when its burst settles (a route's end, of an earlier prompt perhaps). A burst's cause joins what wants the next
   build only when the burst settles, and a build takes what wants it as it starts (`next`), before the engine is
   asked: a save heard after that, even during the engine's first ping, is for the next one. A cause that made no
   build (no `board.py`) is dropped; one whose build never reached the engine is kept for the next attempt. The window
@@ -61,10 +62,16 @@ paths:
 
 ## What a Stop waits for
 
-`domain.ts` holds a turn at its end only while the turn's own build is running, has failed or was not looked at
-(`check` or `look`), at most twice. It waits only for a save the watcher has heard of or a build of this turn, never
-for a fixed time: with a fixed wait at every Stop, a turn is still at work when the next prompt arrives, and the CLI
-folds that prompt into it.
+`domain.ts` holds a turn at its end only while a build Claude made in it is on its way, or its newest one failed or
+was not looked at (`check` or `look`), at most twice. Which builds those are is told by cause (`builds.ts`
+`ofPrompts`: cause `agent`, for a prompt the turn took up or for none that could be named; `claudesComing`,
+`claudesBuild`): one that names a prompt of the turn is its whenever it began, and only one with no prompt to name
+must have begun since the turn did (`claudesIn`). A prompt folded into the turn at work begins none: the manager says
+so to `promptContext`, and the turn keeps its start, the board it began with and what it was held for. The
+person's save mid-turn is neither waited for nor held for, and an earlier prompt's build that comes after hides none
+of the turn's. A failure of Claude's that a later build drew past is let go. It waits only for a save of Claude's the
+watcher has heard of or a build of Claude's, never for a fixed time: with a fixed wait at every Stop, a turn is still
+at work when the next prompt arrives, and the CLI folds that prompt into it.
 
 ## Claude's tools (`main/mcp/`)
 

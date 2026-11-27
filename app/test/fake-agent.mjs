@@ -58,6 +58,7 @@
 //                                 size read from each PNG's header (a text, as `say` is)
 //       garbage                   a line that is no JSON, and an object of a type nobody knows
 //       work <seconds>            a tool (Bash) that takes that long
+//       hold <seconds> <command>  a `Bash` tool of that command that takes that long and is never really run
 //       argv                      says its own arguments as JSON (a text, as `say` is)
 //       write <file> <content>    a `Write` tool: `PreToolUse` and `PostToolUse` with `tool_use_id` and `tool_input`
 //                                 (`file_path`, absolute, and `content`), and between them the file really written (`file`
@@ -405,6 +406,9 @@ async function streamMode() {
       await tool('Bash', { command: rest }, false, 0, () => spawnSync('sh', ['-c', rest], { stdio: 'ignore' }).status)
     } else if (command === 'work') {
       await tool('Bash', { command: `sleep ${rest}` }, false, Number(rest) * 1000)
+    } else if (command === 'hold') {
+      const space = rest.indexOf(' ')
+      await tool('Bash', { command: rest.slice(space + 1) }, false, Number(rest.slice(0, space)) * 1000)
     } else if (command === 'slow') {
       const until = Date.now() + Number(rest) * 1000
       const event = (e) => out({ type: 'stream_event', event: e, ...base, uuid: next('uuid') })
