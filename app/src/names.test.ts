@@ -16,6 +16,8 @@ const MAY_NAME_TORNO = [
   'app/src/tornoSync.test.ts',
   'app/src/manifest.test.ts',
   'app/src/names.test.ts',
+  // The landing page links torno as pino's sibling, and its test holds the link.
+  'app/src/site.test.ts',
   'app/src/shared/app.ts',
   '.claude/hooks/guard-bash.sh',
   '.claude/hooks/guard-bash.test.sh'
