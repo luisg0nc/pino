@@ -10,7 +10,7 @@
 <meta property="og:description" content="A Linux desktop workbench for making circuit boards with Claude Code.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://pino.luisg.me/">
-<meta property="og:image" content="https://pino.luisg.me/assets/img/social-preview.png">
+<meta property="og:image" content="https://pino.luisg.me/assets/img/site-preview.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="1200">
 <meta property="og:image:alt" content="The pino mark, a chip seen from above with pin 1 in green, over the word pino">
@@ -18,7 +18,11 @@
 <link rel="icon" href="assets/pino.svg" type="image/svg+xml">
 <link rel="preload" href="assets/fonts/instrument-sans-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/story.css">
 <script src="assets/site.js" defer></script>
+<script src="assets/story.js" defer></script>
+<script src="stories/simple-blinker.board.js" defer></script>
+<script src="stories/simple-blinker.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a>
@@ -38,7 +42,23 @@
 
 <section class="hero" id="hero" aria-labelledby="hero-title">
   <div class="hero-text">
-    <h1 id="hero-title">A workbench for making circuit boards with Claude Code.</h1>
+    <h1 id="hero-title">A workbench for making circuit boards with <span class="cc" role="img" aria-label="Claude Code"><svg viewBox="-10 140 1330 401" aria-hidden="true" focusable="false">
+      <rect class="cc-floor" x="-10" y="533" width="1330" height="8"/>
+      <g class="cc-table"><rect x="660" y="330" width="640" height="40"/><rect x="700" y="370" width="40" height="163"/><rect x="1220" y="370" width="40" height="163"/></g>
+      <g class="cc-pcb"><rect x="740" y="310" width="440" height="20"/></g>
+      <g class="cc-chip"><rect x="1000" y="262" width="140" height="40"/><rect class="cc-pin-one" x="1012" y="274" width="12" height="12"/>
+        <g class="cc-legs"><rect x="1008" y="302" width="10" height="8"/><rect x="1030" y="302" width="10" height="8"/><rect x="1052" y="302" width="10" height="8"/><rect x="1074" y="302" width="10" height="8"/><rect x="1096" y="302" width="10" height="8"/><rect x="1118" y="302" width="10" height="8"/></g></g>
+      <circle class="cc-shine" cx="896" cy="194" r="64"/>
+      <g class="cc-led"><rect class="cc-lead" x="892" y="236" width="8" height="68"/><rect class="cc-flange" x="862" y="226" width="68" height="10"/><rect class="cc-lens" x="868" y="166" width="56" height="60"/><rect class="cc-lens" x="876" y="154" width="40" height="12"/></g>
+      <rect class="cc-pad" x="866" y="304" width="60" height="6"/>
+      <g class="cc-bead"><rect x="874" y="292" width="44" height="12"/><rect x="882" y="284" width="28" height="8"/></g>
+      <circle class="cc-glow" cx="886" cy="298" r="26"/>
+      <path class="cc-smoke" pathLength="1" d="M868 280C846 254 876 230 852 204S838 170 858 146"/>
+      <path class="cc-smoke cc-smoke-2" pathLength="1" d="M856 286C834 264 862 242 838 218S822 186 840 160"/>
+      <g class="cc-critter"><rect x="120" y="450" width="40" height="83"/><rect x="200" y="450" width="40" height="83"/><rect x="400" y="450" width="40" height="83"/><rect x="480" y="450" width="40" height="83"/>
+        <g class="cc-body"><rect x="80" y="133" width="480" height="322"/><rect x="0" y="292" width="640" height="82"/><rect class="cc-eye" x="160" y="215" width="40" height="77"/><rect class="cc-eye" x="440" y="215" width="40" height="77"/>
+          <g class="cc-iron" transform="translate(598 318)"><g class="cc-iron-arm"><rect class="cc-handle" x="0" y="-18" width="190" height="36"/><rect class="cc-grip" x="40" y="-18" width="10" height="36"/><rect class="cc-grip" x="70" y="-18" width="10" height="36"/><rect class="cc-grip" x="100" y="-18" width="10" height="36"/><rect class="cc-metal" x="190" y="-12" width="22" height="24"/><rect class="cc-shaft" x="212" y="-6" width="50" height="12"/><rect class="cc-metal" x="262" y="-3" width="28" height="6"/></g></g></g></g>
+    </svg></span>.</h1>
     <p class="lede">You point at the board, and Claude Code edits the Python file behind it. On every save, pino builds
       that file into a KiCad project and runs the checks.</p>
     <p class="actions">
@@ -59,55 +79,74 @@
 
 <section class="loop reveal" id="loop" aria-labelledby="loop-title">
   <h2 id="loop-title">The loop</h2>
-  <p class="section-lede">The board is a Python file, <code>board.py</code>. pino has no tools for placing parts or
-    drawing tracks by hand.</p>
+  <p class="section-lede">The board is a Python file, <code>board.py</code>. You say what you want, and each change
+    goes once round this ring.</p>
   <div class="loop-body">
-    <svg id="ring" viewBox="0 0 320 320" role="img" aria-label="A ring of four steps that repeats: you describe or mark, Claude Code edits, the engine builds and checks, pino draws it and reports">
+    <svg id="ring" viewBox="0 0 320 320" role="img" aria-label="A ring of five steps that repeats: you describe the board, Claude Code edits board.py, the engine builds and checks it, the router lays the copper, pino draws it and tells Claude">
       <circle class="ring-track" cx="160" cy="160" r="120"></circle>
       <circle class="ring-trail" cx="160" cy="160" r="120"></circle>
       <g class="ring-nodes"></g>
       <circle class="ring-dot" r="6" cx="160" cy="40"></circle>
     </svg>
     <ol class="steps">
-      <li data-step="0"><h3>You describe the board, or mark it</h3>
-        <p>Point at a part, draw an arrow to where it should go, or sketch the way a track should run. Each mark can
-          carry a note.</p></li>
+      <li data-step="0"><h3>You describe the board</h3>
+        <p>Say what it is for on the Brief, with cards for its parts, power and decisions. On the board, point at a
+          part or draw where it should go. Each mark can carry a note.</p></li>
       <li data-step="1"><h3>Claude Code edits <code>board.py</code></h3>
-        <p>pino sends your marks with your next message as exact references: the part, the pad, the net. Through
-          pino's tools, Claude can look at the board, measure it and read the checks.</p></li>
-      <li data-step="2"><h3>The engine builds it</h3>
-        <p>On save, it runs the file, writes a KiCad <span class="num">10</span> project, and runs KiCad's electrical
-          and design rule checks along with pino's own.</p></li>
-      <li data-step="3"><h3>pino draws it and reports back</h3>
-        <p>The window shows the new build. Claude is told what changed and what failed.</p></li>
+        <p>Your marks go with your message as exact references: the part, the pad, the net. Through pino's tools,
+          Claude looks at the board, measures it and reads the checks.</p></li>
+      <li data-step="2"><h3>The engine builds and checks it</h3>
+        <p>On save, it runs the file, places the parts and writes a KiCad <span class="num">10</span> project. Then
+          KiCad's electrical and design rule checks run, and pino's own.</p></li>
+      <li data-step="3"><h3>The router lays the copper</h3>
+        <p>When you or Claude ask, KiCadRoutingTools routes the board in the background, and the checks run again on
+          its copper.</p></li>
+      <li data-step="4"><h3>pino draws it and tells Claude</h3>
+        <p>The Schematic, the Board and 3D show the new build. Claude is told what changed and what failed.</p></li>
     </ol>
   </div>
 </section>
 
+<section class="story-section reveal" id="story" aria-labelledby="story-title">
+  <h2 id="story-title">A board, prompt by prompt</h2>
+  <p class="section-lede">A small LED blinker, made with Claude Code in three prompts. The lines are what pino reported
+    for each build and route, and the board is drawn from that build's own files.</p>
+  <figure data-story="simple-blinker"><p class="story-told">The first prompt asks for a button, a 9 V battery and an LED
+    that blinks three times, and Claude Code asks a question back. After the second, three builds fail, the fourth
+    places 20 parts with 2 errors, and the fifth has none. The first route connects all 15 nets, with 2 copper errors
+    on the 9 V track. A rule change makes that copper stale, and the second route is clean. Later builds move the
+    labels, and after the third prompt the third route keeps the copper of the second, clean.</p></figure>
+</section>
+
 <section class="window reveal" id="window" aria-labelledby="win-title">
   <h2 id="win-title">The window</h2>
-  <p class="section-lede">Four tabs on one board, with the Claude Code session beside them.</p>
+  <p class="section-lede">Four tabs on one board, with the Claude Code session beside them. Open a picture to see it
+    full size.</p>
   <div class="tabs">
     <figure>
-      <img src="assets/img/brief.png" loading="lazy" width="1600" height="1000" alt="The Brief tab: a few words about the board, and cards for a requirement, a part, a power budget and a decision">
+      <a class="zoom" href="assets/img/brief.png"><img src="assets/img/brief.png" loading="lazy" width="1600" height="1000" alt="The Brief tab: a few words about the board, and cards for a requirement, a part, a power budget and a decision"></a>
       <figcaption><h3>Brief</h3>What the board is for, in your words, with cards for requirements, parts, power and
         decisions.</figcaption>
     </figure>
     <figure>
-      <img src="assets/img/schematic.png" loading="lazy" width="1600" height="1000" alt="The Schematic tab: the circuit of a small LED blinker as a schematic sheet">
+      <a class="zoom" href="assets/img/schematic.png"><img src="assets/img/schematic.png" loading="lazy" width="1600" height="1000" alt="The Schematic tab: the circuit of a small LED blinker as a schematic sheet"></a>
       <figcaption><h3>Schematic</h3>KiCad's sheet, redrawn. A part you select stays selected on the Board and in
         3D.</figcaption>
     </figure>
     <figure>
-      <img src="assets/img/board.png" loading="lazy" width="1600" height="1000" alt="The Board tab: the routed board with its outline, parts, pads and copper tracks">
+      <a class="zoom" href="assets/img/board.png"><img src="assets/img/board.png" loading="lazy" width="1600" height="1000" alt="The Board tab: the routed board with its outline, parts, pads and copper tracks"></a>
       <figcaption><h3>Board</h3>The copper layers as a technical drawing, with net colours as a switch. Routing runs in
         the background, using KiCadRoutingTools.</figcaption>
     </figure>
     <figure>
-      <img src="assets/img/3d.png" loading="lazy" width="1600" height="1000" alt="The 3D tab: a model of the routed board with green solder mask and its parts">
+      <a class="zoom" href="assets/img/3d.png"><img src="assets/img/3d.png" loading="lazy" width="1600" height="1000" alt="The 3D tab: a model of the routed board with green solder mask and its parts"></a>
       <figcaption><h3>3D</h3>A model of the board, with its parts or bare.</figcaption>
     </figure>
   </div>
+  <dialog class="lightbox" aria-label="Picture, full size">
+    <img alt="">
+    <form method="dialog"><button class="lightbox-close" type="submit">Close</button></form>
+  </dialog>
 </section>
 
 <section class="for reveal" id="for" aria-labelledby="for-title">
@@ -176,8 +215,19 @@ scripts/pino ~/boards</code></pre>
     <div class="links-card">
       <h3>torno</h3>
       <p>pino's sibling, the same kind of workbench for CAD parts. The two share much of their code.</p>
-      <p class="actions"><a class="button big" href="https://torno.luisg.me/">torno.luisg.me</a></p>
+      <p class="actions"><a class="button big torno-button" href="https://torno.luisg.me/"><img src="assets/sibling/torno.svg" alt="" width="24" height="24">torno.luisg.me</a></p>
     </div>
+  </div>
+</section>
+
+<section class="author reveal" id="author" aria-labelledby="author-title">
+  <h2 id="author-title">Who makes it</h2>
+  <div class="links-card author-card">
+    <div>
+      <h3>Luis</h3>
+      <p>He is into computers, restoring old rust buckets and 3D printing, and he makes pino and torno.</p>
+    </div>
+    <p class="actions"><a class="button big" href="https://luisg.me/">luisg.me</a></p>
   </div>
 </section>
 

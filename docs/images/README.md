@@ -38,6 +38,22 @@ in `site/index.html`, and its `width` and `height` if the size changed (`app/src
 | `schematic.png` | The Schematic tab. The whole window. |
 | `board.png` | The Board tab, routed. The whole window. |
 | `3d.png` | The 3D tab. The whole window. |
-| `social-preview.png` | 1200 x 1200, the page's link preview (`og:image`): the mark, the name and a line on the paper grey. |
+| `site-preview.png` | 1200 x 1200, the page's link preview (`og:image`): the mark, the name and a line on the paper grey. |
+| `social-preview.png` | 1280 x 640, the repository's social preview on GitHub, uploaded by hand (Settings, General, Social preview). Drawn, not captured: `node app/scripts/social-preview.mjs` renders `app/scripts/social-preview.html` in headless Chromium and fails if a face did not load. Not on the page. |
 
 The captures are 1600 x 1000 (`PINO_TEST_SIZE`). The raw ones are not committed.
+
+## The story
+
+The page's story ("A board, prompt by prompt") is not a picture. `site/assets/story.js` draws the board in SVG from
+`site/stories/simple-blinker.board.js`, which `app/scripts/story-board.mjs` writes from the same blinker's own builds
+and routes, read with the app's board reader:
+
+```sh
+node app/scripts/story-board.mjs <board folder>
+```
+
+It needs the folder's `.pino/build/<hash>/` and `.pino/routes/<key>/` of the builds and routes it names at its top
+(`BUILDS`, `ROUTES`), and fails if a ratsnest end is on no pad or a home folder is in what it writes. The lines pino
+says in `site/stories/simple-blinker.js` are the project's own: its `builds.json`, each build's `result.json` and each
+route's `route.json`. `app/src/site.test.ts` holds that every state the story shows is one of those builds or routes.

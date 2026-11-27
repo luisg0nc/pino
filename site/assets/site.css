@@ -17,6 +17,15 @@
   --scribe: #7DB892;
   --on-dye: #F1F8F3;
   --on-dye-muted: #C4E0CC;
+  --board-paper: #FCFBF8;
+  --cu: #2A2F37;
+  --cu-far: #CBC6BC;
+  --hatch-far: rgb(42 47 55 / .09);
+  --silk: #A29D93;
+  --rat: #6E6A62;
+  --ok: #1B5B3C;
+  --warn: #8C5C16;
+  --fail: #9B2B1D;
   --font-ui: 'Instrument Sans', system-ui, sans-serif;
   --font-mono: 'Martian Mono', ui-monospace, monospace;
   --measure: 66ch;
@@ -26,6 +35,8 @@
   :root {
     --surface: #1A1C1F; --panel: #222529; --ink: #E9E7E2; --muted: #9EA3AA; --hairline: #33373C;
     --accent: #5CC489; --accent-wash: #1F3A2A; --on-accent: #0B1F13; --dye: #123D25; --scribe: #4C9A6A; --on-dye: #E6F4EA; --on-dye-muted: #A8D4B5;
+    --board-paper: #202327; --cu: #E6E3DC; --cu-far: #464B52; --hatch-far: rgb(230 227 220 / .07); --silk: #6F747B; --rat: #A7A39A;
+    --ok: #A9E6C8; --warn: #CBAA6A; --fail: #F9B2A7;
     color-scheme: dark;
   }
 }
@@ -65,6 +76,52 @@ main > section + section { border-top: 1px solid var(--hairline); }
 /* Hero: the words on the left, the board on the right. */
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 5vw, 64px); align-items: center; padding-top: clamp(24px, 5vw, 64px); }
 .hero h1 { font-size: clamp(36px, 5.6vw, 64px); letter-spacing: -0.025em; max-width: 14ch; }
+/* Claude Code in the heading, drawn from its pixel mark as torno's is, at a table with a small board: it touches the
+   iron to an LED's joint, the solder flows and smokes, it lifts the iron and the LED blinks three times. Once, on
+   load. With motion reduced it is the drawing of the joint being made, and nothing moves. */
+.hero h1 .cc { display: inline-block; vertical-align: -0.1em; }
+.hero h1 .cc svg { display: block; height: 0.92em; width: auto; overflow: visible; }
+.cc-critter rect { fill: #D97757; }
+/* On the dye: the eyes are holes, as in the mark; the table and the iron's handle are the dye's pale green, its metal
+   the dye's white, the board its scribe, the chip and the LED's lens as they are on a real board. */
+.cc-critter rect.cc-eye { fill: var(--dye); }
+.cc-table rect { fill: var(--on-dye-muted); }
+.cc-floor, .cc-pcb rect { fill: var(--scribe); }
+.cc-chip rect { fill: #16191D; }
+.cc-chip .cc-legs rect, .cc-pad, .cc-lead, .cc-flange { fill: var(--on-dye-muted); }
+.cc-chip rect.cc-pin-one { fill: var(--scribe); }
+.cc-lens { fill: var(--on-dye-muted); opacity: .6; }
+.cc-shine { fill: var(--on-dye); opacity: 0; }
+.cc-bead rect { fill: var(--on-dye); }
+.cc-bead { transform-box: fill-box; transform-origin: 50% 100%; }
+.cc-glow { fill: var(--on-dye); opacity: 0; }
+.cc-smoke { fill: none; stroke: var(--on-dye); stroke-width: 13; stroke-linecap: round; opacity: .4; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.cc-smoke-2 { opacity: 0; }
+.cc-critter rect.cc-handle { fill: var(--on-dye-muted); }
+.cc-critter rect.cc-grip { fill: var(--scribe); }
+.cc-critter rect.cc-metal { fill: var(--on-dye); }
+.cc-critter rect.cc-shaft { fill: var(--on-dye-muted); }
+.cc-iron-arm { transform-box: fill-box; transform-origin: 0 50%; transform: rotate(-4.2deg); }
+.cc-body { transform: translate(10px, 4px); }
+/* The moment: 5.6 s, once, half a second after the page is drawn. */
+.js .cc-iron-arm { animation: cc-iron 5.6s .5s ease-in-out both; }
+.js .cc-body { animation: cc-lean 5.6s .5s ease-in-out both; }
+.js .cc-bead { animation: cc-flow 5.6s .5s ease-out both; }
+.js .cc-glow { animation: cc-heat 5.6s .5s ease-out both; }
+.js .cc-smoke { animation: cc-rise 5.6s .5s ease-out both; }
+.js .cc-smoke-2 { animation: cc-rise-2 5.6s .5s ease-out both; }
+.js .cc-shine, .js .cc-lens { animation: cc-blink-led 5.6s .5s linear both; }
+.js .cc-shine { animation-name: cc-blink-shine; }
+.js .cc-eye { transform-box: fill-box; transform-origin: center; animation: cc-wink 5.6s .5s both; }
+@keyframes cc-iron { 0% { transform: rotate(-18deg); } 16%, 54% { transform: rotate(-4.2deg); } 66%, 100% { transform: rotate(-16deg); } }
+@keyframes cc-lean { 0% { transform: none; } 16%, 54% { transform: translate(10px, 4px); } 66%, 100% { transform: none; } }
+@keyframes cc-flow { 0%, 20% { transform: scale(0); } 42%, 100% { transform: scale(1); } }
+@keyframes cc-heat { 0%, 15% { opacity: 0; } 20% { opacity: .55; } 48% { opacity: .35; } 58%, 100% { opacity: 0; } }
+@keyframes cc-rise { 0%, 22% { opacity: 0; stroke-dashoffset: 1; transform: none; } 34% { opacity: .5; } 46% { stroke-dashoffset: 0; } 78%, 100% { opacity: 0; stroke-dashoffset: 0; transform: translateY(-34px); } }
+@keyframes cc-rise-2 { 0%, 32% { opacity: 0; stroke-dashoffset: 1; transform: none; } 44% { opacity: .4; } 56% { stroke-dashoffset: 0; } 86%, 100% { opacity: 0; stroke-dashoffset: 0; transform: translateY(-30px); } }
+@keyframes cc-blink-led { 0%, 70%, 75%, 79%, 84%, 88%, 93%, 100% { opacity: .6; fill: var(--on-dye-muted); } 71%, 74%, 80%, 83%, 89%, 92% { opacity: 1; fill: var(--on-dye); } }
+@keyframes cc-blink-shine { 0%, 70%, 75%, 79%, 84%, 88%, 93%, 100% { opacity: 0; } 71%, 74%, 80%, 83%, 89%, 92% { opacity: .4; } }
+@keyframes cc-wink { 0%, 95%, 100% { transform: none; } 97% { transform: scaleY(.15); } }
 .lede { font-size: clamp(18px, 1.8vw, 21px); margin: 22px 0 0; max-width: 34ch; }
 .note { color: var(--muted); font-size: 15px; margin-top: 18px; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
@@ -133,12 +190,26 @@ main > section.hero + section { border-top: 0; }
 .steps li.on { background: var(--panel); border-left-color: var(--accent); }
 .steps li.on::before { color: var(--accent); }
 
-/* Pictures: one tab of the window to a row, wide enough to read. */
-.tabs { display: grid; gap: clamp(32px, 5vw, 56px); margin-top: 36px; }
+/* The story. */
+.story-section figure { margin-top: 36px; }
+
+/* Pictures: two tabs of the window to a row, one on a phone; each opens full size. */
+.tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(28px, 4vw, 48px) clamp(20px, 3vw, 32px); margin-top: 36px; }
 .tabs figure { margin: 0; }
-.tabs img { width: 100%; border-radius: 10px; border: 1px solid var(--hairline); }
+.zoom { display: block; border-radius: 10px; cursor: zoom-in; }
+.tabs img { width: 100%; border-radius: 10px; border: 1px solid var(--hairline); transition: border-color 160ms; }
+.zoom:hover img { border-color: var(--accent); }
+.zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .tabs figcaption { max-width: var(--measure); margin-top: 12px; color: var(--muted); font-size: 16px; }
 .tabs figcaption h3 { color: var(--ink); margin-bottom: 4px; }
+.lightbox { padding: 0; border: 0; background: transparent; max-width: 96vw; max-height: 94vh; overflow: visible; }
+.lightbox::backdrop { background: rgb(10 14 12 / .82); }
+.lightbox img { max-width: 96vw; max-height: 88vh; width: auto; height: auto; border-radius: 8px; box-shadow: 0 18px 48px rgb(0 0 0 / .45); }
+.lightbox form { display: flex; justify-content: center; margin-top: 12px; }
+.lightbox-close { font: 500 15px var(--font-ui); padding: 7px 16px; border-radius: 6px; border: 1px solid var(--hairline); background: var(--panel); color: var(--ink); cursor: pointer; }
+.lightbox-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.torno-button { display: inline-flex; align-items: center; gap: 10px; }
+.torno-button img { flex: none; width: 24px; height: 24px; border-radius: 5px; }
 
 .for-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; margin-top: 36px; }
 .for-cols > div { border-top: 2px solid var(--accent); padding-top: 14px; }
@@ -153,6 +224,8 @@ pre { background: var(--panel); border: 1px solid var(--hairline); border-radius
 .links-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: clamp(20px, 3vw, 32px); }
 .links-card p { margin: 12px 0 0; }
 .links-card .actions { margin-top: 20px; }
+.author-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 32px; margin-top: 36px; }
+.author-card .actions { margin: 0; }
 .cmd { position: relative; }
 .cmd pre { padding-right: 84px; }
 .copy[hidden] { display: none !important; }
@@ -172,6 +245,9 @@ pre { background: var(--panel); border: 1px solid var(--hairline); border-radius
   #ring { max-width: 280px; }
   .for-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .run-cols, .links-cols { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .tabs { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 480px) {
   body { font-size: 16px; }
