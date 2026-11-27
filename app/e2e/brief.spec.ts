@@ -265,6 +265,40 @@ test("a part of the person's own has its stock checked from their words, and a l
   }
 })
 
+test('the left column names the fab, and has a row with a Brief button only where the build and the Brief disagree', async () => {
+  const dir = referenceProject('reference')
+  writeCards(dir, [
+    { id: 'C1', kind: 'size', by: 'person', size: { what: 'Board width', value: '50', unit: 'mm', source: 'a guess' } },
+    { id: 'C2', kind: 'size', by: 'person', size: { what: 'Board height', value: '44', unit: 'mm', source: 'measured' } }
+  ])
+  const { app, page } = await launch({ project: dir, env: { FAKE_KERNEL_SERVE: '3' } })
+  try {
+    await waitForBuild(page, 1)
+    const section = page.locator('[data-region="left"] .route-section').filter({ has: page.getByRole('heading', { name: 'Brief', exact: true }) })
+    await expect(section.locator('.route-brief-fab')).toHaveText('JLC standard 2-layer')
+    // The limits are the Brief page's alone.
+    await expect(page.locator('[data-region="left"]')).not.toContainText('Annular ring')
+    await expect(page.locator('[data-region="left"] .fab-limits')).toHaveCount(0)
+    const rows = section.getByRole('listitem')
+    await expect(rows).toHaveCount(1)
+    await expect(rows).toContainText('Board is 56.0 mm wide, the Brief says 50 mm')
+    // The words are read whole, not cut at the column's edge.
+    expect(await rows.locator('.on-words').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await tab(page, 'Schematic').click()
+    await rows.getByRole('button', { name: 'Brief', exact: true }).click()
+    await expect(tab(page, 'Brief')).toHaveAttribute('aria-selected', 'true')
+    // Once they agree, the section is the fab's name and the link.
+    writeCards(dir, [{ id: 'C1', kind: 'size', by: 'person', size: { what: 'Board width', value: '56', unit: 'mm', source: 'measured' } }])
+    await expect(rows).toHaveCount(0, { timeout: 3000 })
+    await expect(section).toHaveText('BriefJLC standard 2-layerOpen the Brief')
+    await tab(page, 'Schematic').click()
+    await section.getByRole('button', { name: 'Open the Brief' }).click()
+    await expect(tab(page, 'Brief')).toHaveAttribute('aria-selected', 'true')
+  } finally {
+    await app.close()
+  }
+})
+
 test("the board's width beside the person's size, marked when they differ", async () => {
   const dir = referenceProject('reference')
   writeCards(dir, [

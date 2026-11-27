@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { referenceModel } from '../test/marks'
 import { tempProject } from '../test/fixtures'
-import type { KeptCause } from '../shared/build'
+import type { BuildTurn } from '../shared/build'
 import { routedLoop } from '../test/routing'
 
 let project: ReturnType<typeof tempProject>
@@ -20,8 +20,8 @@ afterEach(async () => {
   project.remove()
 })
 
-const loop = (env: Record<string, string> = {}, causeNow?: (projectId: string) => KeptCause) => {
-  const l = routedLoop(project, env, undefined, causeNow)
+const loop = (env: Record<string, string> = {}, turnNow?: (projectId: string) => BuildTurn | undefined) => {
+  const l = routedLoop(project, env, undefined, turnNow)
   done.push(l.dispose)
   return l
 }
@@ -89,7 +89,7 @@ describe('routing', () => {
 
   it('makes the build after a route Claude started carry the turn it was started in', async () => {
     const turn = { prompt: 'u3', conversation: 'c1' }
-    const l = loop({}, () => ({ cause: 'agent', turn }))
+    const l = loop({}, () => turn)
     await l.built()
     await l.routing.start(l.info)
     await l.routing.whenDone(l.info.id)
@@ -97,12 +97,14 @@ describe('routing', () => {
     expect(state.history.at(-1)).toMatchObject({ number: 2, cause: 'agent', turn })
   })
 
-  it('does not know what made the build after a route Claude started with no turn named', async () => {
+  it("keeps the build after a route Claude started as Claude's with no prompt named", async () => {
     const l = loop()
     await l.built()
     await l.routing.start(l.info)
     await l.routing.whenDone(l.info.id)
-    expect((await l.built()).history.at(-1)).toMatchObject({ number: 2, cause: 'unknown' })
+    const build = (await l.built()).history.at(-1)!
+    expect(build).toMatchObject({ number: 2, cause: 'agent' })
+    expect('turn' in build).toBe(false)
   })
 
   it('keeps one route a project, and cancels it', async () => {

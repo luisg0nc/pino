@@ -1,10 +1,10 @@
 // Routing as main runs it: one route job a project, its progress told in the build state, and a build when it ends, so
 // that the build's own `routing` is the one truth of where the copper stands. The trial tools go through here too.
 
-import { isRecord, type KeptCause, type RouteProgress, type RoutingState } from '../shared/build'
+import { isRecord, type BuildTurn, type KeptCause, type RouteProgress, type RoutingState } from '../shared/build'
 import { ENGINE_STARTING } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
-import { engineMayWrite, type Builds } from './builds'
+import { causeOfSave, engineMayWrite, type Builds } from './builds'
 import type { KernelClient } from './kernel/client'
 
 // Why routing is refused, in words that say what is missing: Claude reads them and acts on them.
@@ -49,8 +49,8 @@ export class Routing {
   constructor(private readonly deps: {
     kernel: () => KernelClient
     builds: Builds
-    /** What made a build now (`Builds`'s own): Claude's turn at work, or the person. Asked when Claude starts a route. */
-    causeNow?: (projectId: string) => KeptCause
+    /** The prompt Claude is answering (`Sessions.turnNow`). Asked when Claude starts a route. */
+    turnNow?: (projectId: string) => BuildTurn | undefined
     now?: () => number
   }) {
     this.now = deps.now ?? Date.now
@@ -76,12 +76,13 @@ export class Routing {
 
   /**
    * Starts the project's route, or says the one running. `by` is who asked: the person in the window, whose route is
-   * what makes the build that follows, or Claude's tool, whose turn is.
+   * what makes the build that follows, or Claude's tool: that build is Claude's, of the turn that started it.
    */
   start(p: ProjectInfo, by: 'person' | 'agent' = 'agent'): Promise<Started> {
     const held = this.jobs.get(p.id)
     if (held) return held.started.then((s) => ({ ...s, already: true }))
-    const cause: KeptCause = by === 'person' ? { cause: 'route' } : (this.deps.causeNow?.(p.id) ?? { cause: 'unknown' })
+    const turn = by === 'agent' ? this.deps.turnNow?.(p.id) : undefined
+    const cause: KeptCause = by === 'person' ? { cause: 'route' } : causeOfSave(turn ? { turn } : {})
     let finish: () => void = () => {}
     const done = new Promise<void>((resolve) => (finish = resolve))
     const job = { done, finish, dropped: false, progress: null } as unknown as Job

@@ -29,10 +29,12 @@ than 3 prompts have said their cost (`listUsage`): older logs of pino kept none.
   turn gets what they grew by. The first turn of a resumed session has `sessionCostUsd` and no `costUsd`
   (`isResumedTurn`): it is said as "not known", never worked out. A turn with neither (a log from before pino kept
   costs) is "not known" too, and is not called a resume.
-- **A turn's builds** (`Builds.ranSince`, asked by the transcript through `SessionDomain.turnBuilds` as the turn ends):
-  the builds of the open project that began since the turn did and came back, whatever saved the file, with the newest
-  before them and the newest of them that drew something (`h<n>`). A build still running when the turn ends is in no
-  turn.
+- **A turn's builds** (`Builds.ranSince`, asked by the transcript through `SessionDomain.turnBuilds` as the turn ends,
+  with the prompts the turn took up): Claude's alone. The builds of the open project that began since the turn did, came
+  back and are caused `agent` for one of those prompts (or for none that could be named), the rebuild after a route
+  Claude started among them; never the person's saves or routes, an opening or a Rebuild, nor a route Claude started in
+  an earlier turn. With them, the newest build before the turn and the newest of them that drew something (`h<n>`). A
+  build still running when the turn ends is in no turn. A log from before kept every build of the turn.
 - **The project's usage in the window** is `state/usage.ts` (`usageStore`): the rows of `chat.usage` for the open
   project (`Sessions.usage`, which waits for the chat logs being written; `listUsage`, over `listPrompts`, read only),
   asked when it opens (`useProjectUsage`), when a `turn` item comes (`connectChat`) and when the page mounts; an answer

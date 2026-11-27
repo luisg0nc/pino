@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { watch as chokidarWatch } from 'chokidar'
 import { APP } from '../shared/app'
-import type { BuildCause, BuildEntry, BuildResult, BuildState, EngineState, KeptCause, Verdict } from '../shared/build'
+import type { BuildCause, BuildEntry, BuildResult, BuildState, BuildTurn, EngineState, KeptCause, Verdict } from '../shared/build'
 import { engineDidNotStart } from '../shared/fab'
 import type { TurnBuilds } from '../shared/chat'
 import type { ProjectInfo } from '../shared/project'
@@ -41,12 +41,14 @@ export async function engineMayWrite(dir: string): Promise<void> {
 
 /** Told the files that changed in a burst, as absolute paths. */
 export type OnChange = (paths: string[]) => void
+/** Told one file as its save is heard. */
+export type OnSeen = (path: string) => void
 
 /**
- * Calls `onChange` once per burst of saves of the project's Python or outline, with what changed, and `onSeen` at the
- * first save of a burst, as soon as it is heard of: a build is on its way from then.
+ * Calls `onChange` once per burst of saves of the project's Python or outline, with what changed, and `onSeen` at each
+ * save, as soon as it is heard of: a build is on its way from the first.
  */
-export function watchProject(dir: string, onChange: OnChange, debounceMs: number = DEBOUNCE_MS, onSeen?: () => void): () => void {
+export function watchProject(dir: string, onChange: OnChange, debounceMs: number = DEBOUNCE_MS, onSeen?: OnSeen): () => void {
   let timer: NodeJS.Timeout | undefined
   let changed = new Set<string>()
   // Only what lies under the project counts: the project's own folder may be named like an ignored one.
@@ -55,7 +57,7 @@ export function watchProject(dir: string, onChange: OnChange, debounceMs: number
   watcher.on('all', (event, path) => {
     if (event === 'addDir' || event === 'unlinkDir' || isIgnored(path)) return
     if (!path.endsWith('.py') && relative(dir, path) !== 'outline.json') return
-    if (!changed.size) onSeen?.()
+    onSeen?.(path)
     changed.add(path)
     clearTimeout(timer)
     timer = setTimeout(() => {
@@ -106,6 +108,12 @@ function merged(held: KeptCause | undefined, more: KeptCause): KeptCause {
   return held && CAUSE_RANK[held.cause] >= CAUSE_RANK[more.cause] ? held : more
 }
 
+/** What made a save: Claude, when one of its tool calls accounts for it (`Sessions.wroteBy`), else the person. */
+export function causeOfSave(claude: { turn?: BuildTurn } | undefined): KeptCause {
+  if (!claude) return { cause: 'person' }
+  return { cause: 'agent', ...(claude.turn ? { turn: { ...claude.turn } } : {}) }
+}
+
 interface Entry {
   project: ProjectInfo
   state: BuildState
@@ -119,8 +127,8 @@ interface Entry {
   retry?: NodeJS.Timeout
   startedAt?: number
   endedAt?: number
-  /** The builds that came back, oldest first, the last `MOST_RAN`: when each began, and whether it drew something. */
-  ran: Array<{ number: number; startedAt: number; drew: boolean }>
+  /** The builds that came back, oldest first, the last `MOST_RAN`: when each began, what made it, and whether it drew something. */
+  ran: Array<{ number: number; startedAt: number; drew: boolean; made: KeptCause }>
   /** For each route seen current, the build it was first seen on. */
   routes: Map<string, number>
   /** What made each build, by number: loaded with the history, and written to `.pino/build-causes.json` as it grows. */
@@ -138,7 +146,7 @@ export class Builds {
   private readonly kernel: () => KernelClient
   private readonly watch: typeof watchProject
   private readonly readHistory: (dir: string) => Promise<BuildEntry[]>
-  private readonly causeNow: (projectId: string) => KeptCause
+  private readonly causeNow: (projectId: string, path: string) => KeptCause
   private readonly readCauses: (dir: string) => Promise<Map<number, KeptCause>>
   private readonly writeCauses: (dir: string, causes: ReadonlyMap<number, KeptCause>) => Promise<void>
   private readonly now: () => number
@@ -158,8 +166,8 @@ export class Builds {
     kernel: () => KernelClient
     watch?: typeof watchProject
     readHistory?: (dir: string) => Promise<BuildEntry[]>
-    /** What made a build now: Claude's turn at work, or the person. Asked at the first save of a burst. */
-    causeNow?: (projectId: string) => KeptCause
+    /** What made the save of `path`: Claude, by its tool calls, or the person. Asked of each save as it is heard. */
+    causeNow?: (projectId: string, path: string) => KeptCause
     readCauses?: (dir: string) => Promise<Map<number, KeptCause>>
     writeCauses?: (dir: string, causes: ReadonlyMap<number, KeptCause>) => Promise<void>
     now?: () => number
@@ -201,17 +209,19 @@ export class Builds {
     this.entries.set(project.id, entry)
     entry.unwatch = this.watch(
       project.dir,
-      () => {
+      (paths) => {
         entry.seen = false
-        // The burst has settled: what made it wants the next build, not one already on its way.
-        entry.pending = merged(entry.pending, entry.burst ?? this.causeNow(project.id))
+        // The burst has settled: what made it wants the next build, not one already on its way. A watch that told no
+        // save as it heard it has the whole burst asked of now.
+        const burst = entry.burst ?? paths.reduce<KeptCause | undefined>((held, path) => merged(held, this.causeNow(project.id, path)), undefined)
+        if (burst) entry.pending = merged(entry.pending, burst)
         entry.burst = undefined
         this.want(entry)
       },
       DEBOUNCE_MS,
-      () => {
+      (path) => {
         entry.seen = true
-        entry.burst = merged(entry.burst, this.causeNow(project.id))
+        entry.burst = merged(entry.burst, this.causeNow(project.id, path))
       }
     )
     void Promise.all([this.readHistory(project.dir), entry.loaded]).then(([history]) => {
@@ -266,12 +276,13 @@ export class Builds {
   }
 
   /**
-   * The builds that began at `since` or later and came back: how many, ok or failed; the newest before them that drew
-   * something, and the newest of them that did. Undefined when there were none.
+   * Claude's builds of a turn: those it made that began at `since` or later and came back, for one of the turn's
+   * `prompts` or for none that could be named. How many, ok or failed; the newest build before them that drew
+   * something, whoever made it, and the newest of them that did. Undefined when there were none.
    */
-  ranSince(projectId: string, since: number): TurnBuilds | undefined {
+  ranSince(projectId: string, since: number, prompts: readonly string[]): TurnBuilds | undefined {
     const ran = this.entries.get(projectId)?.ran ?? []
-    const during = ran.filter((b) => b.startedAt >= since)
+    const during = ran.filter((b) => b.startedAt >= since && b.made.cause === 'agent' && (!b.made.turn || prompts.includes(b.made.turn.prompt)))
     if (during.length === 0) return undefined
     const from = ran.findLast((b) => b.drew && b.startedAt < since)?.number
     const to = during.findLast((b) => b.drew)?.number
@@ -466,7 +477,7 @@ export class Builds {
       entry.causes.set(result.number, cause)
       this.keepCauses(entry)
       entry.endedAt = this.now()
-      entry.ran.push({ number: result.number, startedAt: entry.startedAt, drew: result.hash !== null })
+      entry.ran.push({ number: result.number, startedAt: entry.startedAt, drew: result.hash !== null, made: cause })
       if (entry.ran.length > MOST_RAN) entry.ran.shift()
       // A result older than the one shown never replaces it.
       if (result.number < (entry.state.latest?.number ?? 0)) {

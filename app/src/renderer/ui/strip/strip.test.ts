@@ -58,7 +58,7 @@ describe("the timeline's nodes", () => {
       ['Earlier', false, undefined],
       ['Prompt 13', false, 13],
       ['Saved by you', true, undefined],
-      ['Routed by you', true, undefined],
+      ['Route you ran', true, undefined],
       ['Claude Code', false, undefined]
     ])
   })
@@ -87,7 +87,7 @@ describe("the timeline's groups", () => {
     expect(groups.map((g) => [g.label, groupCount(g), g.saved])).toEqual([
       ['Earlier', 2, false],
       ['Saved by you', 2, true],
-      ['Routed by you', 1, true],
+      ['Route you ran', 1, true],
       ['Prompt 14', 1, false]
     ])
   })
@@ -138,7 +138,7 @@ describe('a build named in words', () => {
   it('names the newest build as the latest, with what made it in the timeline\'s words', () => {
     expect(buildNamed(nodes, 4)).toEqual({ id: 'h4', head: 'Latest build · prompt 14', latest: true })
     expect(buildNamed(stripNodes([entry(1, { cause: 'person' })], at(1)), 1)!.head).toBe('Latest build · saved by you')
-    expect(buildNamed(stripNodes([entry(1, { cause: 'route' })], at(1)), 1)!.head).toBe('Latest build · routed by you')
+    expect(buildNamed(stripNodes([entry(1, { cause: 'route' })], at(1)), 1)!.head).toBe('Latest build · route you ran')
     expect(buildNamed(stripNodes([agent(1, 'gone')], at(1)), 1)!.head).toBe('Latest build · Claude Code')
     expect(buildNamed(stripNodes([entry(1)], at(1)), 1)!.head).toBe('Latest build')
   })
