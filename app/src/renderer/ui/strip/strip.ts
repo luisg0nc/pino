@@ -1,4 +1,6 @@
 import type { BuildCause, BuildEntry, BuildResult } from '../../../shared/build'
+import { dollars } from '../../../shared/format'
+import { largeTimes, type ProjectUsage } from '../../../shared/usage'
 
 // The builds timeline's rules, pure: which nodes the project's history makes, how they are grouped by what made them, what a
 // group is labelled and titled, and how the build on show is named. The timeline draws what these say (`BuildsTimeline`), and
@@ -155,6 +157,18 @@ export function stripGroups(nodes: readonly StripNode[]): StripGroup[] {
 }
 
 export const groupCount = (group: StripGroup): number => group.nodes.length
+
+/**
+ * What a prompt group's chip says it cost (torno #372): the cost of its prompt, from the project's usage (`chat:usage`), and
+ * whether that prompt was large (`largeTimes`). Null for a group of no prompt, a prompt whose cost is not known, or before the
+ * usage is read.
+ */
+export function chipCost(group: StripGroup, usage: ProjectUsage | undefined): { text: string; large: boolean } | null {
+  if (group.prompt === undefined || !usage) return null
+  const cost = usage.rows.find((r) => r.number === group.prompt)?.usage?.costUsd
+  if (cost === undefined) return null
+  return { text: dollars(cost), large: largeTimes(cost, group.prompt, usage.median) !== null }
+}
 
 /**
  * What a group says in its title, two lines: what made it in words (the prompt's own, `words` by prompt number), then its

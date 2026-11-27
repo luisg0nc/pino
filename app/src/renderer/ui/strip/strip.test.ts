@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BuildEntry, BuildResult, RoutingState } from '../../../shared/build'
-import { buildNamed, captionOf, factsOf, groupCount, groupTitle, stripGroups, stripNodes, stripSays } from './strip'
+import type { ProjectUsage, UsageRow } from '../../../shared/usage'
+import { buildNamed, captionOf, chipCost, factsOf, groupCount, groupTitle, stripGroups, stripNodes, stripSays } from './strip'
 
 const entry = (number: number, over: Partial<BuildEntry> = {}): BuildEntry => ({ number, hash: `aaaaaaaa000${number}`, verdict: 'ok', at: '', kept: true, ...over })
 const agent = (number: number, prompt: string, over: Partial<BuildEntry> = {}): BuildEntry => entry(number, { cause: 'agent', turn: { prompt }, ...over })
@@ -156,6 +157,23 @@ describe('a build named in words', () => {
   it('is null for a build the timeline does not have, or one that runs', () => {
     expect(buildNamed(nodes, 9)).toBeNull()
     expect(buildNamed(stripNodes([entry(1, { verdict: 'running', hash: null, kept: false })], at(null)), 1)).toBeNull()
+  })
+})
+
+describe("a prompt chip's cost", () => {
+  const row = (number: number, costUsd?: number): UsageRow => ({ conversation: 'c', id: `u${number}`, number, text: '', at: number, turns: [`t${number}`], facts: { pictures: {}, builds: { count: 0 } }, usage: { input: 0, output: 1, cacheRead: 1, cacheCreation: 0, ...(costUsd !== undefined ? { costUsd } : {}) } })
+  const usage: ProjectUsage = { rows: [row(13, 0.95), row(14, 0.64), row(15, 7.05), row(16)], median: 0.95 }
+  const groupOf = (prompt: number) => stripGroups(stripNodes([agent(1, `u${prompt}`)], at(1), new Map([[`u${prompt}`, prompt]])))[0]!
+
+  it("says a prompt group's cost, the large one marked", () => {
+    expect(chipCost(groupOf(14), usage)).toEqual({ text: '$0.64', large: false })
+    expect(chipCost(groupOf(15), usage)).toEqual({ text: '$7.05', large: true })
+  })
+
+  it('says nothing for a group that is no prompt, a prompt whose cost is not known, or before usage is read', () => {
+    expect(chipCost(stripGroups(stripNodes([entry(1, { cause: 'person' })], at(1)))[0]!, usage)).toBeNull()
+    expect(chipCost(groupOf(16), usage)).toBeNull()
+    expect(chipCost(groupOf(14), undefined)).toBeNull()
   })
 })
 

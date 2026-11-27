@@ -83,6 +83,11 @@ test('the builds of a project are a folded bar under the views, a chip for each 
   expect(Math.abs(panel.y + panel.height - line.y)).toBeLessThanOrEqual(1)
   // One chip a group: the opening's build, each prompt's builds with their count, the saves; no words of the prompt.
   await expect.poll(chipTexts, { timeout: 15_000 }).toEqual(['Earlier', 'Prompt 1 (2)', 'Prompt 2', 'Saved by you (2)'])
+  // A prompt's chip ends with what the prompt cost (torno #372; the stand-in says $0); the saves' has none.
+  await expect(chips().nth(1).locator('.tl-chip-cost')).toHaveText(/^\$0/, { timeout: 15_000 })
+  await expect(chips().nth(2).locator('.tl-chip-cost')).toHaveText(/^\$0/)
+  await expect(chips().last().locator('.tl-chip-cost')).toHaveCount(0)
+  await expect(chips().first().locator('.tl-chip-cost')).toHaveCount(0)
   // The last group holds the build on show; the prompt's words are in the title.
   await expect(chips().last()).toHaveAttribute('data-on-show', '')
   await expect(chips().nth(1)).toHaveAttribute('title', /step 0/)
@@ -147,15 +152,17 @@ test('its toggle opens the drawer upward over the view, a group shows each of it
   await expect(group('Prompt 1').locator('.strip-node[data-build]')).toHaveCount(2)
 })
 
-test('the bar serves the three views and is not on the Brief, which is no build\'s', async () => {
+test("the bar serves the three views and is not on the Brief or Usage, which are no build's", async () => {
   for (const name of ['Schematic', '3D', 'Board']) {
     await tab(name).click()
     await expect(bar()).toBeVisible()
   }
-  await tab('Brief').click()
-  await expect(timeline()).toHaveCount(0)
-  // The key does nothing there.
-  await page.keyboard.press('Control+Shift+H')
+  for (const name of ['Brief', 'Usage']) {
+    await tab(name).click()
+    await expect(timeline()).toHaveCount(0)
+    // The key does nothing there.
+    await page.keyboard.press('Control+Shift+H')
+  }
   await tab('Board').click()
   await expect(toggle()).toHaveAttribute('aria-expanded', 'true')
 })

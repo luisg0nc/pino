@@ -2,10 +2,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { hint } from '../../../shared/keys'
 import { actions, useStore } from '../../state/store'
 import { timelineActions, useTimeline } from '../../state/timeline'
+import { useProjectUsage } from '../../state/usage'
 import { Chevron } from '../Chevron'
 import { numbered } from '../numbered'
 import { useNow } from '../useNow'
-import { groupCount, groupTitle, stripGroups, stripSays, type StripGroup, type StripNode } from './strip'
+import { chipCost, groupCount, groupTitle, stripGroups, stripSays, type StripGroup, type StripNode } from './strip'
 import { useThumbs } from './thumbs'
 import { useStripNodes } from './useStripNodes'
 
@@ -92,6 +93,7 @@ export function BuildsTimeline() {
   const expanded = useTimeline((s) => s.expanded)
   const { nodes, words, tell } = useStripNodes()
   const groups = useMemo(() => stripGroups(nodes), [nodes])
+  const usage = useProjectUsage()
   const latest = build?.lastGood?.number ?? null
   const projectId = project?.id ?? null
   const thumbs = useThumbs(projectId, nodes.slice(-24), tell)
@@ -229,6 +231,10 @@ export function BuildsTimeline() {
                   <span className="tl-chip-label">{group.label}</span>
                   {groupCount(group) > 1 && <span className="num tl-chip-count">({groupCount(group)})</span>}
                   {group.state === 'running' && <span className="num tl-chip-count">{seconds} s</span>}
+                  {(() => {
+                    const cost = chipCost(group, usage)
+                    return cost && <span className="num tl-chip-cost" data-large={cost.large ? '' : undefined} title={cost.large ? "What the prompt cost: a large turn, 3 times this project's usual one or more" : 'What the prompt cost'}>{cost.text}</span>
+                  })()}
                 </button>
               </span>
             ))

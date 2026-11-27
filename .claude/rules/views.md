@@ -65,13 +65,15 @@ route's copper while there is one.
 ## The builds timeline (`ui/strip/`, from torno #332)
 
 - **A bar under the views, folded by default.** `BuildsTimeline` is drawn by `ViewPane` under the Schematic, the Board
-  and 3D, never on the Brief, which is no build's (torno draws it only with the model on screen). It is `--timeline-h`
+  and 3D (`isViewTab`), never on the Brief or Usage, which are no build's (torno draws it only with the model on
+  screen). It is `--timeline-h`
   (34 px) across the foot of the views, above the status line; `.views:has(> .timeline) > .views-panel` stands the view
   on it, and the band sits on it. The bar: the toggle (`.timeline-toggle`, `Builds` and how many are kept) and a chip
-  for each group (`.tl-chip`, oldest at the left; the person's own have a dot in their violet). The drawer rises from
+  for each group (`.tl-chip`, oldest at the left; the person's own have a dot in their violet; a prompt's ends with
+  what it cost, `chipCost`, torno #372, rule `usage`). The drawer rises from
   the bar over the view (it never resizes it), `inert` while folded. Open or shut is `state/timeline.ts`, the window's
   (`localStorage` `pino.timeline`), toggled by the toggle and by `builds.toggle` (`Ctrl+Shift+H`, global, `App`'s
-  `useTimelineKey`, only with a project's views on screen). Which groups show every build is the run's only.
+  `useTimelineKey`, only with one of a project's three views on screen). Which groups show every build is the run's only.
 - The rules are `strip.ts`, pure and held by `strip.test.ts`: `stripNodes(history, at, numbering)` (one node a build,
   its caption as today: `ok`, `routed`, `stale`, `2 errors`, `failed`, `not kept`, `building`; `by`, the label:
   `Prompt 4` for a build of a numbered prompt, `Saved by you`, `Routed by you`, `Earlier` for `unknown`, `Claude Code`
@@ -83,7 +85,8 @@ route's copper while there is one.
 - In the drawer a group of several builds is a pile (`.tl-pile`) until a click on it or its label shows every build;
   a chip opens the drawer at its group. A build is a button: a press shows it in the views (`actions.showBuild`), the
   newest that drew being the live one; one not kept cannot be pressed. There is no menu, compare, star or review.
-- `e2e/timeline.spec.ts` holds the bar, the groups, the drawer, the key, the Brief and the window's memory;
+- `e2e/timeline.spec.ts` holds the bar, the groups and their costs, the drawer, the key, the Brief and Usage, and the
+  window's memory;
   `views.spec.ts` the route's and a save's builds.
 
 ## Motion

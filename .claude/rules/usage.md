@@ -53,5 +53,7 @@ than 3 prompts have said their cost (`listUsage`): older logs of pino kept none.
   and the conversations (`conversationsOf`, named by their first prompt) with `PLAN_NOTE` at the foot. A conversation
   opens to its ledger: a row a prompt, a large one lit with `WhyLarge` under it, and "Resumed here, in a new Claude Code
   process" before a resumed turn.
-- **Not here yet:** torno also says each prompt's cost on the chips of its builds timeline, which pino does not have.
-  `largeTimes`, `dollars` and `usageStore` are what such a chip reads.
+- **On the builds timeline** (torno #372, see `views`): a prompt group's chip ends with that prompt's cost
+  (`strip.ts` `chipCost`: the row of its number in `useProjectUsage`, `dollars`; in the accent when `largeTimes` calls
+  it large). A group of no prompt, a prompt whose cost is not known, or a project whose usage is not read yet shows
+  none.
