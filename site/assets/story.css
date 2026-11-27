@@ -87,6 +87,11 @@
   .story { grid-template-columns: minmax(0, 1fr); }
   .story-chat { border-left: 0; border-top: 1px solid var(--hairline); height: 260px; }
 }
+/* With motion reduced the whole conversation is there at once, so it flows at its own height, none of it faded. */
+.story.still .story-chat { height: auto; -webkit-mask-image: none; mask-image: none; }
+.story.still .story-log { position: static; }
+/* Without script the figure holds the story in words. */
+.story-told { margin: 0; padding: 18px 20px; border: 1px solid var(--hairline); border-radius: 10px; background: var(--panel); color: var(--muted); max-width: none; }
 @media (prefers-reduced-motion: reduce) {
   .story-row, .story-lines li, .story-caret { animation: none; }
 }

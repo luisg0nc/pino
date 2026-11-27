@@ -41,11 +41,6 @@
     board: 'simple-blinker',
     name: 'simple-blinker',
     intro: 'New project, simple-blinker. The folder is empty.',
-    summary: 'A small LED blinker made in pino in three prompts. The first asks for a button, a 9 V battery and an LED ' +
-      'that blinks three times, and Claude Code asks a question back. After the second, three builds fail, the fourth ' +
-      'places 20 parts with 2 errors, the fifth has none, and the first route connects all 15 nets with 2 copper ' +
-      'errors on the 9 V track. A rule change makes that copper stale, and the second route is clean. Later builds ' +
-      'move the labels, and after the third prompt the third route keeps the copper of the second, clean.',
     steps: steps
   })
 })()

@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- The repository's social preview, 1280 × 640, drawn: no capture of the window in it. `social-preview.mjs` renders it to
+     docs/images/social-preview.png. The site's hero on its dye: the mark, the name and the line at the left, the critter of
+     the hero at the bench soldering an LED on a small board, at the right, standing on a rule, and a line of facts under
+     it. The faces are the window's, from `app/node_modules/@fontsource` (as `build-site.mjs` takes them), the colours the
+     site's tokens (site/assets/site.css). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pino social preview</title>
+<style>
+@font-face { font-family: 'Instrument Sans'; font-weight: 400; src: url(../node_modules/@fontsource/instrument-sans/files/instrument-sans-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Instrument Sans'; font-weight: 600; src: url(../node_modules/@fontsource/instrument-sans/files/instrument-sans-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Martian Mono'; font-weight: 400; src: url(../node_modules/@fontsource/martian-mono/files/martian-mono-latin-400-normal.woff2) format('woff2'); }
+:root { --dye: #17663A; --scribe: #7DB892; --on-dye: #F1F8F3; --on-dye-muted: #C4E0CC; --clay: #D97757; }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1280px; height: 640px; overflow: hidden; }
+body { position: relative; background: var(--dye); color: var(--on-dye); font-family: 'Instrument Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+.num { font-family: 'Martian Mono', monospace; font-size: 16px; }
+.text { position: absolute; left: 96px; top: 118px; width: 680px; }
+.brand { display: flex; align-items: center; gap: 20px; }
+.brand img { width: 84px; height: 84px; }
+.brand span { font-size: 104px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+h2 { margin-top: 40px; font-size: 44px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.12; }
+p { margin-top: 20px; max-width: 26ch; color: var(--on-dye-muted); font-size: 25px; line-height: 1.4; text-wrap: pretty; }
+.scene { position: absolute; right: 72px; bottom: 67px; width: 600px; }
+.scene svg { display: block; width: 100%; height: auto; }
+.critter rect { fill: var(--clay); }
+.critter rect.eye { fill: var(--dye); }
+.table rect { fill: var(--on-dye-muted); }
+/* The board, the chip, the LED and the iron, as on the page with the iron on the joint (site/assets/site.css, `.cc-`). */
+.pcb rect, .chip rect.pin-one, .critter rect.grip { fill: var(--scribe); }
+.chip rect { fill: #16191D; }
+.chip .legs rect, .pad, .lead, .flange, .critter rect.handle, .critter rect.shaft { fill: var(--on-dye-muted); }
+.lens { fill: var(--on-dye-muted); opacity: .6; }
+.bead rect, .critter rect.metal { fill: var(--on-dye); }
+.smoke { fill: none; stroke: var(--on-dye); stroke-width: 13; stroke-linecap: round; opacity: .4; }
+.rule { position: absolute; right: 96px; bottom: 72px; left: 96px; height: 2px; background: rgba(196, 224, 204, 0.35); }
+.foot { position: absolute; left: 96px; bottom: 30px; color: var(--on-dye-muted); font-size: 19px; }
+</style>
+</head>
+<body>
+<div class="text">
+  <div class="brand"><img src="../../site/assets/pino.svg" alt=""><span>pino</span></div>
+  <h2>Circuit boards with Claude Code.</h2>
+  <p>You describe the board. Claude&nbsp;Code writes <span class="num">board.py</span>. pino builds and routes it.</p>
+</div>
+<!-- The drawing of the site's hero (site/index.html, `.cc`) at the moment the iron is on the joint, without its floor:
+     the rule below is the floor. -->
+<div class="scene">
+  <svg viewBox="-10 140 1330 401" aria-hidden="true">
+    <g class="table"><rect x="660" y="330" width="640" height="40"/><rect x="700" y="370" width="40" height="163"/><rect x="1220" y="370" width="40" height="163"/></g>
+    <g class="pcb"><rect x="740" y="310" width="440" height="20"/></g>
+    <g class="chip"><rect x="1000" y="262" width="140" height="40"/><rect class="pin-one" x="1012" y="274" width="12" height="12"/>
+      <g class="legs"><rect x="1008" y="302" width="10" height="8"/><rect x="1030" y="302" width="10" height="8"/><rect x="1052" y="302" width="10" height="8"/><rect x="1074" y="302" width="10" height="8"/><rect x="1096" y="302" width="10" height="8"/><rect x="1118" y="302" width="10" height="8"/></g></g>
+    <g class="led"><rect class="lead" x="892" y="236" width="8" height="68"/><rect class="flange" x="862" y="226" width="68" height="10"/><rect class="lens" x="868" y="166" width="56" height="60"/><rect class="lens" x="876" y="154" width="40" height="12"/></g>
+    <rect class="pad" x="866" y="304" width="60" height="6"/>
+    <g class="bead"><rect x="874" y="292" width="44" height="12"/><rect x="882" y="284" width="28" height="8"/></g>
+    <path class="smoke" d="M868 280C846 254 876 230 852 204S838 170 858 146"/>
+    <g class="critter"><rect x="120" y="450" width="40" height="83"/><rect x="200" y="450" width="40" height="83"/><rect x="400" y="450" width="40" height="83"/><rect x="480" y="450" width="40" height="83"/>
+      <g transform="translate(10 4)"><rect x="80" y="133" width="480" height="322"/><rect x="0" y="292" width="640" height="82"/><rect class="eye" x="160" y="215" width="40" height="77"/><rect class="eye" x="440" y="215" width="40" height="77"/>
+        <g transform="translate(598 318) rotate(-4.2)"><rect class="handle" x="0" y="-18" width="190" height="36"/><rect class="grip" x="40" y="-18" width="10" height="36"/><rect class="grip" x="70" y="-18" width="10" height="36"/><rect class="grip" x="100" y="-18" width="10" height="36"/><rect class="metal" x="190" y="-12" width="22" height="24"/><rect class="shaft" x="212" y="-6" width="50" height="12"/><rect class="metal" x="262" y="-3" width="28" height="6"/></g></g></g>
+  </svg>
+</div>
+<div class="rule"></div>
+<div class="foot">pino.luisg.me &nbsp;·&nbsp; KiCad <span class="num">10</span> &nbsp;·&nbsp; Linux &nbsp;·&nbsp; Apache-2.0</div>
+</body>
+</html>

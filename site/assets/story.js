@@ -33,8 +33,9 @@
     var r = route && data.routes[route]
     return r ? (typeof r.tracks === 'string' ? r.tracks : route) : null
   }
+  // The pour drawn is the route's while its copper fits, else the build's own, as the Board view draws a stale route.
   function pourOf(data, s) {
-    if (s.route) { var p = data.routes[s.route].pour; return 'r:' + (typeof p === 'string' ? p : s.route) }
+    if (s.route && !s.stale) { var p = data.routes[s.route].pour; return 'r:' + (typeof p === 'string' ? p : s.route) }
     return s.build ? 'b:' + s.build : null
   }
   function set(el, k, v) { if (el['_' + k] !== v) { el.setAttribute(k, v); el['_' + k] = v } }
@@ -220,8 +221,11 @@
     })
     var total = t, HOLD = 3.5, LOOP = total + HOLD
 
-    // The figure.
+    // The figure. What the page holds in it for a reader without script becomes the summary for a screen reader.
+    var told = root.querySelector('.story-told')
+    root.textContent = ''
     root.classList.add('story')
+    if (still) root.classList.add('still')
     var view = html('div', 'story-view', root)
     var head = html('div', 'story-head', view)
     var name = html('span', 'story-name num', head, story.name)
@@ -242,10 +246,14 @@
       var b = html('button', 'story-tick', ticks)
       b.type = 'button'
       b.setAttribute('aria-label', 'Step ' + (i + 1) + ': ' + st.you)
-      b.addEventListener('click', function () { clock = st.T.start - 0.01; playing = true; pause.textContent = 'Pause'; kick() })
+      // A tick goes back to its turn and plays from there; with motion reduced it shows the turn's end, and nothing moves.
+      b.addEventListener('click', function () {
+        if (still) { clock = st.T.end - 0.01; lastClock = Infinity; render(clock); return }
+        clock = st.T.start - 0.01; playing = true; pause.textContent = 'Pause'; kick()
+      })
       return html('span', '', b)
     })
-    if (story.summary) html('p', 'story-sr', root, story.summary)
+    if (told) { told.className = 'story-sr'; root.appendChild(told) }
 
     // The conversation, as events at their times; going back clears it and plays them again at once.
     var events = [], typers = [], ei = 0, lastClock = -1
@@ -307,6 +315,8 @@
         var m = moments[i]
         if (c < m.t0) break
         at.moment = m
+        // A line that moves nothing (a build that failed) has landed as soon as it is said.
+        if (!m.line.state) { at.from = m.to; at.done = m; continue }
         if (c < m.t1) { at.from = m.from; at.to = m.to; at.p = (c - m.t0) / (m.t1 - m.t0); return at }
         at.from = m.to; at.done = m
       }
@@ -408,17 +418,22 @@
 
   // A story file registers itself by name, and its board's data by the board's; each <figure data-story="name"> on the
   // page plays it.
+  // The story and its board come in files of their own, which may arrive after this one: each that registers tries to
+  // start again, and a figure starts once both of its are in.
   var registry = {}, boards = {}
-  function register(name, story) { registry[name] = story }
-  function board(name, data) { boards[name] = data }
+  function register(name, story) { registry[name] = story; soon() }
+  function board(name, data) { boards[name] = data; soon() }
   function start() {
     document.querySelectorAll('[data-story]').forEach(function (el) {
       var story = registry[el.getAttribute('data-story')]
       if (story && !el.storyTimes) play(el, story)
     })
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start)
-  else setTimeout(start)
+  function soon() {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true })
+    else setTimeout(start)
+  }
+  soon()
 
   window.PinoStory = { add: register, board: board, play: play }
 })()

@@ -22,7 +22,7 @@ export const COPIED = {
   'assets/img/schematic.png': 'docs/images/schematic.png',
   'assets/img/board.png': 'docs/images/board.png',
   'assets/img/3d.png': 'docs/images/3d.png',
-  'assets/img/social-preview.png': 'docs/images/social-preview.png',
+  'assets/img/site-preview.png': 'docs/images/site-preview.png',
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

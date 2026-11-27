@@ -10,7 +10,7 @@
 <meta property="og:description" content="A Linux desktop workbench for making circuit boards with Claude Code.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://pino.luisg.me/">
-<meta property="og:image" content="https://pino.luisg.me/assets/img/social-preview.png">
+<meta property="og:image" content="https://pino.luisg.me/assets/img/site-preview.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="1200">
 <meta property="og:image:alt" content="The pino mark, a chip seen from above with pin 1 in green, over the word pino">
@@ -111,7 +111,11 @@
   <h2 id="story-title">A board, prompt by prompt</h2>
   <p class="section-lede">A small LED blinker, made with Claude Code in three prompts. The lines are what pino reported
     for each build and route, and the board is drawn from that build's own files.</p>
-  <figure data-story="simple-blinker"></figure>
+  <figure data-story="simple-blinker"><p class="story-told">The first prompt asks for a button, a 9 V battery and an LED
+    that blinks three times, and Claude Code asks a question back. After the second, three builds fail, the fourth
+    places 20 parts with 2 errors, and the fifth has none. The first route connects all 15 nets, with 2 copper errors
+    on the 9 V track. A rule change makes that copper stale, and the second route is clean. Later builds move the
+    labels, and after the third prompt the third route keeps the copper of the second, clean.</p></figure>
 </section>
 
 <section class="window reveal" id="window" aria-labelledby="win-title">

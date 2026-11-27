@@ -88,10 +88,21 @@ describe('site/index.html', () => {
   it('is served at pino.luisg.me, with a square link preview', () => {
     expect(readFileSync(join(site, 'CNAME'), 'utf8')).toBe('pino.luisg.me\n')
     expect(html).toContain('<meta property="og:url" content="https://pino.luisg.me/">')
-    expect(html).toContain('<meta property="og:image" content="https://pino.luisg.me/assets/img/social-preview.png">')
+    expect(html).toContain('<meta property="og:image" content="https://pino.luisg.me/assets/img/site-preview.png">')
     expect(html).toContain('<meta name="twitter:card" content="summary">')
-    expect(copied['assets/img/social-preview.png']).toBe('docs/images/social-preview.png')
-    expect(sizeOf('assets/img/social-preview.png')).toEqual([1200, 1200])
+    expect(copied['assets/img/site-preview.png']).toBe('docs/images/site-preview.png')
+    expect(sizeOf('assets/img/site-preview.png')).toEqual([1200, 1200])
+  })
+
+  it('has a drawn social preview for the repository, 1280 x 640, kept out of the page', () => {
+    const png = readFileSync(join(root, 'docs/images/social-preview.png'))
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1280, 640])
+    expect(Object.values(copied)).not.toContain('docs/images/social-preview.png')
+    const card = readFileSync(join(root, 'app/scripts/social-preview.html'), 'utf8')
+    // Drawn, in the window's faces: no picture but the mark, and no face but the bundled ones.
+    expect([...card.matchAll(/<img src="([^"]+)"/g)].map((m) => m[1])).toEqual(['../../site/assets/pino.svg'])
+    expect([...card.matchAll(/url\(([^)]+)\)/g)].map((m) => m[1]).every((u) => u.startsWith('../node_modules/@fontsource/'))).toBe(true)
+    expect(readFileSync(join(root, 'app/scripts/social-preview.mjs'), 'utf8')).toMatch(/did not load/)
   })
 
   it('shows the hero in the theme of the system', () => {
@@ -135,7 +146,8 @@ describe('site/index.html', () => {
 describe('the story', () => {
   type Line = { say: string; rev: string; state?: { build?: string; route?: string } }
   type Step = { you: string; before?: Line[]; lines?: Line[] }
-  const captured: { story?: { board: string; steps: Step[] }; board?: { builds: Record<string, { hash: string }>; routes: Record<string, { key: string; build: string }> } } = {}
+  type Counts = Record<string, number>
+  const captured: { story?: { board: string; steps: Step[] }; board?: { builds: Record<string, { hash: string; counts: Counts }>; routes: Record<string, { key: string; build: string; counts: Counts }> } } = {}
   const PinoStory = {
     add: (_name: string, story: typeof captured.story) => { captured.story = story },
     board: (_name: string, data: typeof captured.board) => { captured.board = data }
@@ -147,7 +159,9 @@ describe('the story', () => {
 
   it('is loaded by the page, after the engine and its board', () => {
     expect(attrs(/<script src="([^"]+)" defer><\/script>/g)).toEqual(['assets/site.js', 'assets/story.js', 'stories/simple-blinker.board.js', 'stories/simple-blinker.js'])
-    expect(html).toContain('<figure data-story="simple-blinker"></figure>')
+    // Without script the figure tells the story in words; with it, those words are the screen reader's summary.
+    expect(html).toMatch(/<figure data-story="simple-blinker"><p class="story-told">[^<]{200,}<\/p><\/figure>/)
+    expect(read('assets/story.js')).toContain("root.querySelector('.story-told')")
   })
 
   it('shows only the builds and routes the data has, which are the ones the generator reads', () => {
@@ -164,6 +178,33 @@ describe('the story', () => {
       expect(generator).toContain(`${name}: '${r.key}'`)
       expect(board.builds, name).toHaveProperty(r.build)
     }
+  })
+
+  it('says of each build and route what its own counts say, and shows each route on the build it was made on', () => {
+    let build: string | undefined
+    let checked = 0
+    for (const line of story.steps.flatMap((s) => [...(s.before ?? []), ...(s.lines ?? [])])) {
+      build = line.state?.build ?? build
+      const route = line.state?.route
+      const built = /^h\d+: (\d+) errors, (\d+) unrouted$/.exec(line.say)
+      if (built) {
+        const counts = board.builds[line.state!.build!].counts
+        expect([line.say, Number(built[1]), Number(built[2])]).toEqual([line.say, counts.errors, counts.unrouted])
+        checked++
+      }
+      if (route) {
+        const r = board.routes[route]
+        expect([line.say, r.build]).toEqual([line.say, build])
+        expect(line.say).toMatch(new RegExp(`^Route ${route}: `))
+        const nets = /(\d+) of (\d+) nets/.exec(line.say)
+        if (nets) expect([line.say, Number(nets[1]), Number(nets[2])]).toEqual([line.say, r.counts.nets - r.counts.unrouted, r.counts.nets])
+        const copper = /(\d+) copper errors/.exec(line.say)
+        expect([line.say, copper ? Number(copper[1]) : 0]).toEqual([line.say, r.counts.copper_errors])
+        expect([line.say, /DRC clean/.test(line.say)]).toEqual([line.say, r.counts.drc_errors === 0 && r.counts.copper_errors === 0])
+        checked++
+      }
+    }
+    expect(checked).toBe(5)
   })
 
   it('has three prompts, short, and nothing of the person\'s machine', () => {

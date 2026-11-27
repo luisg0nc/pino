@@ -76,10 +76,11 @@ function labelsOf(src) {
 const shapes = {}
 const libs = {}
 const keyOf = (fp) => {
-  const known = Object.keys(libs).find((k) => k.startsWith(fp.ref + '/') && libs[k] === fp.lib)
+  const what = fp.lib + '|' + fp.side
+  const known = Object.keys(libs).find((k) => k.startsWith(fp.ref + '/') && libs[k] === what)
   if (known) return known
   const k = fp.ref + '/' + Object.keys(libs).filter((x) => x.startsWith(fp.ref + '/')).length
-  libs[k] = fp.lib
+  libs[k] = what
   shapes[k] = localOf(fp)
   return k
 }
@@ -101,9 +102,9 @@ for (const [name, hash] of Object.entries(BUILDS)) {
   const rats = placement.edges.map(([, a, b]) => line(toKicad({ x: a[0], y: a[1] }), toKicad({ x: b[0], y: b[1] }))).join('')
   // The ratsnest's ends are pads of the build: a check that the two frames meet.
   const centres = board.footprints.flatMap((fp) => fp.pads.map((p) => p.center))
-  for (const [, a] of placement.edges) {
-    const p = toKicad({ x: a[0], y: a[1] })
-    if (!centres.some((c) => Math.hypot(c.x - p.x, c.y - p.y) < 0.6)) throw new Error(`${name}: a ratsnest end at ${a} is on no pad`)
+  for (const end of placement.edges.flatMap(([, a, b]) => [a, b])) {
+    const p = toKicad({ x: end[0], y: end[1] })
+    if (!centres.some((c) => Math.hypot(c.x - p.x, c.y - p.y) < 0.6)) throw new Error(`${name}: a ratsnest end at ${end} is on no pad`)
   }
   const result = JSON.parse(readFileSync(join(dir, 'result.json'), 'utf8'))
   builds[name] = {
@@ -138,7 +139,8 @@ for (const [name, key] of Object.entries(ROUTES)) {
     tracks,
     vias: board.vias.map((v) => [r2(v.pos.x), r2(v.pos.y), r2(v.size / 2), r2(v.drill / 2)]),
     pour: pourOf(filled),
-    errors: route.findings.filter((x) => x.severity === 'error').map((x) => { const p = toKicad(x.at); return [r2(p.x), r2(p.y)] })
+    // Where an error is on the board, in the board's frame; one said of no place on the board is not drawn.
+    errors: route.findings.filter((x) => x.severity === 'error' && x.at?.space === 'board').map((x) => { const p = toKicad(x.at); return [r2(p.x), r2(p.y)] })
   }
 }
 

@@ -38,7 +38,8 @@ in `site/index.html`, and its `width` and `height` if the size changed (`app/src
 | `schematic.png` | The Schematic tab. The whole window. |
 | `board.png` | The Board tab, routed. The whole window. |
 | `3d.png` | The 3D tab. The whole window. |
-| `social-preview.png` | 1200 x 1200, the page's link preview (`og:image`): the mark, the name and a line on the paper grey. |
+| `site-preview.png` | 1200 x 1200, the page's link preview (`og:image`): the mark, the name and a line on the paper grey. |
+| `social-preview.png` | 1280 x 640, the repository's social preview on GitHub, uploaded by hand (Settings, General, Social preview). Drawn, not captured: `node app/scripts/social-preview.mjs` renders `app/scripts/social-preview.html` in headless Chromium and fails if a face did not load. Not on the page. |
 
 The captures are 1600 x 1000 (`PINO_TEST_SIZE`). The raw ones are not committed.
 

@@ -5,8 +5,8 @@
 
 Each capture is the whole window at 1600 × 1000 with a `.json` beside it holding the boxes of the window's regions.
 The crops are made here (docs/images/README.md says which), every PNG is quantized to keep it small, and the link
-preview (1200 × 1200: the mark in the middle, the name and a line) is drawn here. It needs `resvg` on PATH, and
-`pnpm install` done, for the faces.
+preview (site-preview.png, 1200 × 1200: the mark in the middle, the name and a line) is drawn here. It needs `resvg`
+on PATH, and `pnpm install` done, for the faces. The repository's social preview is social-preview.mjs's.
 """
 
 import json
@@ -64,4 +64,4 @@ def font(size: int, weight: int) -> ImageFont.FreeTypeFont:
 
 draw.text((W // 2, 920 - LIFT), "pino", fill=(32, 36, 43), font=font(112, 600), anchor="mm")
 draw.text((W // 2, 1030 - LIFT), "Circuit boards with Claude Code", fill=(98, 102, 109), font=font(44, 400), anchor="mm")
-save(social, "social-preview.png")
+save(social, "site-preview.png")
