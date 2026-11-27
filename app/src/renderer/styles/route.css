@@ -22,19 +22,23 @@
   white-space: nowrap;
 }
 
+/* The build in words and how it stands, wrapping as one line can't hold them; an older build's way back beside it. */
 .route-verdict {
-  font-size: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.35;
 }
 
-.route-verdict .route-build {
-  font-size: 15px;
+.route-back {
+  font-weight: 400;
 }
 
 .route-rest {
-  margin-left: 4px;
   font: 500 11px / 1.5 var(--font-mono);
   letter-spacing: -0.02em;
   color: var(--ok);

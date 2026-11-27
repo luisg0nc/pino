@@ -1,137 +1,472 @@
-/* The builds strip at the top of the dock (`ui/strip/BuildsStrip.tsx`): the project's builds, each a small picture of
-   its board, hung on a line. */
-
-.strip {
-  flex: none;
-  padding: 8px 0 8px;
-  border-bottom: var(--divider);
+/* The builds timeline (torno #332): a slim bar across the foot of the views, above the status line, a chip for each group of builds on a
+   hairline; and a drawer that rises from it over the view, with the pictures. A group of several builds is a pile until it is opened. */
+.timeline {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 8;
+  height: var(--timeline-h);
+  color: var(--ink);
+  font-size: var(--text-small);
 }
 
-.strip-head {
+/* The view stands above the bar: the drawing is fitted to what is left, and what sits at the foot of the view sits on the bar. */
+.views:has(> .timeline) > .views-panel {
+  bottom: var(--timeline-h);
+}
+
+.views:has(> .timeline) > .band {
+  bottom: calc(var(--timeline-h) + 14px);
+}
+
+.timeline-bar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: var(--space-3);
+  height: 100%;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-top: var(--divider);
+  background: var(--panel);
+}
+
+.timeline-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  padding: 0 14px 6px;
-  color: var(--muted);
-  font-size: var(--text-small);
+  height: 22px;
+  padding: 0 var(--space-2) 0 6px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.strip-head b {
+.timeline-toggle .num {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.timeline-toggle:hover {
+  background: var(--surface);
+}
+
+/* Up while it is folded: the drawer opens upward. */
+.timeline-chevron {
+  display: inline-flex;
+  transform: rotate(180deg);
+  transition: transform 0.18s var(--ease);
+}
+
+.timeline-chevron[data-open] {
+  transform: none;
+}
+
+.timeline-chevron .chevron {
+  width: 10px;
+  height: 10px;
+}
+
+/* The chips, oldest at the left, on the hairline the builds hang on. */
+.timeline-chips {
+  position: relative;
+  flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tl-chip-item {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+/* The hairline between one chip and the next. */
+.tl-chip-item + .tl-chip-item::before {
+  content: '';
+  width: 6px;
+  height: 1px;
+  margin-left: -6px;
+  background: color-mix(in srgb, var(--field-edge) 50%, transparent);
+}
+
+.tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-inline);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tl-chip:hover {
+  background: var(--raise);
+}
+
+.tl-chip-count {
+  color: var(--muted);
+}
+
+/* The person's own builds: their saves and their routes, a dot in their pencil's colour. */
+.tl-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--user-mark);
+}
+
+/* The group of the build on show. */
+.tl-chip[data-on-show] {
+  background: var(--accent-wash);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.tl-chip[data-on-show] .tl-chip-count {
+  color: var(--accent);
+}
+
+.tl-chip[data-state='failed'] {
+  background: var(--fail-wash);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fail) 45%, var(--hairline));
+  color: var(--fail);
+}
+
+.tl-chip[data-state='running'] {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent);
+}
+
+.tl-chip[data-landing] {
+  animation: strip-land 0.5s var(--ease) both;
+}
+
+.timeline-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* The drawer: on the bar, over the view, opened and folded by its rows' height. */
+.timeline-drawer {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 0.22s var(--ease), visibility 0s linear 0.22s;
+}
+
+.timeline[data-open] .timeline-drawer {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 0.22s var(--ease), visibility 0s;
+}
+
+.timeline-sheet {
+  min-height: 0;
   overflow: hidden;
+  border-top: var(--divider);
+  background: var(--panel);
+}
+
+.timeline-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: var(--space-2) var(--space-4) 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.timeline-head b {
   color: var(--ink);
   font-weight: 600;
+}
+
+.timeline-says {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.strip-track {
-  position: relative;
+.timeline-track {
   display: flex;
-  gap: 6px;
-  padding: 0 14px;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-3);
   overflow-x: auto;
-  overflow-y: hidden;
   scrollbar-width: thin;
 }
 
-.strip-node {
-  display: flex;
+.timeline-track > .timeline-empty {
+  padding-bottom: var(--space-2);
+}
+
+/* A group: what made it over its builds, a bracket over them while it is opened. */
+.tl-group {
   flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tl-group-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 3px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+button.tl-group-head {
+  cursor: pointer;
+}
+
+button.tl-group-head:hover .tl-group-label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tl-group-head .num {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.tl-group-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-group[data-saved] .tl-group-head::before {
+  content: '';
+  flex: none;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  margin-right: 2px;
+  border-radius: 50%;
+  background: var(--user-mark);
+}
+
+.tl-group[data-expanded] .tl-group-head {
+  padding: 0 var(--space-2) 3px;
+  border: 1px solid var(--field-edge);
+  border-bottom: 0;
+  border-radius: var(--radius-inline) var(--radius-inline) 0 0;
+  border-color: color-mix(in srgb, var(--field-edge) 55%, transparent);
+  align-self: stretch;
+}
+
+.tl-group-builds {
+  display: flex;
+  gap: 10px;
+}
+
+/* The builds of a group just opened come out of its pile, one after the other. */
+.tl-group[data-expanded] .strip-node:not([data-landing]) {
+  animation: tl-fan 0.26s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 22ms);
+}
+
+@keyframes tl-fan {
+  from {
+    transform: translateX(calc(var(--i, 0) * -72px));
+    opacity: 0;
+  }
+}
+
+/* A pile: the last build's picture on the edges of the ones under it. */
+.tl-pile .strip-pic {
+  overflow: visible;
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    3px -3px 0 0 var(--panel),
+    3px -3px 0 1px var(--hairline),
+    6px -6px 0 0 var(--panel),
+    6px -6px 0 1px var(--hairline);
+}
+
+.tl-pile .strip-pic img {
+  border-radius: var(--radius-control);
+}
+
+.tl-pile[data-on-show] .strip-pic {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    4px -4px 0 0 var(--panel),
+    4px -4px 0 1px var(--hairline),
+    7px -7px 0 0 var(--panel),
+    7px -7px 0 1px var(--hairline);
+}
+
+.strip-node {
+  position: relative;
+  flex: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
   width: 62px;
+  margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--muted);
-  font-size: 11px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
 }
 
 .strip-pic {
+  position: relative;
   display: grid;
   place-items: center;
   width: 62px;
   height: 44px;
   overflow: hidden;
-  border: 1px solid var(--hairline);
   border-radius: var(--radius-control);
-  background: var(--raise);
-}
-
-.strip-pic img {
-  display: block;
-  width: 60px;
-  height: 42px;
-  object-fit: contain;
-}
-
-.strip-pic-word {
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--hairline);
   color: var(--muted);
   font-size: 11px;
 }
 
-.strip-node:not(:disabled):hover .strip-pic {
-  border-color: var(--field-edge);
+.strip-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.strip-node[data-on-show] .strip-pic {
-  border: 1.5px solid var(--accent);
+.strip-pic-id {
+  font-size: 10.5px;
 }
 
-.strip-node[data-kind='failed'] .strip-pic {
-  border-color: var(--fail);
-  background: var(--fail-wash);
-}
-
-.strip-node[data-kind='failed'] .strip-pic-word {
-  color: var(--fail);
-}
-
-/* A build the engine no longer keeps. */
-.strip-node[data-kind='gone'] .strip-pic {
-  border-style: dashed;
-  background: var(--surface);
+.strip-id,
+.strip-by {
+  max-width: 100%;
+  margin: 0;
+  font-size: 10.5px;
+  white-space: nowrap;
 }
 
 .strip-id {
-  color: var(--ink);
-  font: 500 11px / 1.6 var(--font-mono);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
-.strip-node[data-on-show] .strip-id {
+.strip-by {
+  color: var(--muted);
+}
+
+.strip-node[data-saved] .strip-by {
+  color: var(--user-mark);
+}
+
+/* The build on show. */
+.strip-node[data-on-show] .strip-pic {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.strip-node[data-on-show] .strip-id,
+.strip-node[data-on-show] .strip-by {
   color: var(--accent);
+  font-weight: 500;
+}
+
+/* A build that cannot be shown: one the engine no longer keeps is dashed, and none of them takes the pointer. */
+.strip-node:disabled {
+  cursor: default;
 }
 
 .strip-node:disabled .strip-id {
   color: var(--muted);
 }
 
-.strip-by {
-  max-width: 62px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.strip-node[data-kind='gone'] .strip-pic {
+  box-shadow: none;
+  border: 1px dashed var(--field-edge);
+  background: var(--surface);
 }
 
-.strip-by .num {
-  margin-inline: 0;
+/* A build that failed: hatched, and the word in the fail colour. */
+.strip-node[data-kind='failed'] .strip-pic {
+  background: repeating-linear-gradient(135deg, var(--panel) 0 5px, var(--fail-wash) 5px 10px);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fail) 45%, var(--hairline));
+  color: var(--fail);
 }
 
+.strip-node[data-kind='failed'] .strip-id {
+  color: var(--fail);
+}
+
+/* The build that runs: outlined, with its seconds. */
+.strip-node[data-kind='running'] .strip-pic {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent);
+}
+
+.strip-node[data-kind='running'] .strip-id {
+  color: var(--accent);
+}
+
+.strip-node:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* A build that lands slides in from the right. */
 .strip-node[data-landing] {
   animation: strip-land 0.7s var(--ease) both;
 }
 
 @keyframes strip-land {
   from {
-    opacity: 0;
     transform: translateX(34px);
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .strip-node[data-landing] {
+  .strip-node[data-landing],
+  .tl-chip[data-landing],
+  .tl-group[data-expanded] .strip-node {
     animation: none;
+  }
+
+  .timeline-chevron,
+  .timeline-drawer,
+  .timeline[data-open] .timeline-drawer {
+    transition: none;
   }
 }

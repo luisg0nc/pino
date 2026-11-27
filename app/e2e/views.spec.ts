@@ -35,7 +35,9 @@ test('opens the reference board and the build lands', async () => {
     await waitForBuild(page, 1)
     await onBoard(page)
     expect((await drawn(page)).board!.hash).toBe((await state(page)).build!.lastGood!.hash)
-    await expect(card(page).locator('h2').first()).toContainText('On h1')
+    // The opening's build, named in the builds timeline's words; its id is the title only.
+    await expect(card(page).locator('h2').first()).toContainText('Latest build')
+    await expect(card(page).locator('h2').first()).toHaveAttribute('title', /^h1, /)
     await tab(page, 'Schematic').click()
     await expect.poll(async () => (await drawn(page)).sheet?.symbols ?? 0).toBeGreaterThan(0)
     await tab(page, '3D').click()

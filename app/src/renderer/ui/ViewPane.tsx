@@ -9,6 +9,7 @@ import { actions, useStore } from '../state/store'
 import { useViewModel, type ViewModel } from '../state/viewModel'
 import { numbered } from './numbered'
 import { Plate } from './plate/Plate'
+import { BuildsTimeline } from './strip/BuildsTimeline'
 import { ViewBand } from './view/Band'
 
 /**
@@ -67,6 +68,8 @@ export function ViewPane() {
       </div>
       {/* Which build the copper is from, as Claude is told it; else (a run begun with it stale) the build the route names. */}
       {model && chosen !== 'brief' && <ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
+      {/* The project's builds, in a bar across the foot of the three views, above the status line: not on the Brief, which is no build's. */}
+      {chosen !== 'brief' && <BuildsTimeline />}
     </main>
   )
 }

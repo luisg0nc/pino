@@ -38,6 +38,7 @@ const row = <Id extends string>(id: Id, keys: readonly string[], does: string, c
 const ROWS = [
   row('view.prev', ['Left'], 'On a tab of the views: the view before', 'Everywhere', 'tabs'),
   row('view.next', ['Right'], 'On a tab of the views: the next view', 'Everywhere', 'tabs'),
+  row('builds.toggle', ['Ctrl+Shift+H'], 'Open or fold the builds timeline at the foot of the views', 'Everywhere', 'global'),
 
   row('boards.move', ['Left', 'Right', 'Up', 'Down'], 'On a board of the page: the card that way', 'All projects', 'cards'),
 

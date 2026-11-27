@@ -7,7 +7,6 @@ import { actions, store, useStore } from '../state/store'
 import { ChatPane } from './chat/ChatPane'
 import { ModelButton } from './chat/ModelMenu'
 import { StartChat } from './chat/StartChat'
-import { BuildsStrip } from './strip/BuildsStrip'
 import { Popover } from './Popover'
 import { QuestionCard } from './QuestionCard'
 import { sessionWord } from './sessionWords'
@@ -122,7 +121,6 @@ export function SessionDock({ project }: { project: ProjectInfo }) {
         )}
         {session && <More live={live} resumable={resumable} disabled={starting} onResume={() => void start(true)} onNew={() => void start(false)} onStop={stop} />}
       </header>
-      <BuildsStrip project={project} />
       <div className="session-body">
         {session ? (
           <ChatPane key={session.sessionId} sessionId={session.sessionId} live={live} working={session.status === 'working' || session.status === 'needs_input'} dir={project.dir} />
