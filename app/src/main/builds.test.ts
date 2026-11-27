@@ -421,6 +421,7 @@ describe("a Stop is held for Claude's builds, by their cause and not by when the
     }
     return {
       l,
+      writes,
       domain,
       /** Claude's tool call writes the board, for the prompt named, and the build of it comes back. */
       async claude(text: string, prompt = 'u7') {
@@ -476,6 +477,26 @@ describe("a Stop is held for Claude's builds, by their cause and not by when the
     const t = await stopping()
     await t.claude('claude, from the turn before\n', 'u6')
     expect(await t.stop()).toBeNull()
+  })
+
+  // torno's review of its build causes: what is read after the wait must still be Claude's build, not the newest there is.
+  it("keeps Claude's build in the turn when a build of the person's lands while the Stop waits for it", async () => {
+    const t = await stopping({ FAKE_KERNEL_DELAY_MS: '200' })
+    const asked = t.l.asked.length
+    t.writes.began({ session: 's1', project: info().id, dir: project.dir, id: 't1', tool: 'Edit', input: { file_path: join(project.dir, 'board.py') }, turn: { prompt: 'u7' } })
+    project.touch('claude, moved\n')
+    t.writes.ended('s1', 't1', true)
+    t.l.seen()
+    t.l.save()
+    await expect.poll(() => t.l.asked.length).toBe(asked + 1)
+    const answer = t.stop()
+    await new Promise((r) => setTimeout(r, 30))
+    project.touch('mine, while that one builds, and longer\n')
+    t.l.seen()
+    t.l.save()
+    expect((await answer)!.reason).toContain('h2 was built in this turn')
+    expect(t.l.builds.state(info().id)!.history.map((e) => e.cause)).toEqual(['unknown', 'agent', 'person'])
+    expect(t.l.builds.ranSince(info().id, 1_000_005, ['u7'])).toEqual({ count: 1, from: 1, to: 2 })
   })
 
   it("does not wait for a save of the person's", async () => {
