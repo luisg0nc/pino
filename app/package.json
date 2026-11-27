@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:linux": "electron-vite build && electron-builder --linux --publish never",
     "pack:check": "electron-vite build && electron-builder --linux dir",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

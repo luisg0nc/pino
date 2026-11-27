@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readdirSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { launch, referenceProject, tempFolder } from './launch'
@@ -36,6 +36,12 @@ test('reaches the first screen, hidden, and finds the engine it carries', async 
     )
     const resources = await app.evaluate(() => process.resourcesPath)
     expect(existsSync(join(resources, 'icon.png'))).toBe(true)
+    // What the window bundles carries its notices, in the asar.
+    const notices = await app.evaluate(({ app }) => {
+      const fs = process.getBuiltinModule('node:fs')
+      return fs.readFileSync(`${app.getAppPath()}/out/renderer/third-party-licenses.txt`, 'utf8')
+    })
+    for (const name of ['react ', 'react-dom ', 'three ', 'zustand ', '@fontsource/instrument-sans ', '@fontsource/martian-mono ']) expect(notices).toContain(name)
     // The engine's environment is under the profile (`userData`), never in the package.
     const userData = await app.evaluate(({ app }) => app.getPath('userData'))
     expect(existsSync(join(userData, 'kernel-env'))).toBe(true)
@@ -74,6 +80,11 @@ test('builds the reference board with the engine it carries, and writes nothing 
     expect(build.problem).toBeNull()
     expect(build.latest!.verdict).not.toBe('failed')
     expect(existsSync(join(dir, '.pino'))).toBe(true)
+    // The engine is given nothing of an AppImage's mount, where the package is one.
+    const engine = await app.evaluate(() => (globalThis as unknown as { __pinoMain: { kernelPid(): number | null } }).__pinoMain.kernelPid())
+    const given = readFileSync(`/proc/${engine}/environ`, 'utf8').split('\0')
+    expect(given.filter((entry) => /^(APPDIR|APPIMAGE|ARGV0|OWD)=|\.mount_/.test(entry))).toEqual([])
+    expect(given.some((entry) => entry.startsWith('UV_PROJECT_ENVIRONMENT='))).toBe(true)
   } finally {
     await app.close()
   }

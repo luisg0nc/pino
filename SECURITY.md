@@ -6,8 +6,8 @@ Please don't open a public issue. Use [private vulnerability
 reporting](https://github.com/luisg0nc/pino/security/advisories/new).
 
 Say which commit or release you ran, on which Linux, the steps that show it, and what the finding lets someone do.
-You'll get an acknowledgement within a few days. A fix lands on `main` and is noted in the advisory. There is no
-bounty: pino is one person's project.
+You'll get an acknowledgement within a few days. A fix reaches `main` in a new release and is noted in the
+advisory. There is no bounty: pino is one person's project.
 
 ## Supported versions
 

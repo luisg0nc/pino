@@ -30,7 +30,7 @@ with its libraries and, to try sessions by hand, Claude Code logged in.
 git clone https://github.com/luisg0nc/pino.git
 cd pino
 pnpm install
-pnpm dev                    # the app from the Vite dev server; F5 or Ctrl+R reloads the window
+pnpm dev                    # the app from the Vite dev server
 scripts/pino [folder]       # or build and run it as a user would
 ```
 

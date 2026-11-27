@@ -26,6 +26,9 @@ Linux only.
   `<userData>/kernel-env` and no bytecode (`kernel/client.ts` `kernelCommand`, `kernelEnv`): an AppImage is read-only,
   and mounted somewhere new at every start. `run_board.py` passes `-B` on to the child that runs `board.py`, since
   `-I` reads no `PYTHON*` variable. Nothing is ever written in the package.
+- The renderer's build writes `out/renderer/third-party-licenses.txt` for what it bundles (`electron.vite.config.ts`).
+- In the AppImage, `AppRun` puts the mount's folders into `PATH`, `LD_LIBRARY_PATH` and others: `withoutSession`
+  (`sessions/agentEnv.ts`) takes them out of everything pino starts.
 - `PINO_PACKAGED=<executable> pnpm -C app exec playwright test e2e/packaged.spec.ts` checks the folder or the
   AppImage, hidden. CI does not run it: run it by hand after a change to the package, the engine's start or its files.
 - `.github/workflows/release.yml`: a `v*` tag runs the checks, builds both files and puts them on a draft release;

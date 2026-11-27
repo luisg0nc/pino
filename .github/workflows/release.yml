@@ -23,6 +23,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: The tag is the app's version
+        if: github.event_name == 'push'
+        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./app/package.json').version")"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -67,7 +70,7 @@ jobs:
 
   release:
     name: Draft release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [build]
     runs-on: ubuntu-latest
     permissions:

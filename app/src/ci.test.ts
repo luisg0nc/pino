@@ -28,7 +28,10 @@ describe('the release workflow', () => {
     expect(release).toContain("tags: ['v*']")
     expect(release).toContain('workflow_dispatch:')
     for (const run of ['pnpm -C app typecheck', 'pnpm test', 'bash .claude/hooks/guard-bash.test.sh', 'uv run --no-sync pytest', 'pnpm dist:linux']) expect(release).toContain(`run: ${run}`)
-    expect(release).toContain("if: startsWith(github.ref, 'refs/tags/v')")
+    // A run by hand makes no release, on a tag either.
+    expect(release).toContain("if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')")
+    // A tag that is not the app's version stops at the checks.
+    expect(release).toContain(`run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./app/package.json').version")"`)
     expect(release).toContain('gh release create "$TAG" --draft --verify-tag')
     for (const file of ['app/dist/*.AppImage', 'app/dist/*.tar.gz']) expect(release).toContain(file)
     expect(release).not.toMatch(/macos|dist:mac|demo\.mp4/i)
@@ -41,6 +44,8 @@ describe('the release workflow', () => {
       expect(root.scripts[script]).toBe(`pnpm -C app ${script}`)
       expect(app.scripts[script]).toContain('electron-builder --linux')
     }
+    // electron-builder would publish by itself on a tag, given a token: the draft job alone makes a release.
+    expect(app.scripts['dist:linux']).toContain('--publish never')
   })
 })
 

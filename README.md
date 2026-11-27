@@ -154,6 +154,14 @@ tar xzf pino-app-0.1.0.tar.gz
 ./pino-app-0.1.0/pino-app
 ```
 
+On Ubuntu 23.10 and later, the `.tar.gz` stops with "The SUID sandbox helper binary was found, but is not
+configured correctly". Give the helper in the extracted folder what it asks for, once:
+
+```sh
+sudo chown root:root pino-app-0.1.0/chrome-sandbox
+sudo chmod 4755 pino-app-0.1.0/chrome-sandbox
+```
+
 The AppImage needs FUSE 2 (`fuse2` on Arch, `libfuse2` or `libfuse2t64` on Debian and Ubuntu). The first start
 needs the network, so that uv can set up the engine's Python environment in `~/.config/pino/kernel-env`. Neither
 download adds pino to your applications menu, and neither updates itself.
