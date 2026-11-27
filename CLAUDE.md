@@ -15,6 +15,9 @@ tools. Routing in the app works only with an engine that routes (serve protocol 
   side has a copy of its own; `shared/bridge.ts` is everything the renderer may ask of main. `test/fake-agent.mjs`
   is the stand-in for Claude Code, `test/fake-kernel.mjs` the one for the engine, and `e2e/` the specs.
 - `scripts/pino` is the launcher; `scripts/torno-sync` the drift report on the copied files.
+- `site/` is the landing page (pino.luisg.me): `app/scripts/build-site.mjs` copies the fonts and the pictures of
+  `docs/images/` into it (`docs/images/README.md` says how those are made), and `.github/workflows/pages.yml` deploys
+  it. `app/src/site.test.ts` holds it.
 - `.github/workflows/ci.yml` runs the unit tests, the typecheck, the guard cases and the e2e suite
   (`app/src/ci.test.ts` holds it).
 
@@ -62,7 +65,8 @@ changed.
 - Accent: solder-mask green. The colour values are in `app/src/renderer/styles/tokens.css` and are held by
   `app/src/shared/contrast.test.ts`.
 - Type: Instrument Sans and Martian Mono from `@fontsource`, latin, bundled. Family names are written only in
-  `shared/fonts.ts` and `renderer/styles/tokens.css`.
+  `shared/fonts.ts` and `renderer/styles/tokens.css`, and in `site/assets/site.css`: the landing page is served on its
+  own and declares them itself.
 - The mark is pin one (`renderer/ui/pinOne.ts`): the logo, the first screen's drawing and the icons are drawn from it.
 - Linux only. No macOS code paths.
 - Tests never run the real `claude`: they set `PINO_AGENT_CMD` to the stand-in.
