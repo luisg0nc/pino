@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pino</title>
+<meta name="description" content="A Linux desktop workbench for making circuit boards with Claude Code. You point at the board, Claude Code edits a Python file, pino builds it every time you save.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="pino">
+<meta property="og:description" content="A Linux desktop workbench for making circuit boards with Claude Code.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pino.luisg.me/">
+<meta property="og:image" content="https://pino.luisg.me/assets/img/social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:alt" content="The pino mark, a chip seen from above with pin 1 in green, over the word pino">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="assets/pino.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/instrument-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="top">
+  <a class="brand" href="./" aria-label="pino, home">
+    <img src="assets/pino.svg" alt="" width="32" height="32">
+    <span>pino</span>
+  </a>
+  <nav aria-label="Site">
+    <a class="nav-cta" href="#run">Run it</a>
+    <a class="nav-gh" href="https://github.com/luisg0nc/pino"><svg class="gh" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<section class="hero" id="hero" aria-labelledby="hero-title">
+  <div class="hero-text">
+    <h1 id="hero-title">A workbench for making circuit boards with Claude Code.</h1>
+    <p class="lede">You point at the board. Claude Code edits a Python file. pino builds it into a KiCad project every
+      time you save, and runs the checks.</p>
+    <p class="actions">
+      <a class="button primary big" href="#run">Run it</a>
+      <a class="button big gh-button" href="https://github.com/luisg0nc/pino"><svg class="gh" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>pino on GitHub</a>
+    </p>
+    <p class="note">New and early. Linux only. Apache-2.0.</p>
+  </div>
+
+  <figure class="bench">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/img/hero-dark.png">
+      <img src="assets/img/hero.png" width="1000" height="800" alt="The Board view in pino: a small circuit board, routed, drawn as a technical drawing with its parts, pads and tracks">
+    </picture>
+    <figcaption>The Board view of a small LED blinker, routed.</figcaption>
+  </figure>
+</section>
+
+<section class="loop reveal" id="loop" aria-labelledby="loop-title">
+  <h2 id="loop-title">The loop</h2>
+  <p class="section-lede">The board is a Python file, <code>board.py</code>. pino has no tools for placing parts or
+    drawing tracks by hand.</p>
+  <div class="loop-body">
+    <svg id="ring" viewBox="0 0 320 320" role="img" aria-label="A ring of four steps that repeats: you describe or mark, Claude Code edits, the engine builds and checks, pino draws it and reports">
+      <circle class="ring-track" cx="160" cy="160" r="120"></circle>
+      <circle class="ring-trail" cx="160" cy="160" r="120"></circle>
+      <g class="ring-nodes"></g>
+      <circle class="ring-dot" r="6" cx="160" cy="40"></circle>
+    </svg>
+    <ol class="steps">
+      <li data-step="0"><h3>You describe the board, or mark it</h3>
+        <p>Point at a part, draw an arrow to where it should go, or sketch the way a track should run. Each mark can
+          carry a note.</p></li>
+      <li data-step="1"><h3>Claude Code edits <code>board.py</code></h3>
+        <p>pino sends your marks with your next message as exact references: the part, the pad, the net. Through
+          pino's tools, Claude can look at the board, measure it and read the checks.</p></li>
+      <li data-step="2"><h3>The engine builds it</h3>
+        <p>On save, it runs the file, writes a KiCad <span class="num">10</span> project, and runs KiCad's electrical
+          and design rule checks along with pino's own.</p></li>
+      <li data-step="3"><h3>pino draws it and reports back</h3>
+        <p>The window shows the new build. Claude is told what changed and what failed.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="window reveal" id="window" aria-labelledby="win-title">
+  <h2 id="win-title">The window</h2>
+  <p class="section-lede">Four tabs on one board, with the Claude Code session beside them.</p>
+  <div class="tabs">
+    <figure>
+      <img src="assets/img/brief.png" loading="lazy" width="1600" height="1000" alt="The Brief tab: a few words about the board, and cards for a requirement, a part, a power budget and a decision">
+      <figcaption><h3>Brief</h3>What the board is for, in your words, with cards for requirements, parts, power and
+        decisions.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/img/schematic.png" loading="lazy" width="1600" height="1000" alt="The Schematic tab: the circuit of a small LED blinker as a schematic sheet">
+      <figcaption><h3>Schematic</h3>KiCad's sheet, redrawn. A part you select stays selected on the Board and in
+        3D.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/img/board.png" loading="lazy" width="1600" height="1000" alt="The Board tab: the routed board with its outline, parts, pads and copper tracks">
+      <figcaption><h3>Board</h3>The copper layers as a technical drawing, with net colours as a switch. Routing runs in
+        the background, using KiCadRoutingTools.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/img/3d.png" loading="lazy" width="1600" height="1000" alt="The 3D tab: a model of the routed board with green solder mask and its parts">
+      <figcaption><h3>3D</h3>A model of the board, with its parts or bare.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="for reveal" id="for" aria-labelledby="for-title">
+  <h2 id="for-title">What it is for</h2>
+  <div class="for-cols">
+    <div>
+      <h3>Small boards</h3>
+      <p>Two or four layers, made for up to about a hundred parts.</p>
+    </div>
+    <div>
+      <h3>JLCPCB parts</h3>
+      <p>Name a part by its LCSC number. pino looks up its stock, its price, and whether JLC calls it basic or
+        extended.</p>
+    </div>
+    <div>
+      <h3>Fab files</h3>
+      <p>Gerbers, drill files, a BOM and a CPL (placement) file, which you upload to JLCPCB yourself. Check every part
+        in JLC's placement preview before you pay.</p>
+    </div>
+    <div>
+      <h3>Linux</h3>
+      <p>pino runs on Linux only. It is developed on Arch with Wayland.</p>
+    </div>
+  </div>
+</section>
+
+<section class="run reveal" id="run" aria-labelledby="run-title">
+  <h2 id="run-title">What you need and how to run it</h2>
+  <div class="run-cols">
+    <div>
+      <h3>You need</h3>
+      <ul>
+        <li>Linux</li>
+        <li>Node.js <span class="num">22.12</span> or later, and pnpm</li>
+        <li><a href="https://docs.astral.sh/uv/">uv</a>, which runs the engine</li>
+        <li><a href="https://www.kicad.org/">KiCad <span class="num">10</span></a> with its libraries, for the checks and
+          the routing</li>
+        <li><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a> on your <code>PATH</code>, logged
+          in</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Then</h3>
+      <div class="cmd">
+<pre><code id="cmd">git clone https://github.com/luisg0nc/pino.git
+cd pino
+pnpm install
+scripts/pino ~/boards</code></pre>
+        <button type="button" class="copy" data-copy="cmd" hidden>Copy</button>
+      </div>
+      <p class="aside">pino checks what it needs on its first screen and says what is missing. The first route installs
+        the router into a cache in your home folder, once.</p>
+    </div>
+  </div>
+</section>
+
+<section class="links reveal" id="links" aria-labelledby="links-title">
+  <h2 id="links-title">Links</h2>
+  <div class="links-cols">
+    <div class="links-card">
+      <h3>The repository</h3>
+      <p>The code, the README and the engine's rules. pino is new, so expect rough edges, and
+        <a href="https://github.com/luisg0nc/pino/issues">open an issue</a> when you find one.</p>
+      <p class="actions"><a class="button big gh-button" href="https://github.com/luisg0nc/pino"><svg class="gh" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>pino on GitHub</a></p>
+    </div>
+    <div class="links-card">
+      <h3>torno</h3>
+      <p>pino's sibling, the same kind of workbench for CAD parts. The two share much of their code.</p>
+      <p class="actions"><a class="button big" href="https://torno.luisg.me/">torno.luisg.me</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p><img src="assets/pino.svg" alt="" width="20" height="20"> pino is open source under the
+    <a href="https://github.com/luisg0nc/pino/blob/main/LICENSE">Apache-2.0</a> licence.</p>
+  <p><a href="https://github.com/luisg0nc/pino">Source on GitHub</a>
+    <a href="https://github.com/luisg0nc/pino/issues">Open an issue</a></p>
+</footer>
+</body>
+</html>
