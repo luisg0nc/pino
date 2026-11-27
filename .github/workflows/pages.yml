@@ -1,0 +1,42 @@
+name: Pages
+
+# GitHub Pages: the landing page at pino.luisg.me (site/index.html, site/assets/, checked in; its fonts and pictures
+# copied here from app/node_modules and docs/images). Pages must be set to deploy from GitHub Actions (Settings,
+# Pages, Source), with the custom domain of site/CNAME.
+
+on:
+  push:
+    branches: [main]
+    paths: [site/**, docs/images/**, app/scripts/build-site.mjs, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node app/scripts/build-site.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -3,6 +3,10 @@ out/
 dist/
 app/e2e/.results/
 
+# What app/scripts/build-site.mjs copies into the landing page
+site/assets/fonts/
+site/assets/img/
+
 # Worktrees, Claude Code's own files, profiler dumps
 .worktrees/
 .claude/worktrees/

@@ -38,12 +38,16 @@ The person is working on this desktop. No test, script or check may put a window
   `PINO_SHOTS` naming a folder outside the repository. A hidden window gives **one** picture a launch, and **none**
   once it has been resized with a board drawn (the call never returns): a shot of another size is a launch with
   `PINO_TEST_SIZE=1920x1080`, which main reads under test alone (`frame.ts` `windowSize`). No spec resizes.
+- The landing page's pictures are the spec's `site` group (`docs/images/README.md`), which also needs
+  `PINO_SITE_BOARD`, a folder with a built `board.py`: it is only read, and each launch works on a copy in the
+  temporary folder, without its conversations, session and marks, with the real engine.
 - A CI runner has no GPU, and Chromium makes no WebGL context there unless asked to draw it in software: `launch.ts`
   passes `--enable-unsafe-swiftshader` when `CI` is set. The app itself never does. A run that must have no WebGL
   passes `--disable-gpu --disable-software-rasterizer` (`--disable-webgl` and `--disable-3d-apis` leave it on).
 - Every spec runs the engine's stand-in (`app/test/fake-kernel.mjs`, whose header lists its switches).
-  `real-kernel.spec.ts` alone asks for the real engine (`launch({ kernel: 'real' })`), and is skipped where uv,
-  kicad-cli or `kernel/.venv` is missing; it runs uv offline, so nothing is fetched into the run's empty home.
+  `real-kernel.spec.ts` asks for the real engine (`launch({ kernel: 'real' })`), and is skipped where uv,
+  kicad-cli or `kernel/.venv` is missing; it runs uv offline, so nothing is fetched into the run's empty home. The
+  one other that does is the `site` group of `shots.spec.ts`, which runs only when asked (`src/e2e.test.ts`).
 - A CSS animation that never ends grows a hidden window's memory for as long as it runs: there is none, and
   `styles/styles.test.ts` fails for one.
 - State is read through hooks, not pixels: `window.__pinoTest.state()` in the window, and `globalThis.__pinoMain` in

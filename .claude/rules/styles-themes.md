@@ -42,8 +42,8 @@ something changed. A sheet copied from torno keeps its rules; pino's own areas h
 
 - Instrument Sans (400, 500, 600) for the interface and Martian Mono (300, 400, 500) for every number, ref, file name,
   key cap and code, from `@fontsource/*` (pinned, latin subset, imported in `renderer/main.tsx`, bundled; the CSP
-  stays `font-src 'self' data:`). The family names are written in `shared/fonts.ts` and `tokens.css` alone
-  (`shared/fonts.test.ts`). `.num` (in `layout.css`) is the class for what is set in Martian Mono.
+  stays `font-src 'self' data:`). The family names are written in `shared/fonts.ts` and `tokens.css` alone, and in
+  the landing page's own sheet, `site/assets/site.css`, which cannot import them (`shared/fonts.test.ts`). `.num` (in `layout.css`) is the class for what is set in Martian Mono.
 - A `border-radius` is one of the four radius tokens or `--radius-full`, `0`, `50%` or `inherit` (chat.css keeps
   12px and 3px for the person's words); the one shadow is `--float-shadow`: no other `box-shadow` has a blur over 4px.
 - A sheet reads only custom properties that `tokens.css` or the sheet itself defines, but for one read with a fallback

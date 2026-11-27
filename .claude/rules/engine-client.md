@@ -46,7 +46,7 @@ paths:
   tool. `fab_profiles` is asked once for each engine process.
 - Every test runs the stand-in, `app/test/fake-kernel.mjs`, whose header lists its switches. It writes only under
   `.pino/` (and `fab/v1.0.0/` on a release, as the engine does), in the engine's shapes: change it with the protocol.
-  `e2e/real-kernel.spec.ts` alone runs the real one.
+  `e2e/real-kernel.spec.ts` runs the real one, as does the opt-in `site` group of `e2e/shots.spec.ts`.
 
 ## What a Stop waits for
 
