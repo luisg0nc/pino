@@ -67,8 +67,9 @@ was not looked at (`check` or `look`), at most twice. Which builds those are is 
 `ofPrompts`: cause `agent`, for a prompt the turn took up or for none that could be named; `claudesComing`,
 `claudesBuild`): one that names a prompt of the turn is its whenever it began, and only one with no prompt to name
 must have begun since the turn did (`claudesIn`). A build that came back must also have ended since the turn began
-(`claudesBuild`): no prompt id comes twice (a session's random prefix and a count), and should one, an old build does
-not come back with it. A prompt folded into the turn at work begins none: the manager says so to `promptContext`, and
+(`claudesBuild`), so that a prompt of an earlier turn, counted again, brings no old build back. That guard does not
+cover a build still on its way: keeping each prompt to one turn is the transcript's (see `chat-transcript`; ids of two
+sessions differ by a random prefix). A prompt folded into the turn at work begins none: the manager says so to `promptContext`, and
 the turn keeps its start, the board it began with and what it was held for. The person's save mid-turn is neither
 waited for nor held for, and an earlier prompt's build that comes after hides none of the turn's. A failure of
 Claude's that a later build drew past is let go, and what then must have been looked at is Claude's newest build of

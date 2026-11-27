@@ -314,8 +314,9 @@ export class Builds {
 
   /**
    * The newest build of Claude's in such a turn that came back, or with `good` the newest that did not fail. One that
-   * ended before the turn began is not of it, whatever prompt it names: the manager makes no prompt id twice, and
-   * should one ever come again, an old build does not come back with it.
+   * ended before the turn began is not of it, whatever prompt it names: a prompt of an earlier turn that is counted
+   * again (the transcript keeps its turns apart, and its ids differ between sessions only by chance of their random
+   * prefix) brings no old build back with it.
    */
   claudesBuild(projectId: string, since: number, prompts: readonly string[], { good = false }: { good?: boolean } = {}): ClaudesBuild | undefined {
     return this.entries.get(projectId)?.claudes.findLast((b) => b.endedAt >= since && claudesIn(b.made, b.startedAt, since, prompts) && !(good && b.result.verdict === 'failed'))

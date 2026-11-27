@@ -492,7 +492,7 @@ describe("a Stop is held for Claude's builds, by their cause and not by when the
     expect(await t.stop()).toBeNull()
   })
 
-  // No prompt id comes twice as the manager makes them. Should one, what ended before the turn began is not of it.
+  // Should a prompt of an earlier turn be counted again, what ended before this turn began is not of it.
   it('holds nothing for a build that ended before the turn began, though it names a prompt of the turn', async () => {
     const t = await stopping({ FAKE_KERNEL_FAIL_ON: '2' })
     await t.claude('claude, broken\n')
