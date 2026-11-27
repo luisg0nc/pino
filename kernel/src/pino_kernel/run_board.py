@@ -61,7 +61,8 @@ def run_board(project: Path, *, libraries: Libraries, timeout: float = 30.0, pyt
     board = project / "board.py"
     if not board.is_file():
         return RunResult(None, [Problem("no board.py in the project folder", "board.py", None)])
-    argv = [python, "-I", "-m", "pino_kernel.runner", str(board)]
+    # -I reads no PYTHON* variable: a parent told to write no bytecode (the packaged app's engine) says so with -B.
+    argv = [python, "-I", *(["-B"] if sys.dont_write_bytecode else []), "-m", "pino_kernel.runner", str(board)]
     start = time.perf_counter()
     proc = subprocess.Popen(argv, cwd=str(project), env=_env(libraries, timeout), stdin=subprocess.DEVNULL,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
