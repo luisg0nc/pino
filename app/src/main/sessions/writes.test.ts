@@ -1,5 +1,6 @@
 // Which saves are Claude's: told by its tool calls, never by the clock of its turn.
-import { mkdtempSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, realpathSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -15,7 +16,9 @@ const turn = { prompt: 'u7', conversation: 'c1' }
 beforeEach(() => {
   dir = realpathSync(mkdtempSync(join(tmpdir(), 'pino-writes-')))
   board = join(dir, 'board.py')
-  time = 1_800_000_000_000
+  // Far ahead of the real clock: the kernel stamps a file's ctime by that one, which no test can set, so to this
+  // ledger every ctime is long past and the mtime a test sets is what counts.
+  time = 4_000_000_000_000
   writes = new ClaudeWrites(() => time)
   save('first', time - 60_000)
 })
@@ -225,6 +228,31 @@ describe('a Bash, whose files cannot be read from its command', () => {
     writes.began(bash('sleep 5'))
     save('mine')
     expect(by()).toBeUndefined()
+  })
+
+  // `cp -p`, `rsync -a`, `tar x`, `unzip`, `mv`: the file comes with the old mtime, and only its ctime says when.
+  it.each([
+    ['moved there', (old: string) => renameSync(old, board)],
+    ['copied with its times kept', (old: string) => execFileSync('cp', ['-p', old, board])]
+  ])('is taken to have written an old file %s while it runs, and still once it has ended', async (_how, put) => {
+    const real = new ClaudeWrites()
+    const old = join(dir, 'old.py')
+    save('from before', Date.now() - 3_600_000, old)
+    real.began(bash('python gen.py'))
+    put(old)
+    expect(real.by('p1', board)).toEqual({ turn })
+    real.ended('s1', 't1', true)
+    expect(real.by('p1', board)).toEqual({ turn })
+  })
+
+  it('did not write a file that nothing has touched since before it began', async () => {
+    const real = new ClaudeWrites()
+    save('mine', Date.now() - 3_600_000)
+    await new Promise((r) => setTimeout(r, 50))
+    real.began(bash('python gen.py'))
+    expect(real.by('p1', board)).toBeUndefined()
+    real.ended('s1', 't1', true)
+    expect(real.by('p1', board)).toBeUndefined()
   })
 })
 

@@ -51,8 +51,9 @@ paths:
   turn or session.
   - `Write`, `Edit`, `MultiEdit`, `NotebookEdit`: that file's saves while the call runs, and after it while the file is
     as the tool left it (mtime and size), however late the save is heard. A call that failed wrote nothing.
-  - `Bash` names no file, so any watched file whose mtime falls while the command runs is taken for Claude's (one that
-    is gone: heard while it runs or within 0.5 s). The person's save during such a command is counted as Claude's:
+  - `Bash` names no file, so any watched file whose mtime or ctime, whichever is later, falls while the command runs
+    is taken for Claude's (the ctime tells of a file put there with an old mtime, as `cp -p`, `tar x` and `mv` do; one
+    that is gone: heard while it runs or within 0.5 s). The person's save during such a command is counted as Claude's:
     that is the price of not calling Claude's own the person's. A command that surely writes nothing
     (`surelyWritesNothing`: no redirect or substitution, only programs that read) claims nothing. What a background
     command writes after its call returned is the person's, and so may be what a background subagent writes in a
