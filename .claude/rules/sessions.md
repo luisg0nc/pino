@@ -43,6 +43,20 @@ paths:
   the person's: the reason names `add_card`. All three are judged by where the write lands: a link is followed also
   while what it names is not there yet, since the write would make it. `Bash` is never judged: no path can be read from
   a command, so the CLI's own card stays.
+- **Which saves are Claude's** (`writes.ts` `ClaudeWrites`, asked by `Sessions.wroteBy` for each save the watcher
+  hears). Only a tool call accounts for one, never a turn at work. The manager tells the ledger of a `PreToolUse` pino
+  does not refuse (with the turn it is of), a request for it that waits (`can_use_tool`, by `tool_use_id`: the hook
+  comes before the request, and while it waits nothing is written), the person's answer, its `PostToolUse`, its
+  `tool_result` in the stream (which also ends one that failed or that the CLI denied by itself), and the end of the
+  turn or session.
+  - `Write`, `Edit`, `MultiEdit`, `NotebookEdit`: that file's saves while the call runs, and after it while the file is
+    as the tool left it (mtime and size), however late the save is heard. A call that failed wrote nothing.
+  - `Bash` names no file, so any watched file whose mtime falls while the command runs is taken for Claude's (one that
+    is gone: heard while it runs or within 0.5 s). The person's save during such a command is counted as Claude's:
+    that is the price of not calling Claude's own the person's. A command that surely writes nothing
+    (`surelyWritesNothing`: no redirect or substitution, only programs that read) claims nothing. What a background
+    command writes after its call returned is the person's.
+  - With no hooks (`NO_HOOKS`) every save is the person's. MCP tools write no board file.
 - **Mode, model and effort** are the session's alone (`set_permission_mode`, `set_model`, `apply_flag_settings`,
   held in the CLI's memory), checked before they are sent, and never written to a settings file. `start` takes a
   model and an effort and drops what is neither (`agentChoiceOf`). The last list of models a CLI offered is kept in

@@ -167,8 +167,8 @@ test('routing runs in the background, and its copper goes stale after a move', a
     await expect.poll(async () => (await drawn(page)).board?.revealing ?? true).toBe(false)
     // The build the route asked for is the person's, as the builds timeline and the route card's head say, and its build is routed.
     const timeline = page.locator('[data-region="builds"]')
-    await expect(timeline.locator('.tl-chip').last()).toContainText('Routed by you')
-    await expect(card(page).locator('h2').first()).toContainText('Latest build · routed by you')
+    await expect(timeline.locator('.tl-chip').last()).toContainText('Route you ran')
+    await expect(card(page).locator('h2').first()).toContainText('Latest build · route you ran')
     await expect(card(page).locator('h2').first()).toContainText('routed')
     await timeline.locator('.timeline-toggle').click()
     await expect(timeline.locator('.strip-node[data-on-show] .strip-by')).toHaveText('routed')

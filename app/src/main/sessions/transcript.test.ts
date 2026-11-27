@@ -466,15 +466,31 @@ describe('the builds of a turn', () => {
     t.message(init())
     now = 9000
     t.message(result({ duration_ms: 100 }))
-    expect(turnBuilds).toHaveBeenCalledExactlyOnceWith(5000)
+    expect(turnBuilds).toHaveBeenCalledExactlyOnceWith(5000, [])
     expect(of(t, 'turn')[0].builds).toEqual(ran)
+  })
+
+  it('names the prompts the turn took up, one folded into it too, and none of another turn', () => {
+    const turnBuilds = vi.fn((_since: number, _prompts: string[]) => undefined)
+    const t = new Transcript({ turnBuilds })
+    const first = t.userSent(text('one'), false)
+    t.context({ text: '', sentMarkIds: [], prompt: 'one' })
+    t.message(init())
+    const folded = t.userSent(text('two'), true)
+    t.context({ text: '', sentMarkIds: [], prompt: 'two' })
+    t.message(result())
+    const third = t.userSent(text('three'), false)
+    t.context({ text: '', sentMarkIds: [], prompt: 'three' })
+    t.message(init())
+    t.message(result())
+    expect(turnBuilds.mock.calls.map((c) => c[1])).toEqual([[first.id, folded.id], [third.id]])
   })
 
   it('counts back by how long the turn took when no init said it began', () => {
     const turnBuilds = vi.fn(() => undefined)
     const t = new Transcript({ now: () => 9000, turnBuilds })
     t.message(result({ duration_ms: 1500 }))
-    expect(turnBuilds).toHaveBeenCalledExactlyOnceWith(7500)
+    expect(turnBuilds).toHaveBeenCalledExactlyOnceWith(7500, [])
     expect(of(t, 'turn')[0]).not.toHaveProperty('builds')
   })
 

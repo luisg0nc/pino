@@ -12,7 +12,7 @@ export interface Usage extends TokenCount {
   costUsd?: number
 }
 
-/** What a turn's items say it did besides spending: the pictures that came into the conversation and the builds that ran. */
+/** What a turn's items say it did besides spending: the pictures that came into the conversation and the builds Claude made. */
 export interface UsageFacts {
   /** By where from: a tool's own name (`look`, `Read`), `you` for the person's own pictures. */
   pictures: Record<string, number>

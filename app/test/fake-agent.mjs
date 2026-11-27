@@ -42,12 +42,15 @@
 //     a directory, a mode); its `description` and `blocked_path` are those of the input when it has them;
 //   - the script is one command per line (a line that is none is `say <line>`):
 //       say <text>                a streamed text, then the whole assistant message
-//       tool <name> <json input>  a tool_use, PreToolUse/PostToolUse, a tool_result `ran <name>`; for a name that
-//                                 begins `mcp__pino__` pino's MCP server is called for real and the tool_result
-//                                 holds its `content` as it came
-//       ask <name> <json input>   a `can_use_tool` control_request, waits for its answer, a tool_result
-//                                 `allowed: <json updatedInput>` (and, when the answer carried them, a second line
-//                                 `permissions: <json updatedPermissions>`) or `denied: <message>`
+//       tool <name> <json input>  a tool_use, PreToolUse/PostToolUse (each with `tool_name`, `tool_use_id` and
+//                                 `tool_input`), a tool_result `ran <name>`; for a name that begins `mcp__pino__` pino's
+//                                 MCP server is called for real and the tool_result holds its `content` as it came
+//       ask <name> <json input>   PreToolUse, then a `can_use_tool` control_request (the CLI's order), waits for its
+//                                 answer, a tool_result `allowed: <json updatedInput>` (and, when the answer carried
+//                                 them, a second line `permissions: <json updatedPermissions>`) with a PostToolUse, or
+//                                 `denied: <message>`, an error, with none
+//       bash <command>            a `Bash` tool that really runs the command with `sh -c` between its hooks; a
+//                                 command that fails is an error result
 //       slow <seconds>            a word every 100 ms for that long
 //       rate <percent>            a `rate_limit_event` at that utilization
 //       images                    says what pictures came with the prompt: `images: <n> <width>x<height> ...`, the
@@ -94,7 +97,7 @@
 // in place of the `Stop`, and a `result` with `is_error: true` and <text> as its `result`; the prompt's script is not run.
 // The turns after it run as ever; with FAKE_AGENT_AUTH_EXIT=1 too it exits 1 after that `result` instead. (The shape is the
 // SDK's, not yet seen from a real CLI.)
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -269,13 +272,17 @@ async function streamMode() {
     return answer?.result ?? { content: [{ type: 'text', text: JSON.stringify(answer?.error ?? answer) }], isError: true }
   }
 
-  async function tool(name, input, asked, holdMs = 0) {
+  async function tool(name, input, asked, holdMs = 0, act) {
     // A prompt that comes now is folded into the turn.
     turn.foldable = true
     const id = next('toolu')
     out(message([{ type: 'tool_use', id, name, input }]))
     let content = `ran ${name}`
     let isError = false
+    let denied = false
+    // As the CLI orders them: the hook comes before any request for permission.
+    const hooked = { tool_name: name, tool_use_id: id, tool_input: input }
+    await post('PreToolUse', hooked)
     if (asked) {
       const requestId = next('req_perm')
       const wait = new Promise((resolve) => answers.set(requestId, resolve))
@@ -285,9 +292,12 @@ async function streamMode() {
       pending.delete(requestId)
       if (turn.aborted) return
       if (response?.behavior === 'allow') content = `allowed: ${JSON.stringify(response.updatedInput)}${response.updatedPermissions ? `\npermissions: ${JSON.stringify(response.updatedPermissions)}` : ''}`
-      else content = `denied: ${response?.message ?? ''}`
+      else {
+        content = `denied: ${response?.message ?? ''}`
+        denied = true
+        isError = true
+      }
     }
-    await post('PreToolUse', { tool_name: name })
     if (holdMs > 0) await pause(holdMs)
     if (turn.aborted) {
       // As the CLI does for a tool that was running: its result is the rejection, and the interrupt note says "for tool use".
@@ -302,7 +312,9 @@ async function streamMode() {
       content = result.content
       isError = result.isError === true
     }
-    await post('PostToolUse', { tool_name: name })
+    if (act) isError = act() !== 0
+    // A tool that was denied did not run: the CLI posts no `PostToolUse` for it.
+    if (!denied) await post('PostToolUse', hooked)
     out({ type: 'user', message: { role: 'user', content: [{ tool_use_id: id, type: 'tool_result', content, is_error: isError }] }, ...base, uuid: next('uuid') })
     turn.foldable = false
     await takeFolded()
@@ -388,6 +400,8 @@ async function streamMode() {
     } else if (command === 'edit') {
       const [file, old, replacement] = words(rest)
       await edit(file ?? '', old ?? '', replacement ?? '')
+    } else if (command === 'bash') {
+      await tool('Bash', { command: rest }, false, 0, () => spawnSync('sh', ['-c', rest], { stdio: 'ignore' }).status)
     } else if (command === 'work') {
       await tool('Bash', { command: `sleep ${rest}` }, false, Number(rest) * 1000)
     } else if (command === 'slow') {

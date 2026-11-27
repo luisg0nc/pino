@@ -28,7 +28,7 @@ export interface StripNode {
   kind: 'built' | 'failed' | 'running' | 'gone'
   /** How it stands, under its picture: `ok`, `routed`, `stale`, `2 errors`, `failed`, `not kept`, `building`. */
   caption: string
-  /** What made it, as its group is labelled (`byOf`): `Prompt 14`, `Saved by you`, `Routed by you`, `Earlier`; empty when nothing is known yet. */
+  /** What made it, as its group is labelled (`byOf`): `Prompt 14`, `Saved by you`, `Route you ran`, `Earlier`; empty when nothing is known yet. */
   by: string
   /** What made it, as main kept it. */
   cause: BuildCause
@@ -54,14 +54,14 @@ export function captionOf(entry: BuildEntry, facts: Facts | undefined): string {
 
 const promptBy = (n: number | undefined): string => (n === undefined ? '' : `Prompt ${n}`)
 
-/** What made a build, as its group is labelled: `Prompt 14`, `Saved by you`, `Routed by you`, `Earlier`; `Claude Code` for a prompt with no number. */
+/** What made a build, as its group is labelled: `Prompt 14`, `Saved by you`, `Route you ran`, `Earlier`; `Claude Code` for a prompt with no number. */
 function byOf(cause: BuildCause, number: number | undefined): string {
   if (number !== undefined) return promptBy(number)
   switch (cause) {
     case 'person':
       return 'Saved by you'
     case 'route':
-      return 'Routed by you'
+      return 'Route you ran'
     case 'agent':
       return 'Claude Code'
     case 'unknown':
@@ -110,7 +110,7 @@ export function stripNodes(
 export interface StripGroup {
   /** The id of its first build: what the timeline keeps it open by. */
   id: string
-  /** `Prompt 4`, `Saved by you`, `Routed by you`, `Earlier`, `Claude Code`; `Building` for one nobody can say yet. */
+  /** `Prompt 4`, `Saved by you`, `Route you ran`, `Earlier`, `Claude Code`; `Building` for one nobody can say yet. */
   label: string
   /** Its builds, oldest first. */
   nodes: StripNode[]

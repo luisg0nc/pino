@@ -64,8 +64,11 @@ export interface TranscriptOptions {
   emitMeta?: (meta: ChatMeta) => void
   /** The session continues a conversation (`--resume`). */
   resumed?: boolean
-  /** The builds that ran since `since` (ms), asked at the end of each turn and kept on its item; none when there were none or none can be said. */
-  turnBuilds?: (since: number) => TurnBuilds | undefined
+  /**
+   * The builds a turn made since `since` (ms) for the prompts it took up, asked at the end of each turn and kept on
+   * its item; none when it made none or none can be said.
+   */
+  turnBuilds?: (since: number, prompts: string[]) => TurnBuilds | undefined
   /** The plugin of skills pino passed to the CLI: its `init` is then read for whether it loaded. Absent: none was passed, and nothing is expected. */
   plugin?: { name: string; skills: readonly string[] }
   /** The versions of the CLI pino was checked against, inclusive: one older, or of a newer major or minor, is said once. Absent: no version is judged. */
@@ -182,6 +185,8 @@ export class Transcript {
   private readonly dirty = new Set<string>()
 
   private turnStarted: number | null = null
+  /** The prompts the turn at work took up by their hooks, those folded into it too. */
+  private turnPrompts: string[] = []
   private interrupted = false
   /** pino asked the CLI to interrupt, and the turn has not ended yet. */
   private interruptWanted = false
@@ -306,6 +311,7 @@ export class Transcript {
       const forUser = passed[passed.length - 1]
       for (const id of passed) this.take(id)
       this.promptsPassed = [...passed]
+      this.turnPrompts.push(...passed)
       this.promptTaken = { item: forUser, text: (this.byId.get(forUser) as { text?: string } | undefined)?.text ?? '' }
       // This hook starts a turn, and the `init` that follows it is its own (unless its lifecycle said so already).
       this.explain(forUser)
@@ -873,6 +879,7 @@ export class Transcript {
     this.explained = 0
     this.explainedIds.clear()
     this.turnStarted = null
+    this.turnPrompts = []
     this.unconfirmed.clear()
     this.blocks.clear()
   }
@@ -880,7 +887,7 @@ export class Transcript {
   /** The turn's builds. A domain that throws is logged, and the turn ends all the same. */
   private buildsSince(since: number): TurnBuilds | undefined {
     try {
-      return this.turnBuilds?.(since)
+      return this.turnBuilds?.(since, [...this.turnPrompts])
     } catch (e) {
       console.error(`the builds of the turn cannot be told: ${e instanceof Error ? e.message : String(e)}`)
       return undefined

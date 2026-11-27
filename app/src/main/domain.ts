@@ -210,8 +210,8 @@ export class PinoDomain implements SessionDomain {
     return hold('unlooked', `h${latest.number} was built in this turn and you have not looked at it. Call ${this.deps.toolName('look')} or ${this.deps.toolName('check')} before finishing.`)
   }
 
-  turnBuilds(project: ProjectInfo, since: number) {
-    return this.deps.builds.ranSince(project.id, since)
+  turnBuilds(project: ProjectInfo, since: number, prompts: readonly string[]) {
+    return this.deps.builds.ranSince(project.id, since, prompts)
   }
 
   private routedOn(projectId: string, r: BuildResult): number | undefined {
