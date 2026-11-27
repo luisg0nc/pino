@@ -11,7 +11,8 @@ const FABBED = { FAKE_KERNEL_SERVE: '3' }
 
 const state = (page: Page) => page.evaluate(() => window.__pinoTest!.state())
 const drawn = (page: Page) => page.evaluate(() => window.__pinoTest!.drawn())
-const brief = (page: Page) => page.locator('[data-region="left"] .route-section').filter({ has: page.getByRole('heading', { name: 'Brief' }) })
+const brief = (page: Page) => page.getByRole('tabpanel', { name: 'Brief' }).getByRole('region', { name: 'Fab', exact: true })
+const openBrief = (page: Page) => page.getByRole('tablist', { name: 'Views' }).getByRole('tab', { name: 'Brief' }).click()
 const pill = (page: Page) => page.locator('[data-region="status"]').getByRole('button', { name: /^Fab files/ })
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Fab files for JLCPCB' })
 
@@ -39,6 +40,7 @@ test('the Brief shows the fab limits from the first build', async () => {
   const { app, page } = await launch({ project: referenceProject(), env: FABBED })
   try {
     await waitForBuild(page, 1)
+    await openBrief(page)
     await expect(brief(page)).toContainText('JLC standard 2-layer')
     await expect(brief(page)).toContainText('Annular ring (copper round a hole)')
     await expect(brief(page)).toContainText("From JLC's capability page, read 2026-11-26.")
@@ -52,6 +54,8 @@ test('an engine without fab files shows no Fab files button', async () => {
   try {
     await waitForBuild(page, 1)
     await expect(pill(page)).toHaveCount(0)
+    await openBrief(page)
+    await expect(brief(page)).toContainText('Nothing is asked of the fab on a card.')
     await expect(brief(page)).not.toContainText('Annular ring')
   } finally {
     await app.close()

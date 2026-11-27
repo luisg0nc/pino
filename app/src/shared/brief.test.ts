@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { type Card, linksIn, type PartReading } from './cards'
-import { briefSections, referenceNotes, sizeAgainst, briefSpine, briefWords, freshCards, handOf, promptsSaid, seenHash, seenOf, whenSaid, linkLabel, sizeSource, sizeValue, spineSaid, topicOf } from './brief'
+import { boardDisagreements, briefSections, referenceNotes,sizeAgainst, briefSpine, briefWords, freshCards, handOf, promptsSaid, seenHash, seenOf, whenSaid, linkLabel, sizeSource, sizeValue, spineSaid, topicOf } from './brief'
 import type { PromptRow } from './chat'
 
 const card = (id: string, extra: Partial<Card>): Card => ({ id, kind: 'note', by: 'person', ...extra })
@@ -47,6 +47,32 @@ describe('the board beside what was asked', () => {
     // A value that is no one number is not compared, nor is anything with no board.
     expect(sizeAgainst(size('Board width', 'about 50'), { w: 56, h: 44 })).toBeNull()
     expect(sizeAgainst(size('Board width', '50'), null)).toBeNull()
+  })
+})
+
+describe('where the build and the Brief disagree, in the left column', () => {
+  const size = (id: string, what: string, value: string): Card => card(id, { kind: 'size', size: { what, value, unit: 'mm', source: 'measured' } })
+
+  it('says nothing when they agree', () => {
+    expect(boardDisagreements([size('C1', 'Board width', '40'), size('C2', 'Board height', '30.04')], { w: 40, h: 30 })).toEqual([])
+  })
+
+  it('says a board too wide, with what the Brief says', () => {
+    expect(boardDisagreements([size('C1', 'Board width', '35 mm')], { w: 40, h: 30 })).toEqual([{ card: 'C1', words: 'Board is 40.0 mm wide, the Brief says 35 mm' }])
+  })
+
+  it('says each side that differs, in the order of the cards, with the decimals the board has', () => {
+    expect(boardDisagreements([size('C10', 'board height', '31,5'), size('C2', 'Board width', '41')], { w: 40.25, h: 30 })).toEqual([
+      { card: 'C2', words: 'Board is 40.25 mm wide, the Brief says 41 mm' },
+      { card: 'C10', words: 'Board is 30.0 mm high, the Brief says 31.5 mm' }
+    ])
+  })
+
+  it('says nothing with no size cards, no board, or a size nothing measures', () => {
+    expect(boardDisagreements([], { w: 40, h: 30 })).toEqual([])
+    expect(boardDisagreements([card('C1', { kind: 'rule', text: 'Board width 35 mm' })], { w: 40, h: 30 })).toEqual([])
+    expect(boardDisagreements([size('C1', 'Board width', '35')], null)).toEqual([])
+    expect(boardDisagreements([size('C1', 'USB-C offset', '3'), size('C2', 'Board width', 'about 35')], { w: 40, h: 30 })).toEqual([])
   })
 })
 
