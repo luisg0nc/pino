@@ -46,14 +46,16 @@ const SAME_MM = 0.05
  * What the board on show measures where a size is of its width or its height, and whether the two differ. Null for any
  * other size, one whose value is not one number of millimetres, and with no board.
  */
-export function sizeAgainst(card: Card, box: { w: number; h: number } | null): { built: number; differs: boolean } | null {
+export function sizeAgainst(card: Card, box: { w: number; h: number } | null): { side: 'width' | 'height'; built: number; differs: boolean } | null {
   const size = card.size
   if (!size || !box || size.unit !== 'mm') return null
-  const side = BOARD_SIZE.width.test(size.what.trim()) ? box.w : BOARD_SIZE.height.test(size.what.trim()) ? box.h : null
+  const side = BOARD_SIZE.width.test(size.what.trim()) ? 'width' : BOARD_SIZE.height.test(size.what.trim()) ? 'height' : null
   const asked = parseSize(size.value, size.unit)
-  if (side === null || !Number.isFinite(side) || !asked || asked.mark !== undefined || asked.numbers.length !== 1) return null
-  const built = Math.round(side * 100) / 100
-  return { built, differs: Math.abs(built - asked.numbers[0]) > SAME_MM }
+  if (side === null || !asked || asked.mark !== undefined || asked.numbers.length !== 1) return null
+  const measured = side === 'width' ? box.w : box.h
+  if (!Number.isFinite(measured)) return null
+  const built = Math.round(measured * 100) / 100
+  return { side, built, differs: Math.abs(built - asked.numbers[0]) > SAME_MM }
 }
 
 /**
@@ -64,9 +66,8 @@ export function boardDisagreements(cards: readonly Card[], box: { w: number; h: 
   return readingOrder(cards).flatMap((card) => {
     const against = sizeAgainst(card, box)
     if (!against?.differs) return []
-    const side = BOARD_SIZE.width.test(card.size!.what.trim()) ? 'wide' : 'high'
     const built = Number.isInteger(against.built) ? against.built.toFixed(1) : String(against.built)
-    return [{ card: card.id, words: `Board is ${built} mm ${side}, the Brief says ${sizeValue(card.size!)} mm` }]
+    return [{ card: card.id, words: `Board is ${built} mm ${against.side === 'width' ? 'wide' : 'high'}, the Brief says ${sizeValue(card.size!)} mm` }]
   })
 }
 

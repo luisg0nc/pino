@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { type Card, linksIn, type PartReading } from './cards'
-import { boardDisagreements, briefSections, referenceNotes,sizeAgainst, briefSpine, briefWords, freshCards, handOf, promptsSaid, seenHash, seenOf, whenSaid, linkLabel, sizeSource, sizeValue, spineSaid, topicOf } from './brief'
+import { boardDisagreements, briefSections, referenceNotes, sizeAgainst, briefSpine, briefWords, freshCards, handOf, promptsSaid, seenHash, seenOf, whenSaid, linkLabel, sizeSource, sizeValue, spineSaid, topicOf } from './brief'
 import type { PromptRow } from './chat'
 
 const card = (id: string, extra: Partial<Card>): Card => ({ id, kind: 'note', by: 'person', ...extra })
@@ -39,10 +39,10 @@ describe('the board beside what was asked', () => {
 
   it("sets the board's width beside a size of that name, and marks a difference", () => {
     const size = (what: string, value: string): Card => card('C1', { kind: 'size', size: { what, value, unit: 'mm', source: 'measured' } })
-    expect(sizeAgainst(size('Board width', '50'), { w: 56, h: 44 })).toEqual({ built: 56, differs: true })
-    expect(sizeAgainst(size('board height', '44'), { w: 56, h: 44 })).toEqual({ built: 44, differs: false })
+    expect(sizeAgainst(size('Board width', '50'), { w: 56, h: 44 })).toEqual({ side: 'width', built: 56, differs: true })
+    expect(sizeAgainst(size('board height', '44'), { w: 56, h: 44 })).toEqual({ side: 'height', built: 44, differs: false })
     expect(sizeAgainst(size('USB-C offset', '3'), { w: 56, h: 44 })).toBeNull()
-    expect(sizeAgainst(size('Board width', '56.04'), { w: 56.0000001, h: 44 })).toEqual({ built: 56, differs: false })
+    expect(sizeAgainst(size('Board width', '56.04'), { w: 56.0000001, h: 44 })).toEqual({ side: 'width', built: 56, differs: false })
     expect(sizeAgainst(size('Board width', '56.1'), { w: 56, h: 44 })?.differs).toBe(true)
     // A value that is no one number is not compared, nor is anything with no board.
     expect(sizeAgainst(size('Board width', 'about 50'), { w: 56, h: 44 })).toBeNull()
