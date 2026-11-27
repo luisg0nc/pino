@@ -13,15 +13,15 @@
     return e
   }
 
-  // The loop: four steps on a ring, the dot going round in eight seconds while the ring is in view.
+  // The loop: its steps on a ring, the dot going round in two seconds a step while the ring is in view.
   var ring = document.getElementById('ring')
   if (ring) {
-    var R = 120, LAP = 8000, C = 2 * Math.PI * R
+    var steps = document.querySelectorAll('.steps li'), N = steps.length
+    var R = 120, LAP = 2000 * N, C = 2 * Math.PI * R
     var nodeG = ring.querySelector('.ring-nodes'), dot = ring.querySelector('.ring-dot'), trail = ring.querySelector('.ring-trail')
-    var steps = document.querySelectorAll('.steps li')
     var marks = []
-    for (var k = 0; k < 4; k++) {
-      var ang = -Math.PI / 2 + (k * Math.PI) / 2
+    for (var k = 0; k < N; k++) {
+      var ang = -Math.PI / 2 + (k * 2 * Math.PI) / N
       var gk = el('g', {}, nodeG)
       el('circle', { cx: 160 + R * Math.cos(ang), cy: 160 + R * Math.sin(ang), r: 18 }, gk)
       var tx = el('text', { x: 160 + R * Math.cos(ang), y: 160 + R * Math.sin(ang) }, gk)
@@ -30,7 +30,7 @@
     }
     trail.setAttribute('stroke-dasharray', C.toFixed(1))
     var light = function (on) {
-      for (var j = 0; j < 4; j++) {
+      for (var j = 0; j < N; j++) {
         marks[j].classList.toggle('on', j === on)
         if (steps[j]) steps[j].classList.toggle('on', j === on)
       }
@@ -50,7 +50,7 @@
           dot.setAttribute('cx', (160 + R * Math.cos(a)).toFixed(2))
           dot.setAttribute('cy', (160 + R * Math.sin(a)).toFixed(2))
           trail.setAttribute('stroke-dashoffset', (C * (1 - p)).toFixed(1))
-          light(Math.floor(p * 4 + 0.08) % 4)
+          light(Math.floor(p * N + 0.08) % N)
         }
         requestAnimationFrame(spin)
       }
@@ -68,6 +68,25 @@
     }, { rootMargin: '0px 0px -10% 0px' })
     reveals.forEach(function (r) { ob.observe(r) })
   }
+})()
+
+// The window's pictures open full size over the page, and close on Escape, on Close or on a click outside the picture.
+// Without script, or without <dialog>, each is a link to its PNG.
+;(function () {
+  var box = document.querySelector('.lightbox')
+  if (!box || typeof box.showModal !== 'function') return
+  var img = box.querySelector('img')
+  document.querySelectorAll('a.zoom').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      e.preventDefault()
+      var small = a.querySelector('img')
+      img.src = a.getAttribute('href')
+      img.alt = small ? small.alt : ''
+      box.showModal()
+    })
+  })
+  box.addEventListener('click', function (e) { if (e.target === box) box.close() })
 })()
 
 // Copy button for the commands: shown only where the Clipboard API is there; else the text stays to select.

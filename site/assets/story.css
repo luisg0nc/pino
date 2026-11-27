@@ -1,0 +1,94 @@
+/* pino stories (story.js): the board on the left, drawn as pino's Board view draws it, the conversation on the right,
+   a tick for each turn under both. Uses the tokens of site.css. */
+.story {
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, 1fr); grid-template-rows: auto auto;
+  gap: 0; margin: 0; background: var(--panel); color: var(--ink); border-radius: var(--radius-sheet, 12px);
+  box-shadow: 0 1px 2px rgb(4 24 12 / .12), 0 18px 48px rgb(4 24 12 / .16); overflow: hidden;
+}
+
+.story-view { position: relative; padding: 14px 16px 12px; min-width: 0; }
+.story-head { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.story-name { color: var(--ink); font-size: 13px; }
+.story-rev { font-size: 12px; padding: 1px 7px; border-radius: 999px; background: var(--surface); }
+.story-status { display: inline-flex; align-items: center; gap: 7px; }
+.story-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--hairline); transition: background 300ms; }
+.story-status.working .story-dot { background: var(--accent); animation: story-pulse 1s ease-in-out infinite alternate; }
+.story-status.ok .story-dot { background: var(--ok); }
+.story-status.ok { color: var(--ok); }
+.story-status.warn .story-dot { background: var(--warn); }
+.story-status.warn { color: var(--warn); }
+.story-status.fail .story-dot { background: var(--fail); }
+.story-status.fail { color: var(--fail); }
+@keyframes story-pulse { from { opacity: .35; } to { opacity: 1; } }
+.story-pause {
+  margin-left: auto; font: 500 13px var(--font-ui); color: var(--muted); background: none; cursor: pointer;
+  border: 1px solid var(--hairline); border-radius: 6px; padding: 3px 10px;
+}
+.story-pause:hover { color: var(--ink); border-color: var(--accent); }
+.story-pause:focus-visible, .story-tick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.story-svg { width: 100%; aspect-ratio: 40 / 30; margin-top: 6px; overflow: hidden; }
+.story-grid { fill: none; stroke: var(--hairline); stroke-width: .05; }
+
+/* The board, in the Board view's tokens: millimetres, so hairlines keep to one screen pixel. */
+.sb-paper { fill: var(--board-paper); }
+.sb-hatch { stroke: var(--hatch-far); stroke-width: .06; }
+.sb-track { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sb-front .sb-track { stroke: var(--cu); }
+.sb-back .sb-track { stroke: var(--cu-far); }
+.sb-via { fill: var(--board-paper); stroke: var(--cu); stroke-width: .07; }
+.sb-drill, .sb-pad { fill: var(--cu); }
+.sb-hole { fill: var(--board-paper); }
+.sb-silk { fill: none; stroke: var(--silk); stroke-width: .12; stroke-linecap: round; }
+.sb-label { fill: var(--silk); font-family: var(--font-mono); text-anchor: middle; dominant-baseline: central; }
+.sb-edge { fill: none; stroke: var(--cu); stroke-width: .09; }
+.sb-rat { fill: none; stroke: var(--rat); stroke-width: .07; stroke-dasharray: .3 .2; }
+.sb-errors circle { fill: none; stroke: var(--fail); stroke-width: .16; }
+
+.story-readout { margin: 4px 2px 0; min-height: 2.9em; font-size: 14px; color: var(--muted); max-width: none; }
+.story .verdict { font-weight: 500; color: var(--fail); }
+.story .verdict.pass { color: var(--ok); }
+.story .verdict.warn { color: var(--warn); }
+
+/* The conversation: newest at the bottom, the oldest fading out at the top. */
+.story-chat {
+  position: relative; border-left: 1px solid var(--hairline); background: var(--surface); min-height: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%); mask-image: linear-gradient(to bottom, transparent, #000 22%);
+}
+.story-log { position: absolute; inset: auto 0 0 0; display: flex; flex-direction: column; gap: 14px; padding: 18px 18px 20px; }
+.story-row { margin: 0; font-size: 14.5px; line-height: 1.45; animation: story-in 380ms cubic-bezier(.2,.7,.2,1) both; }
+.story-log.instant .story-row, .story-log.instant .story-row * { animation: none !important; }
+@keyframes story-in { from { opacity: 0; transform: translateY(8px); } }
+.story-note { color: var(--muted); font-size: 13.5px; }
+.story-who { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-bottom: 3px; }
+.story-you .story-msg {
+  margin: 0; background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 9px 11px; max-width: none;
+}
+.story-caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 1px; vertical-align: -0.15em; background: var(--accent); animation: story-blink 1s steps(1) infinite; }
+@keyframes story-blink { 50% { opacity: 0; } }
+/* pino's lines: one for each build or route that landed, a dot in its verdict's colour. */
+.story-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.story-lines li { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--muted); max-width: none; animation: story-in 300ms ease both; }
+.story-verdict { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.story-lines li.ok { color: var(--ok); }
+.story-lines li.ok .story-verdict { background: var(--ok); }
+.story-lines li.warn .story-verdict { background: var(--warn); }
+.story-lines li.fail .story-verdict { background: var(--fail); }
+
+/* A tick for each turn; one goes back to it. */
+.story-ticks { grid-column: 1 / -1; display: flex; gap: 6px; padding: 10px 16px 14px; border-top: 1px solid var(--hairline); }
+.story-tick { flex: 1; height: 14px; padding: 5px 0; background: none; border: 0; cursor: pointer; position: relative; }
+.story-tick::before { content: ''; position: absolute; inset: 5px 0; border-radius: 2px; background: var(--hairline); }
+.story-tick span { position: absolute; left: 0; top: 5px; bottom: 5px; border-radius: 2px; background: var(--accent); width: 0; }
+.story-tick:hover::before { background: var(--scribe); }
+.story-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 860px) {
+  .story { grid-template-columns: minmax(0, 1fr); }
+  .story-chat { border-left: 0; border-top: 1px solid var(--hairline); height: 260px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-row, .story-lines li, .story-caret { animation: none; }
+}
+.story.recording .story-pause { visibility: hidden; }
+.story.recording { border-radius: 0; box-shadow: none; }

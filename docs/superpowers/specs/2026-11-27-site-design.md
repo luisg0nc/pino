@@ -85,6 +85,25 @@ A square link preview (1200 x 1200, the mark in the middle) and the og and twitt
 3. Luis: making the repository public, turning Pages on, the DNS record, and Enforce HTTPS once the certificate is
    issued.
 
+## Second round (branch `site-story`)
+
+The blinker was made with the real Claude Code in three prompts, so the page now has its story, and Luis asked for
+more of torno's craft:
+
+- **A board, prompt by prompt.** torno's story engine (`site/assets/story.js`) draws a board in 2D in place of
+  torno's 3D part. The board is the blinker's own builds (h4, h5, h7, h9) and routes (r1 to r3), written into
+  `site/stories/simple-blinker.board.js` by `app/scripts/story-board.mjs` with the app's board reader, and drawn in
+  the Board view's look. The lines are pino's, from `builds.json`, `result.json` and `route.json`; the prompts are
+  short versions of Luis's three. What Claude Code said back is left out, apart from one line saying it asked a
+  question before the first build.
+- **The loop has five steps**: you describe the board, Claude Code edits `board.py`, the engine builds and checks it,
+  the router lays the copper, pino draws it and tells Claude. The "no tools by hand" line is gone.
+- **Claude Code soldering in the heading**, drawn from its pixel mark as torno's is: it touches the iron to an LED's
+  joint, the solder flows and smokes, it lifts the iron, and the LED blinks three times. It plays once; with motion
+  reduced it is a still drawing of the joint being made.
+- **torno's mark** on the link to torno, **the window's pictures two across** (one on a phone), each opening full size
+  in a light box, and **an author section** linking luisg.me with one line from that page.
+
 ## Left to the builder
 
 The exact copy of each section (short, plain, no em dashes, humanized), the crop of each picture, and how much of

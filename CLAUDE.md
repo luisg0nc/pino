@@ -17,7 +17,8 @@ tools. Routing in the app works only with an engine that routes (serve protocol 
 - `scripts/pino` is the launcher; `scripts/torno-sync` the drift report on the copied files.
 - `site/` is the landing page (pino.luisg.me): `app/scripts/build-site.mjs` copies the fonts and the pictures of
   `docs/images/` into it (`docs/images/README.md` says how those are made), and `.github/workflows/pages.yml` deploys
-  it. `app/src/site.test.ts` holds it.
+  it. Its story is drawn from `site/stories/`, whose board data `app/scripts/story-board.mjs` makes from a real
+  project's builds and routes. `app/src/site.test.ts` holds it.
 - `.github/workflows/ci.yml` runs the unit tests, the typecheck, the guard cases and the e2e suite
   (`app/src/ci.test.ts` holds it).
 
