@@ -16,10 +16,13 @@ export type ViewName = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right' | 
 
 export const TAB_NAMES: Record<ViewTab, string> = { schematic: 'Schematic', board: 'Board', '3d': '3D' }
 
-/** What the middle of the window shows: the project's Brief, first, or one of the views of its board. */
-export type PaneTab = 'brief' | ViewTab
-export const PANE_TABS: readonly PaneTab[] = ['brief', 'schematic', 'board', '3d']
-export const PANE_NAMES: Record<PaneTab, string> = { brief: 'Brief', ...TAB_NAMES }
+/** What the middle of the window shows: the project's Brief, first, one of the views of its board, or what Claude Code spent on it, last. */
+export type PaneTab = 'brief' | ViewTab | 'usage'
+export const PANE_TABS: readonly PaneTab[] = ['brief', 'schematic', 'board', '3d', 'usage']
+export const PANE_NAMES: Record<PaneTab, string> = { brief: 'Brief', ...TAB_NAMES, usage: 'Usage' }
+
+/** Whether a tab is a view of the board: the Brief and Usage are pages, with no drawing, band or selection of their own. */
+export const isViewTab = (tab: PaneTab): tab is ViewTab => tab !== 'brief' && tab !== 'usage'
 
 /**
  * The tab a project opens on: with no `board.py` the Brief, else the one it was left on, else the schematic. A project
@@ -30,9 +33,9 @@ export function firstTab(listed: ListedProject | undefined, remembered: PaneTab 
   return remembered ?? 'schematic'
 }
 
-/** The view Claude's `look` draws: the one it asks for, else the one on screen; on the Brief, the board. */
+/** The view Claude's `look` draws: the one it asks for, else the one on screen; on a page that is no view, the board. */
 export function lookTab(asked: ViewTab | undefined, onScreen: PaneTab): ViewTab {
-  return asked ?? (onScreen === 'brief' ? 'board' : onScreen)
+  return asked ?? (isViewTab(onScreen) ? onScreen : 'board')
 }
 
 /** What is in hand in the views: the same thing in all three. */
@@ -48,7 +51,7 @@ export interface Selection {
 
 /** A tab's name; on a view's tab not chosen, with what is selected, so that switching is seen to keep it. */
 export function tabLabel(tab: PaneTab, chosen: PaneTab, selection: Selection | null): string {
-  return tab !== 'brief' && tab !== chosen && selection ? `${PANE_NAMES[tab]} · ${selection.label}` : PANE_NAMES[tab]
+  return isViewTab(tab) && tab !== chosen && selection ? `${PANE_NAMES[tab]} · ${selection.label}` : PANE_NAMES[tab]
 }
 
 export interface BoardLook {

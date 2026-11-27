@@ -40,7 +40,7 @@ import { takeAnswer, type ViewHolder } from './view'
 //            route:start, route:cancel, marks:list, marks:add, marks:update, marks:remove, marks:resolve,
 //            fab:state, fab:readiness, fab:release, fab:cancel, fab:profiles, fab:showFolder, cards:read, cards:change,
 //            cards:brief, cards:references, cards:reference, cards:openLink, cards:seen, cards:markSeen,
-//            cards:restock, chat:prompts, project:create, project:pickPhotos, project:pickPdf, project:readPhoto,
+//            cards:restock, chat:prompts, chat:usage, project:create, project:pickPhotos, project:pickPdf, project:readPhoto,
 //            project:taken, parts:lookup, project:onboard, project:previewPrompt
 //   sent:    chat:answer, view:answer, window:minimize, window:toggleMaximize, window:close
 //   to the window: session:status, chat:item, chat:meta, chat:capabilities, build:state, marks:changed, notice,
@@ -262,7 +262,12 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
     const project = projectOf(id)
     return project ? listPrompts(project.dir) : []
   })
-  handle('view:tell', (id: unknown, view: unknown) => {
+  // What each prompt of the project took (`sessions/usage.ts`): the turn lines of `.pino/chat/`, read only.
+  handle('chat:usage', (id: unknown) => {
+    const project = projectOf(id)
+    return project ? sessions.usage(project) : { rows: [] }
+  })
+  handle('view:tell',(id: unknown, view: unknown) => {
     const project = projectOf(id)
     if (project) views.tell(project.id, view)
   })

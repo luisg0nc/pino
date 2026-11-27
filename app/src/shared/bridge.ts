@@ -9,6 +9,7 @@ import type { AgentChoice, ChatAnswer, ChatCommand, ChatHistory, ChatItem, ChatM
 import type { FabProfile, FabState, Readiness } from './fab'
 import type { Mark, MarkPatch, NewMark } from './marks'
 import type { ProjectInfo, RecentFolder } from './project'
+import type { ProjectUsage } from './usage'
 import type { EngineInfo } from './ready'
 import type { BoardLook, LookRequest, LookResult, PaneTab, Selection } from './view'
 import type { OpenFolder, WorkspaceInfo } from './workspace'
@@ -171,6 +172,8 @@ export interface PinoBridge {
     setEffort(sessionId: string, effort: Effort): Promise<void>
     /** The open project's prompts, oldest first, numbered across all its conversations. */
     prompts(projectId: string): Promise<PromptRow[]>
+    /** The prompts of `prompts` with what their turns took (the CLI's numbers and the builds kept on each turn of the chat logs, and the pictures of its items), and the median cost of a prompt: what the Usage page and "large" read. Read only. */
+    usage(projectId: string): Promise<ProjectUsage>
     /** The models a session can be started on before it has said its own. */
     models(): Promise<ChatModel[]>
     /** An item of the transcript was added or changed. One whose `seq` is not above that of the history asked for before holds nothing new. */

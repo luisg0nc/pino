@@ -1,7 +1,8 @@
 import { useRef, type KeyboardEvent } from 'react'
 import { pressed } from '../../shared/keys'
-import { emptyWords, PANE_NAMES, PANE_TABS, tabLabel, type PaneTab, type ViewTab } from '../../shared/view'
+import { emptyWords, isViewTab, PANE_NAMES, PANE_TABS, tabLabel, type PaneTab, type ViewTab } from '../../shared/view'
 import { BriefPage } from './brief/BriefPage'
+import { UsagePage } from './usage/UsagePage'
 import { BoardView } from '../board/BoardView'
 import { SheetView } from '../sheet/SheetView'
 import { ThreeView } from '../three/ThreeView'
@@ -12,7 +13,7 @@ import { Plate } from './plate/Plate'
 import { ViewBand } from './view/Band'
 
 /**
- * The middle of the window: the project's Brief and the three views over one build of its board, with their tabs
+ * The middle of the window: the project's Brief, the three views over one build of its board and its Usage page, with their tabs
  * floating at the top left and what is true of a whole view in a band at its foot. With nothing built, a view is the dye
  * and says why. One tab is in the tab order; Left and Right on it choose the one beside it.
  */
@@ -63,10 +64,10 @@ export function ViewPane() {
         ))}
       </div>
       <div className="views-panel" role="tabpanel" id="view-panel" aria-labelledby={`view-tab-${chosen}`} data-view={chosen}>
-        {chosen === 'brief' ? <BriefPage /> : model ? <Drawn tab={chosen} model={model} /> : <Empty />}
+        {chosen === 'brief' ? <BriefPage /> : chosen === 'usage' ? <UsagePage /> : model ? <Drawn tab={chosen} model={model} /> : <Empty />}
       </div>
       {/* Which build the copper is from, as Claude is told it; else (a run begun with it stale) the build the route names. */}
-      {model && chosen !== 'brief' && <ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
+      {model && isViewTab(chosen) &&<ViewBand from={build?.copperFrom ?? build?.history.find((e) => e.hash !== null && e.hash === model.routedBuild)?.number} />}
     </main>
   )
 }

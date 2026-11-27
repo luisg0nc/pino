@@ -67,6 +67,8 @@ pino builds it into a KiCad 10 project and shows it. pino is a sibling of
   that says what to upload and what to check in JLC's preview. Each release is a version, `fab/v1.0.0/`.
 - **Every build kept.** The builds strip at the top of the session has a picture of each build. Press one to see
   that build in the views.
+- **What it cost.** Each turn ends with what Claude Code says it cost and how many tokens it took, and a turn far
+  above the project's usual one says what happened in it. The Usage tab adds it up by day, conversation and prompt.
 - **Local.** pino itself uploads nothing. The only requests it makes are part lookups on jlcsearch, which carry pino's
   version and nothing about you. The agent is your own `claude`, under your own login, and pino leaves its settings
   alone. In your folders, pino writes only under `<project>/.pino/` and, when you release, `<project>/fab/`.

@@ -39,7 +39,8 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
         await settle()
         return state
       },
-      routedOn: () => 5
+      routedOn: () => 5,
+      ranSince: () => undefined
     },
     marks: { drafts: async () => opts.drafts ?? [], open: async () => opts.open ?? [], markSent },
     view: () => opts.view ?? null,
@@ -101,6 +102,7 @@ describe("the build in Claude's prompt", () => {
     expect((await domain({ view: { tab: '3d', look: DEFAULT_LOOK, selection: null } }).d.promptContext(project, 'x')).text).toContain('The person sees the 3D tab.')
     // On the Brief nothing of a view is in hand to speak of.
     expect((await domain({ view: { tab: 'brief', look: DEFAULT_LOOK, selection: padSel } }).d.promptContext(project, 'x')).text.split('\n')).toContain('The person sees the Brief.')
+    expect((await domain({ view: { tab: 'usage', look: DEFAULT_LOOK, selection: padSel } }).d.promptContext(project, 'x')).text.split('\n')).toContain('The person sees the Usage page.')
   })
 
   it('adds nothing for a project with nothing built and nothing marked', async () => {
