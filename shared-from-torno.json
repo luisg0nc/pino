@@ -252,6 +252,7 @@
     { "pino": "site/index.html", "torno": "site/index.html", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's copy and six sections; no animated bench, story, manual or fit lists" },
     { "pino": "site/assets/site.css", "torno": "site/assets/site.css", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's tokens and sections; one dark block; no bench animation, heading drawing or story" },
     { "pino": "site/assets/site.js", "torno": "site/assets/site.js", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "the loop ring, the reveal and the copy button only; no bracket in the hero" },
-    { "pino": "site/.nojekyll", "torno": "site/.nojekyll", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "as-is" }
+    { "pino": "site/.nojekyll", "torno": "site/.nojekyll", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "as-is" },
+    { "pino": "app/scripts/site-images.py", "torno": "app/scripts/readme-images.py", "commit": "8086e7cac36981150e41ffd342160f749a712c07", "mode": "adapted", "change": "pino's seven pictures; a square link preview in the page's face", "moved": "pino's pictures are the landing page's; there are no README pictures yet" }
   ]
 }
