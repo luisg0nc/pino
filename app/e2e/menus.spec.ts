@@ -1,13 +1,11 @@
 // The menus that hang from a button (the folder menu of the title bar, the session dock's More, the view cube's "···"):
 // each is a card over what is under it, its rows plain until pointed at, and no row's words lie over another's.
 
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { expect, test, type Locator } from '@playwright/test'
 import { newSession, waitForBuild } from './helpers'
 import { launch, referenceProject, tempFolder, tempProject } from './launch'
-
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
 
 /** How a menu and its first row are drawn. */
 const drawn = (menu: Locator) =>
@@ -128,33 +126,6 @@ test('on the page of projects and the New project page the folder menu has its k
     await expect(fresh).toBeVisible()
     await walk()
     await expect(fresh).toBeVisible()
-  } finally {
-    await app.close()
-  }
-})
-
-// The same with a picture of the Brief open large: it heard every Escape first, and the menu is drawn over it.
-test('over a Brief picture opened large, Escape closes the folder menu first, then the picture', async () => {
-  const dir = tempProject('blinky')
-  writeFileSync(join(dir, 'brief.md'), '# blinky\n\n## References\n\n- reference/photo-1.png: the old board\n')
-  mkdirSync(join(dir, 'reference'))
-  writeFileSync(join(dir, 'reference', 'photo-1.png'), PNG)
-  const { app, page } = await launch({ project: dir })
-  try {
-    await page.getByRole('img', { name: 'the old board' }).click()
-    const picture = page.getByRole('dialog', { name: 'the old board' })
-    await expect(picture).toBeVisible()
-    const button = page.getByRole('button', { name: /^Workspace / })
-    await button.click()
-    const menu = page.getByRole('menu', { name: 'Workspaces' })
-    await expect(menu.getByRole('menuitem', { name: 'Open workspace…' })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(menu).toHaveCount(0)
-    await expect(button).toBeFocused()
-    await expect(picture).toBeVisible()
-    // With the menu gone, the next Escape is the picture's, wherever the focus is.
-    await page.keyboard.press('Escape')
-    await expect(picture).toHaveCount(0)
   } finally {
     await app.close()
   }

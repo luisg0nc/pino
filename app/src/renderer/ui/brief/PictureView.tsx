@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { pressed } from '../../../shared/keys'
+import { inMenu } from '../inMenu'
 
 /**
  * A picture of the Brief opened large, over the page: Esc, the button or a click outside it puts it away. Esc is
@@ -14,9 +15,7 @@ export function PictureView({ url, label, onClose }: { url: string; label: strin
     const before = document.activeElement
     sheet.current?.focus()
     const onKey = (e: KeyboardEvent): void => {
-      if (!pressed(e, 'sheet.close')) return
-      // A menu of the title bar, drawn over the picture, with the focus in it: its Escape closes it, not the picture.
-      if (e.target instanceof Element && e.target.closest('[role="menu"]')) return
+      if (!pressed(e, 'sheet.close') || inMenu(e)) return
       e.preventDefault()
       e.stopPropagation()
       close.current()
