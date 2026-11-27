@@ -19,6 +19,8 @@ import { FOLDER, whyNotOwn } from './own'
 export const DEBOUNCE_MS = 300
 /** How many builds of an open project are remembered for `ranSince`: far more than one turn runs. */
 const MOST_RAN = 500
+/** How many of Claude's builds are kept with their results, for the Stop: as many as the engine keeps builds. */
+const MOST_CLAUDES = 20
 /** The engine is started again at most this often: a start that fails at once must not become a loop. */
 const RESTART_MS = 10_000
 /** How long a new engine has to answer: its first run under uv may have its environment to make. */
@@ -114,6 +116,31 @@ export function causeOfSave(claude: { turn?: BuildTurn } | undefined): KeptCause
   return { cause: 'agent', ...(claude.turn ? { turn: { ...claude.turn } } : {}) }
 }
 
+/**
+ * Whether a cause is Claude's in a turn that took up `prompts`: its tool calls made it, for one of them or for none that
+ * could be named. By cause: a save of the person's is no turn's, whenever it was made.
+ */
+function ofPrompts(made: KeptCause | undefined, prompts: readonly string[]): boolean {
+  return made?.cause === 'agent' && (!made.turn || prompts.includes(made.turn.prompt))
+}
+
+/**
+ * Whether a build, or one on its way (no `startedAt` yet), is Claude's in the turn that began at `since` and has taken
+ * up `prompts`. One that names a prompt of the turn is its whenever it began: a prompt folded into a turn at work moves
+ * `since` past what the turn had built. The time tells only of one with no prompt to name.
+ */
+function claudesIn(made: KeptCause | undefined, startedAt: number | undefined, since: number, prompts: readonly string[]): boolean {
+  return ofPrompts(made, prompts) && (made?.turn !== undefined || (startedAt ?? since) >= since)
+}
+
+/** A build of Claude's that came back. */
+export interface ClaudesBuild {
+  result: BuildResult
+  endedAt: number
+  /** A later build drew something, whoever made it. */
+  redrawn: boolean
+}
+
 interface Entry {
   project: ProjectInfo
   state: BuildState
@@ -126,7 +153,13 @@ interface Entry {
   /** Waiting out the rest of RESTART_MS before another start of the engine. */
   retry?: NodeJS.Timeout
   startedAt?: number
-  endedAt?: number
+  /** The build at work: what made it, and when the engine was asked, once it has been. */
+  making?: { made: KeptCause; startedAt?: number }
+  /**
+   * Claude's builds that came back, oldest first, the last `MOST_CLAUDES`, and whether one after each drew something. A
+   * build of an earlier prompt's may come after this turn's, as a route's end does, and hides none of them.
+   */
+  claudes: Array<ClaudesBuild & { startedAt: number; made: KeptCause }>
   /** The builds that came back, oldest first, the last `MOST_RAN`: when each began, what made it, and whether it drew something. */
   ran: Array<{ number: number; startedAt: number; drew: boolean; made: KeptCause }>
   /** For each route seen current, the build it was first seen on. */
@@ -194,6 +227,7 @@ export class Builds {
       seen: false,
       running: false,
       ran: [],
+      claudes: [],
       routes: new Map(),
       causes: new Map(),
       loaded: Promise.resolve(),
@@ -214,7 +248,9 @@ export class Builds {
         // The burst has settled: what made it wants the next build, not one already on its way. A watch that told no
         // save as it heard it has the whole burst asked of now.
         const burst = entry.burst ?? paths.reduce<KeptCause | undefined>((held, path) => merged(held, this.causeNow(project.id, path)), undefined)
-        if (burst) entry.pending = merged(entry.pending, burst)
+        // Of two that rank alike the save's stands, over a rebuild that was asked for and waits (a route's end, of an
+        // earlier prompt perhaps): the save is what changed the board.
+        if (burst) entry.pending = merged(burst, entry.pending ?? burst)
         entry.burst = undefined
         this.want(entry)
       },
@@ -260,19 +296,25 @@ export class Builds {
     return this.entries.get(projectId)?.state.lastGood ?? null
   }
 
-  /** Whether a save has been heard of that no build has started for yet. */
-  pending(projectId: string): boolean {
+  /**
+   * The number of the build of Claude's that is on its way in a turn that began at `since` and took up `prompts`: the
+   * one at work, or the next, for a save heard of or settled that no build has started for yet. Undefined when none is.
+   */
+  claudesComing(projectId: string, since: number, prompts: readonly string[]): number | undefined {
     const entry = this.entries.get(projectId)
-    return entry !== undefined && (entry.seen || (entry.wanted && entry.retry === undefined && !entry.running))
+    if (!entry) return undefined
+    const running = entry.state.history.find((e) => e.verdict === 'running')?.number
+    const newest = running ?? Math.max(entry.state.history.at(-1)?.number ?? 0, entry.state.latest?.number ?? 0)
+    const at = entry.running ? entry.making : undefined
+    if (at && claudesIn(at.made, at.startedAt, since, prompts)) return running ?? newest + 1
+    const heard = entry.seen && claudesIn(entry.burst, undefined, since, prompts)
+    const waits = entry.wanted && entry.retry === undefined && claudesIn(entry.pending, undefined, since, prompts)
+    return heard || waits ? newest + 1 : undefined
   }
 
-  /** When the newest build began, and when the newest one ended. */
-  startedAt(projectId: string): number | undefined {
-    return this.entries.get(projectId)?.startedAt
-  }
-
-  endedAt(projectId: string): number | undefined {
-    return this.entries.get(projectId)?.endedAt
+  /** The newest build of Claude's in such a turn that came back. */
+  claudesBuild(projectId: string, since: number, prompts: readonly string[]): ClaudesBuild | undefined {
+    return this.entries.get(projectId)?.claudes.findLast((b) => claudesIn(b.made, b.startedAt, since, prompts))
   }
 
   /**
@@ -282,7 +324,7 @@ export class Builds {
    */
   ranSince(projectId: string, since: number, prompts: readonly string[]): TurnBuilds | undefined {
     const ran = this.entries.get(projectId)?.ran ?? []
-    const during = ran.filter((b) => b.startedAt >= since && b.made.cause === 'agent' && (!b.made.turn || prompts.includes(b.made.turn.prompt)))
+    const during = ran.filter((b) => b.startedAt >= since && ofPrompts(b.made, prompts))
     if (during.length === 0) return undefined
     const from = ran.findLast((b) => b.drew && b.startedAt < since)?.number
     const to = during.findLast((b) => b.drew)?.number
@@ -377,9 +419,11 @@ export class Builds {
     // Whatever wanted this build is taken as it starts: a save heard from now on, even while the engine is asked, is for the next one.
     const cause = entry.pending ?? { cause: 'unknown' }
     entry.pending = undefined
+    entry.making = { made: cause }
     this.say(entry, { building: true })
     void this.run(entry, cause).finally(() => {
       entry.running = false
+      entry.making = undefined
       if (this.entries.get(entry.project.id) !== entry) return
       if (entry.wanted) this.next(entry)
       else this.finish(entry)
@@ -466,6 +510,7 @@ export class Builds {
       await entry.loaded
       if (!open()) return
       entry.startedAt = this.now()
+      entry.making = { made: cause, startedAt: entry.startedAt }
       const before = entry.state.history
       const number = Math.max(before.at(-1)?.number ?? 0, entry.state.latest?.number ?? 0) + 1
       asked = true
@@ -476,7 +521,9 @@ export class Builds {
       // The engine numbers its builds, and its number is the one the cause belongs to.
       entry.causes.set(result.number, cause)
       this.keepCauses(entry)
-      entry.endedAt = this.now()
+      if (result.hash !== null) for (const before of entry.claudes) before.redrawn = true
+      if (cause.cause === 'agent') entry.claudes.push({ result, startedAt: entry.startedAt, endedAt: this.now(), made: cause, redrawn: false })
+      if (entry.claudes.length > MOST_CLAUDES) entry.claudes.shift()
       entry.ran.push({ number: result.number, startedAt: entry.startedAt, drew: result.hash !== null, made: cause })
       if (entry.ran.length > MOST_RAN) entry.ran.shift()
       // A result older than the one shown never replaces it.
@@ -500,7 +547,6 @@ export class Builds {
     } catch (e) {
       if (!open()) return
       if (!asked) entry.pending = entry.pending ? merged(cause, entry.pending) : cause
-      entry.endedAt = this.now()
       const history = entry.state.history.filter((one) => one.verdict !== 'running')
       if (e instanceof EngineDown || (e instanceof KernelError && e.kind === 'stopped')) {
         const reason = e instanceof EngineDown ? e.message : `The engine stopped: ${e.message}`

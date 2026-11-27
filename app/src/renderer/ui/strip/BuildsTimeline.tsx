@@ -208,7 +208,8 @@ export function BuildsTimeline() {
             <Chevron />
           </span>
           Builds
-          <span className="num">{kept}</span>
+          {/* Every build, as the chips and the groups count them: the drawer's head says how many of them are kept. */}
+          <span className="num">{nodes.length}</span>
         </button>
         <div ref={chips} className="timeline-chips" role="list" aria-label="Builds by what made them, newest at the right">
           {groups.length === 0 ? (

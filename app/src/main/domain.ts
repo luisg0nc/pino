@@ -1,5 +1,6 @@
 // pino's answers to a session (sessions/domain.ts): what Claude is told with each prompt (the newest build, what the
-// person sees, their new marks), and when a turn may not end yet (its own build still running, failed, or unseen).
+// person sees, their new marks), and when a turn may not end yet (a build Claude made in it still running, failed, or
+// unseen).
 
 import { verdictWords, type BuildResult, type BuildState, type Finding } from '../shared/build'
 import { at } from '../shared/board/coords'
@@ -23,7 +24,7 @@ const MOST_FINDINGS = 5
 const STOP_LIMIT = 1200
 
 export interface DomainDeps {
-  builds: Pick<Builds, 'state' | 'startedAt' | 'endedAt' | 'whenSettled' | 'routedOn' | 'pending' | 'ranSince'>
+  builds: Pick<Builds, 'state' | 'whenSettled' | 'routedOn' | 'ranSince' | 'claudesComing' | 'claudesBuild'>
   marks: {
     /** The person's marks not yet sent, oldest first. */
     drafts(project: ProjectInfo): Promise<Mark[]>
@@ -117,9 +118,10 @@ export class PinoDomain implements SessionDomain {
     if (hash) this.lookedHash.set(projectId, hash)
   }
 
-  async promptContext(project: ProjectInfo, _prompt: string): Promise<PromptContext> {
+  async promptContext(project: ProjectInfo, _prompt: string, folded = false): Promise<PromptContext> {
     const state = this.deps.builds.state(project.id)
-    this.turns.set(project.id, { startedAt: this.now(), board: state?.lastGood?.hash ?? null, holds: 0, held: new Set() })
+    // A prompt folded into the turn at work begins none: the board the turn began with, and what it was held for, stand.
+    if (!folded || !this.turns.has(project.id)) this.turns.set(project.id, { startedAt: this.now(), board: state?.lastGood?.hash ?? null, holds: 0, held: new Set() })
     const lines: string[] = []
     if (state?.engine.state === 'failed') lines.push(`The engine is not running: ${state.engine.reason.slice(state.engine.reason.indexOf(': ') + 2)}.`)
     else if (state?.latest) lines.push(verdictText(state.latest, state, this.routedOn(project.id, state.latest)))
@@ -178,16 +180,15 @@ export class PinoDomain implements SessionDomain {
     }
   }
 
-  async stopAnswer(project: ProjectInfo): Promise<{ decision: 'block'; reason: string } | null> {
+  async stopAnswer(project: ProjectInfo, prompts: readonly string[]): Promise<{ decision: 'block'; reason: string } | null> {
     const turn = this.turns.get(project.id)
     if (!turn || turn.holds >= MOST_HOLDS) return null
-    const ofTurn = () => (this.deps.builds.startedAt(project.id) ?? -Infinity) >= turn.startedAt
+    const coming = () => this.deps.builds.claudesComing(project.id, turn.startedAt, prompts)
     let state = this.deps.builds.state(project.id)
     if (!state) return null
-    // A save just made may not have started its build yet: it is waited for as a build of the turn at work is. With
-    // neither there is nothing to wait for, and the answer is given at once.
-    if (this.deps.builds.pending(project.id) || (state.building && ofTurn())) state = await this.deps.builds.whenSettled(project.id, this.now() + STOP_WAIT_MS)
-    if (!ofTurn()) return null
+    // A build of Claude's on its way is waited for, also a save of its that no build has started for yet. A build or a
+    // save of the person's is not, and with nothing of Claude's the answer is given at once.
+    if (coming() !== undefined) state = await this.deps.builds.whenSettled(project.id, this.now() + STOP_WAIT_MS)
 
     const hold = (kind: string, reason: string) => {
       if (turn.held.has(kind)) return null
@@ -195,19 +196,19 @@ export class PinoDomain implements SessionDomain {
       turn.holds += 1
       return { decision: 'block' as const, reason: cut(reason, STOP_LIMIT) }
     }
-    if (state.building) {
-      const number = state.history.find((e) => e.verdict === 'running')?.number ?? (state.latest?.number ?? 0) + 1
-      return hold('running', `h${number}, started in this turn, is still building. Wait for it, then call ${this.deps.toolName('check')}.`)
-    }
-    const latest = state.latest
-    if (!latest) return null
-    if (latest.verdict === 'failed') return hold('failed', `${failedLine(latest, state)} Fix board.py, or say it is still broken.`)
+    const number = coming()
+    if (number !== undefined) return hold('running', `h${number}, started in this turn, is still building. Wait for it, then call ${this.deps.toolName('check')}.`)
+    const own = this.deps.builds.claudesBuild(project.id, turn.startedAt, prompts)
+    if (!own) return null
+    const { result } = own
+    // A failure a later build has drawn past is no board of Claude's to mend any more.
+    if (result.verdict === 'failed') return own.redrawn ? null : hold('failed', `${failedLine(result, state)} Fix board.py, or say it is still broken.`)
     // The engine numbers a build it has cached anew, and its `changes` are since the last build of another hash: the
     // hash says whether this is a board Claude has seen, or the one the turn began with.
-    const seen = (this.lookedAt.get(project.id) ?? -Infinity) >= (this.deps.builds.endedAt(project.id) ?? Infinity) || this.lookedHash.get(project.id) === latest.hash
-    const changed = latest.hash !== turn.board && latest.changes.circuit.length + latest.changes.layout.length > 0
+    const seen = (this.lookedAt.get(project.id) ?? -Infinity) >= own.endedAt || this.lookedHash.get(project.id) === result.hash
+    const changed = result.hash !== turn.board && result.changes.circuit.length + result.changes.layout.length > 0
     if (seen || !changed) return null
-    return hold('unlooked', `h${latest.number} was built in this turn and you have not looked at it. Call ${this.deps.toolName('look')} or ${this.deps.toolName('check')} before finishing.`)
+    return hold('unlooked', `h${result.number} was built in this turn and you have not looked at it. Call ${this.deps.toolName('look')} or ${this.deps.toolName('check')} before finishing.`)
   }
 
   turnBuilds(project: ProjectInfo, since: number, prompts: readonly string[]) {

@@ -68,7 +68,9 @@ route's copper while there is one.
   and 3D (`isViewTab`), never on the Brief or Usage, which are no build's (torno draws it only with the model on
   screen). It is `--timeline-h`
   (34 px) across the foot of the views, above the status line; `.views:has(> .timeline) > .views-panel` stands the view
-  on it, and the band sits on it. The bar: the toggle (`.timeline-toggle`, `Builds` and how many are kept) and a chip
+  on it, and the band sits on it. The bar: the toggle (`.timeline-toggle`, `Builds` and how many there are, failed and
+  not-kept ones too, so that it is what the chips' counts add up to; how many are kept is the drawer's head,
+  `<n> kept`) and a chip
   for each group (`.tl-chip`, oldest at the left; the person's own have a dot in their violet; a prompt's ends with
   what it cost, `chipCost`, torno #372, rule `usage`). The drawer rises from
   the bar over the view (it never resizes it), `inert` while folded. Open or shut is `state/timeline.ts`, the window's

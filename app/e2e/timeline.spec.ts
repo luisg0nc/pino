@@ -183,3 +183,24 @@ test("open is the window's, not the project's: another project keeps it open", a
   await toggle().click()
   await expect(drawer()).toBeHidden()
 })
+
+// The bar's count and the chips' counts are of the same builds; the drawer's head counts those kept, and says so.
+test('the bar counts every build the chips count, a failed one too, and the drawer says how many are kept', async () => {
+  const project = referenceProject()
+  const own = await launch({ project, env: { FAKE_KERNEL_FAIL_ON: '2' } })
+  try {
+    await waitForBuild(own.page, 1)
+    const said = own.page.locator('[data-region="builds"]')
+    for (const n of [2, 3]) {
+      appendFileSync(join(project, 'board.py'), `# save ${n}\n`)
+      // Build 2 fails, so it is waited for in the history, not as a build that drew.
+      await expect.poll(() => own.page.evaluate(() => window.__pinoTest!.state().build?.history.filter((e) => e.verdict !== 'running').length ?? 0), { timeout: 20_000 }).toBe(n)
+    }
+    await expect(said.locator('.tl-chip')).toHaveText(['Earlier', 'Saved by you(2)'])
+    await expect(said.locator('.timeline-toggle')).toHaveText('Builds3')
+    await said.locator('.timeline-toggle').click()
+    await expect(said.locator('.timeline-head')).toContainText('Builds of reference2 kept')
+  } finally {
+    await own.app.close()
+  }
+})
