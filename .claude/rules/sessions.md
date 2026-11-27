@@ -55,8 +55,11 @@ paths:
     is gone: heard while it runs or within 0.5 s). The person's save during such a command is counted as Claude's:
     that is the price of not calling Claude's own the person's. A command that surely writes nothing
     (`surelyWritesNothing`: no redirect or substitution, only programs that read) claims nothing. What a background
-    command writes after its call returned is the person's.
-  - With no hooks (`NO_HOOKS`) every save is the person's. MCP tools write no board file.
+    command writes after its call returned is the person's, and so may be what a background subagent writes in a
+    call still under way when the main turn's `result` comes.
+  - A tool of an MCP server of the person's own (pino adds its server beside theirs) counts as a writer of the board
+    files its input names (`.py`, `outline.json`), and of no other. pino's own tools write none.
+  - With no hooks (`NO_HOOKS`) every save is the person's.
 - **Mode, model and effort** are the session's alone (`set_permission_mode`, `set_model`, `apply_flag_settings`,
   held in the CLI's memory), checked before they are sent, and never written to a settings file. `start` takes a
   model and an effort and drops what is neither (`agentChoiceOf`). The last list of models a CLI offered is kept in

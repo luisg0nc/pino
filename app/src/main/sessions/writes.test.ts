@@ -139,6 +139,37 @@ describe("a save is Claude's when a tool of its wrote the file", () => {
   })
 })
 
+describe("a tool of an MCP server of the person's own", () => {
+  const other = (input: unknown, tool = 'mcp__files__edit_file') => call(tool, input)
+
+  it('is taken to write the board files its input names, and no other', () => {
+    writes.began(other({ path: board, edits: [{ oldText: 'a', newText: 'b' }] }))
+    save('claude')
+    expect(by()).toEqual({ turn })
+    expect(by(join(dir, 'extra.py'))).toBeUndefined()
+    writes.ended('s1', 't1', true)
+    expect(by()).toEqual({ turn })
+  })
+
+  it('finds a file named in a list or a nested input, from the project folder', () => {
+    writes.began(other({ files: [{ file: 'board.py' }] }))
+    save('claude')
+    expect(by()).toEqual({ turn })
+  })
+
+  it('claims nothing when it names no board file', () => {
+    writes.began(other({ query: 'how to save board.py safely', url: 'http://x' }, 'mcp__docs__search'))
+    save('mine')
+    expect(by()).toBeUndefined()
+  })
+
+  it("claims nothing for a tool of pino's own, which writes no board file", () => {
+    writes.began(other({ path: board }, 'mcp__pino__look'))
+    save('mine')
+    expect(by()).toBeUndefined()
+  })
+})
+
 describe('a Bash, whose files cannot be read from its command', () => {
   it('is taken to have written a file saved while it runs', () => {
     writes.began(bash('python gen.py'))

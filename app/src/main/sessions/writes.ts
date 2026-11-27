@@ -1,5 +1,6 @@
 import { statSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { TOOL_PREFIX } from '../../shared/app'
 import type { CardTurn } from '../../shared/cards'
 import { WRITERS, writtenAt } from './reach'
 
@@ -36,8 +37,8 @@ interface Running {
   session: string
   project: string
   turn?: CardTurn
-  /** The file a writer tool names, by where its write lands; none for a command, whose files cannot be read. */
-  file?: string
+  /** The files the call names, by where their writes land; none for a command, whose files cannot be read. */
+  files?: string[]
   /** It may write from this time on. */
   since: number
   /** It waits for the person's answer: nothing is written meanwhile. */
@@ -62,6 +63,31 @@ export function surelyWritesNothing(command: unknown): boolean {
 
 const fieldOf = (input: unknown, key: string): unknown => (typeof input === 'object' && input !== null ? (input as Record<string, unknown>)[key] : undefined)
 
+/** What the watcher watches: a save of nothing else makes a build. */
+const BOARD_FILE = /(\.py|(^|\/)outline\.json)$/
+/** How deep an input is read for the files it names, and the longest a path can be. */
+const MOST_DEEP = 4
+const LONGEST_PATH = 4096
+
+/** Every text in an input that reads as the path of a board file. */
+function boardFilesIn(input: unknown, deep = 0): string[] {
+  if (typeof input === 'string') return input.length <= LONGEST_PATH && !input.includes('\n') && BOARD_FILE.test(input) ? [input] : []
+  if (typeof input !== 'object' || input === null || deep >= MOST_DEEP) return []
+  return Object.values(input).flatMap((value) => boardFilesIn(value, deep + 1))
+}
+
+/**
+ * The files a call may write, as its input names them: a writer tool's one file; for a tool of an MCP server of the
+ * person's own, the board files among its input's texts (pino's tools write none). Undefined for a command, which may
+ * write any; empty for a call that is of no account.
+ */
+function filesOf(tool: string, input: unknown): string[] | undefined {
+  if (tool === 'Bash') return surelyWritesNothing(fieldOf(input, 'command')) ? [] : undefined
+  if (tool.startsWith('mcp__')) return tool.startsWith(TOOL_PREFIX) ? [] : boardFilesIn(input)
+  const named = Object.hasOwn(WRITERS, tool) ? fieldOf(input, WRITERS[tool]) : undefined
+  return typeof named === 'string' && named !== '' ? [named] : []
+}
+
 /** The file as it stands: when it was saved and how long it is; undefined for one that is not there. */
 function statOf(path: string): { mtimeMs: number; size: number } | undefined {
   try {
@@ -82,7 +108,7 @@ const keyOf = (project: string, file: string): string => `${project}\n${file}`
 export class ClaudeWrites {
   /** The calls under way that may write, by session and id. */
   private readonly running = new Map<string, Running>()
-  /** For each file a writer tool wrote last: as the tool left it, and whose it was. */
+  /** For each file a call that names it wrote last: as the tool left it, and whose it was. */
   private readonly left = new Map<string, { stamp: string; turn?: CardTurn }>()
   /** The commands that ended, oldest first. */
   private runs: Run[] = []
@@ -91,10 +117,9 @@ export class ClaudeWrites {
 
   /** A tool is about to run. One that can write no file is of no account. */
   began(call: ToolCall): void {
-    const named = Object.hasOwn(WRITERS, call.tool) ? fieldOf(call.input, WRITERS[call.tool]) : undefined
-    const file = typeof named === 'string' && named !== '' ? writtenAt(resolve(call.dir, named)) : undefined
-    if (file === undefined && !(call.tool === 'Bash' && !surelyWritesNothing(fieldOf(call.input, 'command')))) return
-    this.running.set(`${call.session}\n${call.id}`, { session: call.session, project: call.project, ...(call.turn ? { turn: call.turn } : {}), ...(file !== undefined ? { file } : {}), since: this.now(), waiting: false })
+    const files = filesOf(call.tool, call.input)?.map((file) => writtenAt(resolve(call.dir, file)))
+    if (files?.length === 0) return
+    this.running.set(`${call.session}\n${call.id}`, { session: call.session, project: call.project, ...(call.turn ? { turn: call.turn } : {}), ...(files ? { files } : {}), since: this.now(), waiting: false })
   }
 
   /** The CLI asks the person whether the call may run: until they answer, it writes nothing. */
@@ -122,12 +147,12 @@ export class ClaudeWrites {
     if (!call) return
     this.running.delete(key)
     if (call.waiting) return
-    if (call.file === undefined) {
+    if (call.files === undefined) {
       // A command that failed may have written before it did.
       this.runs = [...this.runs, { ...call, end: this.now() }].slice(-KEPT_RUNS)
     } else if (ok) {
-      // A writer tool that failed wrote nothing.
-      this.left.set(keyOf(call.project, call.file), { stamp: stampOf(call.file), ...(call.turn ? { turn: call.turn } : {}) })
+      // A tool that names its files and failed wrote nothing.
+      for (const file of call.files) this.left.set(keyOf(call.project, file), { stamp: stampOf(file), ...(call.turn ? { turn: call.turn } : {}) })
     }
   }
 
@@ -143,8 +168,8 @@ export class ClaudeWrites {
     const claude = (turn: CardTurn | undefined): ClaudesSave => (turn ? { turn } : {})
     for (const call of this.running.values()) {
       if (call.project !== project || call.waiting) continue
-      if (call.file === file) return claude(call.turn)
-      if (call.file === undefined && (!stat || stat.mtimeMs >= call.since - MTIME_SLACK_MS)) return claude(call.turn)
+      if (call.files?.includes(file)) return claude(call.turn)
+      if (call.files === undefined && (!stat || stat.mtimeMs >= call.since - MTIME_SLACK_MS)) return claude(call.turn)
     }
     const left = this.left.get(keyOf(project, file))
     if (left && stat && left.stamp === `${stat.mtimeMs}:${stat.size}`) return claude(left.turn)

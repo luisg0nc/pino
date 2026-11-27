@@ -486,6 +486,30 @@ describe('the builds of a turn', () => {
     expect(turnBuilds.mock.calls.map((c) => c[1])).toEqual([[first.id, folded.id], [third.id]])
   })
 
+  it("names a command's turn by the command, which has no hook, and not by the prompt before it", () => {
+    const turnBuilds = vi.fn((_since: number, _prompts: string[]) => undefined)
+    const t = new Transcript({ turnBuilds })
+    t.userSent(text('one'), false)
+    t.context({ text: '', sentMarkIds: [], prompt: 'one' })
+    t.message(init())
+    t.message(result())
+    const command = t.userSent(text('/my-skill'), false)
+    t.message(init())
+    expect(t.taken()).toEqual({ item: command.id, text: '/my-skill' })
+    t.message(result())
+    expect(turnBuilds.mock.calls[1]![1]).toEqual([command.id])
+  })
+
+  it('does the same for a command the CLI says it started', () => {
+    const turnBuilds = vi.fn((_since: number, _prompts: string[]) => undefined)
+    const t = new Transcript({ turnBuilds })
+    const command = t.userSent(text('/my-skill'), false, 'uuid-1')
+    t.message({ type: 'command_lifecycle', command_uuid: 'uuid-1', state: 'started' })
+    t.message(init())
+    t.message(result())
+    expect(turnBuilds.mock.calls[0]![1]).toEqual([command.id])
+  })
+
   it('counts back by how long the turn took when no init said it began', () => {
     const turnBuilds = vi.fn(() => undefined)
     const t = new Transcript({ now: () => 9000, turnBuilds })

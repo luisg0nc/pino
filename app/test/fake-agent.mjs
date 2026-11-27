@@ -51,6 +51,7 @@
 //                                 `denied: <message>`, an error, with none
 //       bash <command>            a `Bash` tool that really runs the command with `sh -c` between its hooks; a
 //                                 command that fails is an error result
+//                                 (a tool that fails or is denied has no `PostToolUse`, as with the CLI)
 //       slow <seconds>            a word every 100 ms for that long
 //       rate <percent>            a `rate_limit_event` at that utilization
 //       images                    says what pictures came with the prompt: `images: <n> <width>x<height> ...`, the
@@ -313,8 +314,8 @@ async function streamMode() {
       isError = result.isError === true
     }
     if (act) isError = act() !== 0
-    // A tool that was denied did not run: the CLI posts no `PostToolUse` for it.
-    if (!denied) await post('PostToolUse', hooked)
+    // The CLI posts `PostToolUse` only for a tool that ran and succeeded: its result alone ends the others.
+    if (!denied && !isError) await post('PostToolUse', hooked)
     out({ type: 'user', message: { role: 'user', content: [{ tool_use_id: id, type: 'tool_result', content, is_error: isError }] }, ...base, uuid: next('uuid') })
     turn.foldable = false
     await takeFolded()
@@ -338,7 +339,7 @@ async function streamMode() {
       return
     }
     const { response, result, isError } = change(input.file_path)
-    const answered = await post('PostToolUse', { ...hooked, tool_response: response })
+    const answered = isError ? undefined : await post('PostToolUse', { ...hooked, tool_response: response })
     const context = answered?.hookSpecificOutput?.additionalContext
     if (context) out({ type: 'system', subtype: 'hook_response', hook_event: 'PostToolUse', output: context, ...base, uuid: next('uuid') })
     out({ type: 'user', message: { role: 'user', content: [{ tool_use_id: id, type: 'tool_result', content: result, is_error: isError === true }] }, ...base, uuid: next('uuid') })

@@ -340,9 +340,11 @@ export class Transcript {
     for (const [id, given] of this.uuids) {
       if (given !== uuid) continue
       if (!this.untaken.includes(id)) return
-      if (!this.isCommand(id)) this.waitForHook(id)
+      const command = this.isCommand(id)
+      if (!command) this.waitForHook(id)
       this.lifecycled.add(id)
-      this.take(id)
+      if (command) this.takeCommand(id)
+      else this.take(id)
       this.explain(id)
       return
     }
@@ -392,9 +394,16 @@ export class Transcript {
     if (item?.kind === 'user' && item.state === 'queued') this.takeUp(item)
   }
 
-  /** The prompt the last hook took up, for whoever says which prompt a turn is of; undefined before any. */
+  /** The prompt the last hook (or command) took up, for whoever says which prompt a turn is of; undefined before any. */
   taken(): { item: string; text: string } | undefined {
     return this.promptTaken
+  }
+
+  /** A command begins: it has no hook, so its turn is named by it here. */
+  private takeCommand(id: string): void {
+    this.take(id)
+    this.promptTaken = { item: id, text: (this.byId.get(id) as { text?: string } | undefined)?.text ?? '' }
+    this.turnPrompts.push(id)
   }
 
   /** The prompts the last hook took up, the one it is for last: none when it matched no prompt that waits. */
@@ -585,7 +594,7 @@ export class Transcript {
       // A hook has said what this `init` starts, or it is a command's (which has no hook): the oldest prompt not
       // taken up, if it begins with a slash.
       if (this.explained > 0) this.explained -= 1
-      else if (this.untaken.length > 0 && this.isCommand(this.untaken[0])) this.take(this.untaken[0])
+      else if (this.untaken.length > 0 && this.isCommand(this.untaken[0])) this.takeCommand(this.untaken[0])
       this.compactNoted = false
       if (this.turnStarted === null) this.turnStarted = this.now()
       const model = str(m.model)

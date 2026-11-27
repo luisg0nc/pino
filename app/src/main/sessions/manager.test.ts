@@ -282,6 +282,16 @@ describe('Sessions', () => {
       expect(sessions.wroteBy(project.id, file('gen.py'))).toEqual(promptOf(sessions, id, 1))
     })
 
+    it("is not one made after a command of its that failed ended, which only its result says", async () => {
+      const sessions = manager()
+      const id = await started(sessions)
+      await sessions.send(id, { text: 'bash exit 1\nwork 2' })
+      await until(() => expect(of(sessions, id, 'tool')).toHaveLength(2))
+      await new Promise((r) => setTimeout(r, 50))
+      writeFileSync(file(), 'mine')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
     it('is not one made after a request the person refused', async () => {
       const sessions = manager()
       const id = await started(sessions)
