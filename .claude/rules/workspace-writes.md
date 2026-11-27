@@ -53,6 +53,10 @@ paths:
 - **pino's main** writes, besides the chat's files, in a project: `.pino/marks/marks.json` (`marks/file.ts`),
   through `ownFolder` and `writeFileAtomic`, and it is its only writer (`marks/store.ts` takes one change at a time).
   A file there that cannot be read is renamed `marks.json.bad-<n>` and said; it is never overwritten.
+- **What made each build** (`main/buildCauses.ts`): `.pino/build-causes.json` (`pino.build-causes/1`: the build's
+  number, its cause, and for Claude's the prompt of its turn), by `Builds` in main alone, through `writeOwn`, ignored
+  by git (`ensureIgnored`). It keeps the newest 200 by number; a row that is not one is left out when it is read, and a
+  write that fails is let go.
 - **The card's picture** (`main/thumb.ts`): `.pino/thumb.png` and `.pino/thumb.json` (the build's hash and when),
   through `writeOwn`, both ignored by git. The window draws it and main keeps it only for the open project, only of its
   newest good build, and only a PNG of 512 KB at most. It is read only as a plain file through no link. Opening a

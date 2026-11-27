@@ -26,6 +26,11 @@ paths:
   and the like. A folder with no `board.py` is neither built nor written in. A failed build keeps the last drawing.
   An engine that has not answered its first ping in 2 minutes is ended. A failed or stopped engine is started again
   at most once in 10 s.
+- Main stamps each build's cause for the builds timeline (`BuildEntry.cause`/`turn`, kept in `.pino/build-causes.json`,
+  `buildCauses.ts`): `causeNow` is asked at a burst's first save (`turnNow` while a prompt's turn works, else the
+  person), a route's end asks for its build with the route's cause (`route` when the person started it, the turn's when Claude did), the opening build and a Rebuild are `unknown`. Triggers that fold
+  into one build keep the highest (agent, route, person, unknown), whole; a save heard while a build runs is for the
+  next one. The window never says what made a build.
 - Each engine is pinged once (`Builds.pong`), whoever asks first, since a ping waits behind a build. A lookup ends a
   silent engine only if it started it, and for 10 s after a start that failed it says why and starts no other
   (`Builds.startFailure`).
