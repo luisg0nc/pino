@@ -510,6 +510,22 @@ describe('the builds of a turn', () => {
     expect(turnBuilds.mock.calls[0]![1]).toEqual([command.id])
   })
 
+  // Its builds name it: a Stop of a later turn must not take them for its own.
+  it.each([
+    ['by its init', [init()]],
+    ['by its lifecycle', [{ type: 'command_lifecycle', command_uuid: 'uuid-1', state: 'started' } as AgentMessage, init()]]
+  ])("leaves a command taken up %s out of the next prompt's turn", (_how, taking) => {
+    const turnBuilds = vi.fn((_since: number, _prompts: string[]) => undefined)
+    const t = new Transcript({ turnBuilds })
+    t.userSent(text('/my-skill'), false, 'uuid-1')
+    for (const message of taking) t.message(message)
+    t.message(result())
+    const next = t.userSent(text('two'), false)
+    t.context({ text: '', sentMarkIds: [], prompt: 'two' })
+    expect(t.answering()).toEqual([next.id])
+    expect(t.takenItems()).toEqual([next.id])
+  })
+
   it('counts back by how long the turn took when no init said it began', () => {
     const turnBuilds = vi.fn(() => undefined)
     const t = new Transcript({ now: () => 9000, turnBuilds })

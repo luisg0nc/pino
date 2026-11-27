@@ -473,6 +473,34 @@ describe("a Stop is held for Claude's builds, by their cause and not by when the
     expect(await t.stop()).toBeNull()
   })
 
+  // Claude's good board is on screen under the person's mend of its failure: it has still not been looked at.
+  it("still holds for Claude's unseen good build when its failure after it has been built past", async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '3' })
+    await t.claude('claude, moved\n')
+    await t.claude('claude, broken, and longer\n')
+    await t.person('mine, mended, and longer than that\n')
+    expect((await t.stop())!.reason).toContain('h2 was built in this turn')
+  })
+
+  it('holds nothing for that good build once Claude has looked at it', async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '3' })
+    await t.claude('claude, moved\n')
+    t.l.later(10)
+    t.domain.looked(info().id)
+    await t.claude('claude, broken, and longer\n')
+    await t.person('mine, mended, and longer than that\n')
+    expect(await t.stop()).toBeNull()
+  })
+
+  // Should a prompt of an earlier turn be counted again, what ended before this turn began is not of it.
+  it('holds nothing for a build that ended before the turn began, though it names a prompt of the turn', async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '2' })
+    await t.claude('claude, broken\n')
+    t.l.later(10)
+    await t.domain.promptContext(info(), 'a turn anew')
+    expect(await t.stop()).toBeNull()
+  })
+
   it("holds nothing for a build of an earlier prompt's save that began in this turn", async () => {
     const t = await stopping()
     await t.claude('claude, from the turn before\n', 'u6')

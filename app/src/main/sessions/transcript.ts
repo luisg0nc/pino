@@ -893,6 +893,12 @@ export class Transcript {
     this.explained = 0
     this.explainedIds.clear()
     this.turnStarted = null
+    // A command taken up in this turn had no hook to take it off the ones that wait: left there, the next prompt's hook
+    // would pass over it and count it, and with it what it built, in its own turn.
+    for (const id of this.turnPrompts) {
+      const at = this.awaiting.indexOf(id)
+      if (at >= 0) this.awaiting.splice(at, 1)
+    }
     this.turnPrompts = []
     this.unconfirmed.clear()
     this.blocks.clear()

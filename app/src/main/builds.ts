@@ -126,8 +126,8 @@ function ofPrompts(made: KeptCause | undefined, prompts: readonly string[]): boo
 
 /**
  * Whether a build, or one on its way (no `startedAt` yet), is Claude's in the turn that began at `since` and has taken
- * up `prompts`. One that names a prompt of the turn is its whenever it began: a prompt folded into a turn at work moves
- * `since` past what the turn had built. The time tells only of one with no prompt to name.
+ * up `prompts`. One that names a prompt of the turn is its whenever it began (a build that came back must also have
+ * ended since: `claudesBuild`). When it began tells only of one with no prompt to name.
  */
 function claudesIn(made: KeptCause | undefined, startedAt: number | undefined, since: number, prompts: readonly string[]): boolean {
   return ofPrompts(made, prompts) && (made?.turn !== undefined || (startedAt ?? since) >= since)
@@ -312,9 +312,14 @@ export class Builds {
     return heard || waits ? newest + 1 : undefined
   }
 
-  /** The newest build of Claude's in such a turn that came back. */
-  claudesBuild(projectId: string, since: number, prompts: readonly string[]): ClaudesBuild | undefined {
-    return this.entries.get(projectId)?.claudes.findLast((b) => claudesIn(b.made, b.startedAt, since, prompts))
+  /**
+   * The newest build of Claude's in such a turn that came back, or with `good` the newest that did not fail. One that
+   * ended before the turn began is not of it, whatever prompt it names: a prompt of an earlier turn that is counted
+   * again (the transcript keeps its turns apart, and its ids differ between sessions only by chance of their random
+   * prefix) brings no old build back with it.
+   */
+  claudesBuild(projectId: string, since: number, prompts: readonly string[], { good = false }: { good?: boolean } = {}): ClaudesBuild | undefined {
+    return this.entries.get(projectId)?.claudes.findLast((b) => b.endedAt >= since && claudesIn(b.made, b.startedAt, since, prompts) && !(good && b.result.verdict === 'failed'))
   }
 
   /**
