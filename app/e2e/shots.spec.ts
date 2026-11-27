@@ -4,7 +4,7 @@
 // Each picture is a launch of its own: a hidden window's `capturePage()` gives one picture, and the next call never
 // returns (torno found the same).
 
-import { appendFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { appendFileSync, cpSync, existsSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join, relative, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -291,7 +291,15 @@ const LEFT_BEHIND = [/^\.pino\/(chat|marks|kicad|brief)$/, /^\.pino\/(session\.j
 /** The board in a workspace of its own, `<temp>/boards/simple-blinker`, with a Brief written for the picture. */
 function siteCopy(): string {
   const dir = join(tempFolder('site'), 'boards', 'simple-blinker')
-  cpSync(siteBoard!, dir, { recursive: true, filter: (from) => !LEFT_BEHIND.some((left) => left.test(relative(siteBoard!, from))) })
+  cpSync(siteBoard!, dir, {
+    recursive: true,
+    filter: (from) => {
+      if (LEFT_BEHIND.some((left) => left.test(relative(siteBoard!, from)))) return false
+      // A link is copied as a link to where it led: what the copy then writes would land in the person's own file.
+      if (lstatSync(from).isSymbolicLink()) throw new Error(`the board holds a link, which a copy cannot keep apart from it: ${relative(siteBoard!, from)}`)
+      return true
+    }
+  })
   writeFileSync(join(dir, 'brief.md'), '# Simple blinker\n\nA small board that runs on a 9 V battery. Press the button and the LED blinks three times, then waits for the next press.\n')
   mkdirSync(join(dir, '.pino', 'brief'), { recursive: true })
   // The person's own cards, so that the picture puts no words in Claude's mouth. What they say is in board.py.
