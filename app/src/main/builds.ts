@@ -9,6 +9,7 @@ import { watch as chokidarWatch } from 'chokidar'
 import { APP } from '../shared/app'
 import type { BuildCause, BuildEntry, BuildResult, BuildState, EngineState, KeptCause, Verdict } from '../shared/build'
 import { engineDidNotStart } from '../shared/fab'
+import type { TurnBuilds } from '../shared/chat'
 import type { ProjectInfo } from '../shared/project'
 import { BUILD_HASH } from './artifacts'
 import { readCauses as readCausesFile, writeCauses as writeCausesFile } from './buildCauses'
@@ -16,6 +17,8 @@ import { KernelError, type KernelClient, type Pong } from './kernel/client'
 import { FOLDER, whyNotOwn } from './own'
 
 export const DEBOUNCE_MS = 300
+/** How many builds of an open project are remembered for `ranSince`: far more than one turn runs. */
+const MOST_RAN = 500
 /** The engine is started again at most this often: a start that fails at once must not become a loop. */
 const RESTART_MS = 10_000
 /** How long a new engine has to answer: its first run under uv may have its environment to make. */
@@ -116,6 +119,8 @@ interface Entry {
   retry?: NodeJS.Timeout
   startedAt?: number
   endedAt?: number
+  /** The builds that came back, oldest first, the last `MOST_RAN`: when each began, and whether it drew something. */
+  ran: Array<{ number: number; startedAt: number; drew: boolean }>
   /** For each route seen current, the build it was first seen on. */
   routes: Map<string, number>
   /** What made each build, by number: loaded with the history, and written to `.pino/build-causes.json` as it grows. */
@@ -178,6 +183,7 @@ export class Builds {
       wanted: false,
       seen: false,
       running: false,
+      ran: [],
       routes: new Map(),
       causes: new Map(),
       loaded: Promise.resolve(),
@@ -255,6 +261,19 @@ export class Builds {
 
   endedAt(projectId: string): number | undefined {
     return this.entries.get(projectId)?.endedAt
+  }
+
+  /**
+   * The builds that began at `since` or later and came back: how many, ok or failed; the newest before them that drew
+   * something, and the newest of them that did. Undefined when there were none.
+   */
+  ranSince(projectId: string, since: number): TurnBuilds | undefined {
+    const ran = this.entries.get(projectId)?.ran ?? []
+    const during = ran.filter((b) => b.startedAt >= since)
+    if (during.length === 0) return undefined
+    const from = ran.findLast((b) => b.drew && b.startedAt < since)?.number
+    const to = during.findLast((b) => b.drew)?.number
+    return { count: during.length, ...(from !== undefined ? { from } : {}), ...(to !== undefined ? { to } : {}) }
   }
 
   /** The number of the build a route's copper was made for: the first one seen with it current. */
@@ -430,6 +449,8 @@ export class Builds {
       entry.causes.set(result.number, cause)
       this.keepCauses(entry)
       entry.endedAt = this.now()
+      entry.ran.push({ number: result.number, startedAt: entry.startedAt, drew: result.hash !== null })
+      if (entry.ran.length > MOST_RAN) entry.ran.shift()
       // A result older than the one shown never replaces it.
       if (result.number < (entry.state.latest?.number ?? 0)) {
         this.say(entry, { history: this.withCauses(entry, history) })

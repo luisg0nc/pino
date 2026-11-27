@@ -92,6 +92,22 @@ describe('the build loop', () => {
     expect((await l.settled()).latest!.number).toBe(1)
   })
 
+  it('says the builds that began since a time, from the one before them to the newest that drew', async () => {
+    const l = loop()
+    l.builds.open(info())
+    await l.settled()
+    l.later(10)
+    const since = 1_000_005
+    expect(l.builds.ranSince(info().id, since)).toBeUndefined()
+    project.touch()
+    l.save()
+    await l.settled()
+    l.save()
+    await l.settled()
+    expect(l.builds.ranSince(info().id, since)).toEqual({ count: 2, from: 1, to: 3 })
+    expect(l.builds.ranSince(info().id, 0)).toEqual({ count: 3, to: 3 })
+  })
+
   it('three saves in one burst build once', async () => {
     const l = loop()
     l.builds.open(info())

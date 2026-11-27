@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { pressed, which } from '../shared/keys'
+import { isViewTab } from '../shared/view'
 import type { ProjectInfo } from '../shared/project'
 import type { WorkspaceInfo } from '../shared/workspace'
 import { answerLooks } from './look'
@@ -31,7 +32,7 @@ function why(what: string, e: unknown): string {
   return message.endsWith('.') || / is not a folder pino can open: /.test(message) ? message : openProblem(what, e)
 }
 
-/** The key that opens or folds the builds timeline at the foot of the views, as its toggle does: heard everywhere, with a project's views on screen (not the Brief). */
+/** The key that opens or folds the builds timeline at the foot of the views, as its toggle does: heard everywhere, with one of a project's three views on screen (not the Brief or Usage). */
 function useTimelineKey(): void {
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent): void => {
@@ -39,7 +40,7 @@ function useTimelineKey(): void {
       e.preventDefault()
       e.stopPropagation()
       const s = store.getState()
-      if (e.repeat || s.page !== 'project' || s.project === null || s.tab === 'brief') return
+      if (e.repeat || s.page !== 'project' || s.project === null || !isViewTab(s.tab)) return
       timelineActions.toggle()
     }
     window.addEventListener('keydown', onKey, true)

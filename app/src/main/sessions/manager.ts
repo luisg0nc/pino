@@ -19,6 +19,8 @@ import { type KnownModels, modelsOf } from './models'
 import { sessionRules } from './permissions'
 import { deniedAnswer, refusalOf } from './reach'
 import { SESSION_FILE, storeConversation, storedConversation, UUID } from './resume'
+import { listUsage } from './usage'
+import type { ProjectUsage } from '../../shared/usage'
 import { HOOK_EVENTS, reduceStatus } from './status'
 import type { AgentAsk, AgentTransport, AskAnswer, PromptBlock } from './transport'
 import { Transcript } from './transcript'
@@ -228,6 +230,8 @@ export class Sessions {
       transcript: new Transcript({
         prefix: `${id.slice(0, 6)}-`,
         redact: http.redact,
+        resumed: stored !== null,
+        turnBuilds: (since) => this.deps.domain.turnBuilds?.(project, since),
         ...(adapter.tested ? { tested: adapter.tested } : {}),
         ...(isEffort(choice.effort) ? { effort: choice.effort } : {}),
         emit: (item) => {
@@ -278,6 +282,12 @@ export class Sessions {
   /** Whether a conversation is on file for the project, to resume. */
   resumable(project: ProjectInfo): boolean {
     return storedConversation(project.dir) !== null
+  }
+
+  /** What each prompt of a project took (`listUsage`), read once the chat logs being written have landed: the window asks as a turn ends. */
+  async usage(project: Pick<ProjectInfo, 'id' | 'dir'>): Promise<ProjectUsage> {
+    await Promise.all([...this.sessions.values()].filter((s) => s.project.id === project.id).map((s) => s.logging))
+    return listUsage(project.dir)
   }
 
   /**

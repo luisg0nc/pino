@@ -4,8 +4,13 @@ import type { Placement } from './circuit'
 import { bandFor, DEFAULT_LOOK, emptyWords, firstTab, lookTab, PANE_NAMES, PANE_TABS, ratsFor, tabLabel, type Selection } from './view'
 
 describe('the tabs of the middle of the window', () => {
-  it('are the Brief, then the three views', () => {
-    expect(PANE_TABS.map((t) => PANE_NAMES[t])).toEqual(['Brief', 'Schematic', 'Board', '3D'])
+  it('are the Brief, then the three views, then Usage', () => {
+    expect(PANE_TABS.map((t) => PANE_NAMES[t])).toEqual(['Brief', 'Schematic', 'Board', '3D', 'Usage'])
+  })
+
+  it("Claude's look on Usage draws the board, and the Usage tab never carries the selection", () => {
+    expect(lookTab(undefined, 'usage')).toBe('board')
+    expect(tabLabel('usage', 'board', { tab: 'board', label: 'J1' } as Selection)).toBe('Usage')
   })
 
   it('opens a project with no board.py on the Brief, and one with a board where it was left', () => {

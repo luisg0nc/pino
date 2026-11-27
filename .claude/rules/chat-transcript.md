@@ -39,8 +39,10 @@ paths:
   and the "Compacted" of `/compact` is not a second one.
 - **What the CLI says of itself** (`Transcript.system`, `finished`). From the `init`, the meta (`ChatMeta`) takes
   `version` (`claude_code_version`), `apiKeySource` and `appConnected` (pino's MCP server); `result` adds `costUsd`
-  and `context`, and the `turn` item takes the tokens the `result` counts as `usage` (numbers only, so it is in the
-  chat's log). A `warn` note `NO_HOOKS` says once per session that the hooks do not arrive (a prompt of ours the CLI
+  and `context`, and the `turn` item takes what the turn used as `usage` (numbers only, so it is in the chat's log):
+  the tokens and calls the `result` counts, and `costUsd` and `models` as what the CLI's running totals grew by since
+  the last `result` (a resumed session's first turn has neither, only `sessionCostUsd`). It also takes the `builds`
+  that ran during the turn (`turnBuilds`, from the turn's `init` on; see `usage`). A `warn` note `NO_HOOKS` says once per session that the hooks do not arrive (a prompt of ours the CLI
   started with no `UserPromptSubmit` by 8 s or the end of its turn, in a session where none has come); it never moves
   the status. When the `init` names a key as the credentials' source the note is `RUNNING_BARE` instead. `api_retry`
   sets `retrying` until the API answers. Other notes: a `warn` when pino's tools are `failed`, a `quiet` once a

@@ -19,9 +19,9 @@ paths:
 
 # The three views: Board, Schematic and 3D
 
-The middle of the window has four tabs: the **Brief** first (see `brief`), then the three views. A project with no
-`board.py` opens on the Brief, one with a board where it was left (`firstTab`, `shared/view.ts`). The band and the
-route's pictures are the views' alone.
+The middle of the window has five tabs: the **Brief** first (see `brief`), then the three views, then **Usage** (see
+`usage`). A project with no `board.py` opens on the Brief, one with a board where it was left (`firstTab`,
+`shared/view.ts`). The band and the route's pictures are the views' alone (`isViewTab`).
 
 All three draw one view model (`state/viewModel.ts`): the board read from the build's `.kicad_pcb` by
 `shared/board/` (pino draws the board itself; the engine's SVG layers are not used), the circuit, the placement, and a

@@ -41,7 +41,7 @@ test('a project with no board.py opens on the Brief with its words, its picture 
   const dir = describedProject()
   const { app, page } = await launch({ project: dir })
   try {
-    await expect(tabs(page)).toHaveText(['Brief', 'Schematic', 'Board', '3D'])
+    await expect(tabs(page)).toHaveText(['Brief', 'Schematic', 'Board', '3D', 'Usage'])
     await expect(tab(page, 'Brief')).toHaveAttribute('aria-selected', 'true')
     const words = part(page, 'In your words')
     await expect(words).toContainText('A board that blinks one LED.')

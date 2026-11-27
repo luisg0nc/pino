@@ -1,7 +1,10 @@
-import { memo, useMemo, useState, type ReactNode } from 'react'
+import { memo, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { ChatItem } from '../../../shared/chat'
+import { isResumedTurn, largeTimes, usageFacts, whyLarge, type UsageFacts } from '../../../shared/usage'
 import { drawn } from '../../state/chat'
-import { useStore } from '../../state/store'
+import { actions, useStore } from '../../state/store'
+import { useProjectUsage, usageActions } from '../../state/usage'
+import { TurnUsageLine } from './TurnUsage'
 import { MarkChip } from '../MarkChip'
 import { chipsFor } from './markChips'
 import { numbered } from '../numbered'
@@ -55,7 +58,16 @@ const User = memo(function User({ item }: { item: Of<'user'> }) {
 })
 
 /** How a turn ended, in a line: how long it took, that it was stopped, or why it failed. */
-function TurnLine({ item }: { item: Of<'turn'> }) {
+function TurnLine({ item, facts }: { item: Of<'turn'>; facts?: UsageFacts }) {
+  // Large against the project's usual turn: its median turn cost, and the prompt's number across the project.
+  const project = useProjectUsage()
+  const row = project?.rows.find((r) => r.turns.includes(item.id))
+  const times = largeTimes(item.usage?.costUsd, row?.number, project?.median)
+  const why = times !== null && item.usage ? whyLarge(item.usage, facts ?? usageFacts([item]), times) : null
+  const openUsage = (): void => {
+    if (row) usageActions.openConversation(row.conversation, row.id)
+    actions.setTab('usage')
+  }
   const head = item.stopped ? 'Stopped' : item.ok ? `Done in ${item.seconds < 10 ? item.seconds.toFixed(1) : Math.round(item.seconds)} s` : `Failed${item.error ? `: ${item.error}` : ''}`
   return (
     <div className="chat-item chat-turn" data-kind="turn" data-ok={item.ok && !item.stopped ? '' : undefined}>
@@ -64,6 +76,7 @@ function TurnLine({ item }: { item: Of<'turn'> }) {
           <b className="chat-turn-head">{numbered(head)}</b>
         </p>
       </div>
+      <TurnUsageLine usage={item.usage} resumed={isResumedTurn(item.usage)} why={why} onOpen={openUsage} />
     </div>
   )
 }
@@ -72,7 +85,7 @@ function TurnLine({ item }: { item: Of<'turn'> }) {
  * One item of the transcript. Memoized: an item that did not change (the pane keeps its object) is not drawn again
  * for what else changes; `beat` is passed only to the items that show a dot, a constant to the rest.
  */
-export const ItemView = memo(function ItemView({ item, beat }: { item: ChatItem; beat: boolean }) {
+export const ItemView = memo(function ItemView({ item, beat, facts }: { item: ChatItem; beat: boolean; facts?: UsageFacts }) {
   switch (item.kind) {
     case 'user':
       return <User item={item} />
@@ -104,7 +117,7 @@ export const ItemView = memo(function ItemView({ item, beat }: { item: ChatItem;
     case 'ask':
       return <AskCard item={item} />
     case 'turn':
-      return <TurnLine item={item} />
+      return <TurnLine item={item} facts={facts} />
     case 'note':
       return (
         <p className="chat-item chat-note" data-kind="note" data-tone={item.tone}>
@@ -162,6 +175,25 @@ export function ChatItems({ items, beat }: { items: ChatItem[]; beat: boolean })
   // What is drawn on its own: a context whose prompt is here is drawn under that one.
   const entries = useMemo(() => foldRuns(order.filter((item) => !(item.kind === 'context' && ids.has(item.forUser))), new Set(under.keys())), [order, ids, under])
   const lists = useMemo(() => listsAt(order), [order])
+  // What came in and what was built in each turn, by the id of its end: what says why a large one was large. An
+  // account that says the same as before keeps its object, so that an old turn's line is not drawn again.
+  const kept = useRef(new Map<string, { said: string; facts: UsageFacts }>())
+  const accounts = useMemo(() => {
+    const out = new Map<string, UsageFacts>()
+    let turn: ChatItem[] = []
+    for (const item of order) {
+      turn.push(item)
+      if (item.kind !== 'turn') continue
+      const facts = usageFacts(turn)
+      const said = JSON.stringify(facts)
+      const was = kept.current.get(item.id)
+      const same = was?.said === said ? was.facts : facts
+      kept.current.set(item.id, { said, facts: same })
+      out.set(item.id, same)
+      turn = []
+    }
+    return out
+  }, [order])
 
   const draw = (entry: Entry, at: number): ReactNode => {
     if (entry.kind === 'fold') return <ToolFold key={entry.id} entry={entry} />
@@ -173,7 +205,7 @@ export function ChatItems({ items, beat }: { items: ChatItem[]; beat: boolean })
     const listed = list && list.length > 0 ? list : undefined
     return (
       <div key={item.id} className="chat-group" data-id={item.id}>
-        {item.kind === 'tool' && item.name === 'TodoWrite' && listed ? <TasksCard list={listed} /> : <ItemView item={item} beat={underWay(item) ? beat : true} />}
+        {item.kind === 'tool' && item.name === 'TodoWrite' && listed ? <TasksCard list={listed} /> : <ItemView item={item} beat={underWay(item) ? beat : true} facts={accounts.get(item.id)} />}
         {under.get(item.id)?.map((context) => <Added key={context.id} item={context} />)}
         {listed && !(item.kind === 'tool' && item.name === 'TodoWrite') && <TasksCard list={listed} />}
       </div>
