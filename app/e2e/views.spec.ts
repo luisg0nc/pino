@@ -35,7 +35,9 @@ test('opens the reference board and the build lands', async () => {
     await waitForBuild(page, 1)
     await onBoard(page)
     expect((await drawn(page)).board!.hash).toBe((await state(page)).build!.lastGood!.hash)
-    await expect(card(page).locator('h2').first()).toContainText('On h1')
+    // The opening's build, named in the builds timeline's words; its id is the title only.
+    await expect(card(page).locator('h2').first()).toContainText('Latest build')
+    await expect(card(page).locator('h2').first()).toHaveAttribute('title', /^h1, /)
     await tab(page, 'Schematic').click()
     await expect.poll(async () => (await drawn(page)).sheet?.symbols ?? 0).toBeGreaterThan(0)
     await tab(page, '3D').click()
@@ -163,9 +165,22 @@ test('routing runs in the background, and its copper goes stale after a move', a
     await expect.poll(async () => (await drawn(page)).board?.route ?? null, { timeout: 20_000 }).not.toBeNull()
     await expect(page.locator('[data-region="status"]')).toContainText(/routed \d+\/\d+/)
     await expect.poll(async () => (await drawn(page)).board?.revealing ?? true).toBe(false)
+    // The build the route asked for is the person's, as the builds timeline and the route card's head say, and its build is routed.
+    const timeline = page.locator('[data-region="builds"]')
+    await expect(timeline.locator('.tl-chip').last()).toContainText('Routed by you')
+    await expect(card(page).locator('h2').first()).toContainText('Latest build · routed by you')
+    await expect(card(page).locator('h2').first()).toContainText('routed')
+    await timeline.locator('.timeline-toggle').click()
+    await expect(timeline.locator('.strip-node[data-on-show] .strip-by')).toHaveText('routed')
+    await timeline.locator('.timeline-toggle').click()
     save(dir)
     await expect.poll(async () => (await drawn(page)).board?.stale ?? 0, { timeout: 20_000 }).toBeGreaterThan(0)
     await expect(band(page)).toContainText('Parts moved since.')
+    // The save after it is the person's too, its build's copper stale.
+    await expect(timeline.locator('.tl-chip').last()).toContainText('Saved by you')
+    await timeline.locator('.timeline-toggle').click()
+    await expect(timeline.locator('.strip-node[data-on-show] .strip-by')).toHaveText('stale')
+    await timeline.locator('.timeline-toggle').click()
     // "Keep it" leaves the faded copper on show and puts the band away; "Route again" is the other way out of it.
     await band(page).getByRole('button', { name: 'Keep it' }).click()
     await expect(band(page)).toHaveCount(0)

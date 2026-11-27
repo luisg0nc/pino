@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
-import { which } from '../shared/keys'
+import { pressed, which } from '../shared/keys'
+import { isViewTab } from '../shared/view'
 import type { ProjectInfo } from '../shared/project'
 import type { WorkspaceInfo } from '../shared/workspace'
 import { answerLooks } from './look'
@@ -8,6 +9,7 @@ import { cardsActions, connectCards } from './state/cards'
 import { clampDock, DOCK_MIN, dockDefault, readDock, windowStorage, writeDock } from './state/dock'
 import { useKeepThumb } from './state/keepThumb'
 import { actions, store, useStore } from './state/store'
+import { timelineActions } from './state/timeline'
 import { NewProject, openNewProject } from './ui/onboard/NewProject'
 import { nameOf, openProblem } from './ui/openFolder'
 import { ProjectsPage } from './ui/ProjectsPage'
@@ -30,6 +32,22 @@ function why(what: string, e: unknown): string {
   return message.endsWith('.') || / is not a folder pino can open: /.test(message) ? message : openProblem(what, e)
 }
 
+/** The key that opens or folds the builds timeline at the foot of the views, as its toggle does: heard everywhere, with one of a project's three views on screen (not the Brief or Usage). */
+function useTimelineKey(): void {
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent): void => {
+      if (!pressed(e, 'builds.toggle')) return
+      e.preventDefault()
+      e.stopPropagation()
+      const s = store.getState()
+      if (e.repeat || s.page !== 'project' || s.project === null || !isViewTab(s.tab)) return
+      timelineActions.toggle()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
+}
+
 /** Said where the person is looking: in the status line of a project, else on the page itself. */
 function say(text: string): void {
   if (store.getState().page === 'project') actions.notice(text)
@@ -37,6 +55,7 @@ function say(text: string): void {
 }
 
 export function App() {
+  useTimelineKey()
   const page = useStore((s) => s.page)
   const project = useStore((s) => s.project)
   const [busy, setBusy] = useState(false)

@@ -202,7 +202,7 @@ export function registerIpc({ opened, sessions, trust, models, builds, views, ma
   handle('build:engineInfo', () => engineInfo())
   handle('build:routeFile', (id: unknown, key: unknown, name: unknown) => readRouteFile(mustBeOpen(id), String(key), name as RouteFile))
   builds.onState((state) => broadcast('build:state', state))
-  handle('route:start', async (id: unknown) => void (await routing.start(mustBeOpen(id))))
+  handle('route:start', async (id: unknown) => void (await routing.start(mustBeOpen(id), 'person')))
   handle('route:cancel', async (id: unknown) => void (await routing.cancel(mustBeOpen(id))))
   handle('fab:state', (id: unknown) => {
     const project = projectOf(id)

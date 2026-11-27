@@ -125,7 +125,27 @@ export function verdictWords(r: Pick<BuildResult, 'number' | 'headline'>): { on:
 
 export type EngineState = { state: 'starting' } | { state: 'ready'; kernel: string; serve: number } | { state: 'failed'; reason: string }
 
-/** One build of the project, as the strip lists them. */
+/**
+ * What made a build: Claude Code in a prompt's turn (`agent`), a save of the person's (`person`), a route the person
+ * started in the window (`route`); `unknown` for an opening, a Rebuild, or a build kept before this was said.
+ */
+export type BuildCause = 'agent' | 'person' | 'route' | 'unknown'
+
+/** The prompt of the turn a build came out of. Main's only (`Sessions.turnNow`), never taken from the window or a tool. */
+export interface BuildTurn {
+  /** The chat's `user` item. */
+  prompt: string
+  conversation?: string
+}
+
+/** What main keeps of what made a build (`main/buildCauses.ts`). */
+export interface KeptCause {
+  cause: BuildCause
+  /** For the cause `agent`, when a prompt's turn was at work. */
+  turn?: BuildTurn
+}
+
+/** One build of the project, as the builds timeline lists them. */
 export interface BuildEntry {
   number: number
   hash: string | null
@@ -133,6 +153,10 @@ export interface BuildEntry {
   at: string
   /** Its folder is still there: the engine keeps the newest twenty. */
   kept: boolean
+  /** What made it, as main kept it; absent is `unknown`. */
+  cause?: BuildCause
+  /** For the cause `agent`: the prompt it came out of. */
+  turn?: BuildTurn
 }
 
 /** A route job at work. */

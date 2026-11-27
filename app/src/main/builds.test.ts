@@ -1,7 +1,7 @@
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { BuildResult, BuildState } from '../shared/build'
+import type { BuildResult, BuildState, KeptCause } from '../shared/build'
 import { fx, readJson, tempProject, FAKE_KERNEL } from '../test/fixtures'
 import { Builds, readBuildHistory, watchProject, type OnChange } from './builds'
 import { kernelHolder, startKernel, type KernelClient } from './kernel/client'
@@ -18,7 +18,7 @@ afterEach(async () => {
 const info = () => ({ id: 'p000000000001', dir: project.dir, name: 'board' })
 
 /** The loop over the stand-in, with a watcher the test works by hand and a clock it moves. */
-function loop(env: () => Record<string, string> = () => ({})) {
+function loop(env: () => Record<string, string> = () => ({}), deps: Partial<ConstructorParameters<typeof Builds>[0]> = {}) {
   let tell: OnChange = () => {}
   let seen: () => void = () => {}
   let time = 1_000_000
@@ -41,14 +41,18 @@ function loop(env: () => Record<string, string> = () => ({})) {
       seen = onSeen ?? (() => {})
       return () => {}
     },
-    now: () => time
+    now: () => time,
+    ...deps
   })
   const states: BuildState[] = []
   const results: BuildResult[] = []
   builds.onState((s) => states.push(structuredClone(s)))
   builds.onResult((_id, r) => results.push(r))
   done.push(
-    () => builds.close(info().id),
+    () => {
+      builds.close(info().id)
+      return builds.writing()
+    },
     () => holder.dispose()
   )
   return {
@@ -146,6 +150,8 @@ describe('the build loop', () => {
     await builds.whenSettled(info().id, Date.now() + 5000)
     expect(builds.latest(info().id)!.number).toBe(3)
     expect(results).toEqual([3])
+    builds.close(info().id)
+    await builds.writing()
   })
 
   // `uv` waiting on a lock, or a sync that hangs: the engine is there and says nothing.
@@ -298,6 +304,8 @@ describe('the build a route was made on', () => {
     }
     expect(builds.routedOn(info().id, 'cccccccc00000001')).toBe(5)
     expect(builds.routedOn(info().id, 'cccccccc00000002')).toBeUndefined()
+    builds.close(info().id)
+    await builds.writing()
   })
 })
 
@@ -363,5 +371,192 @@ describe('the watch', () => {
     await new Promise((r) => setTimeout(r, 300))
     odd.touch('b = 2\n')
     await expect.poll(() => heard.length, { timeout: 3000 }).toBe(1)
+  })
+})
+
+describe('what made each build', () => {
+  const agent: KeptCause = { cause: 'agent', turn: { prompt: 'u7', conversation: 'c1' } }
+  /** The causes as the window is told them, by build number. */
+  const told = (s: BuildState) => s.history.map((e) => [e.number, e.cause, e.turn])
+  const written = () => {
+    const files: Array<Map<number, KeptCause>> = []
+    return { files, writeCauses: async (_dir: string, causes: ReadonlyMap<number, KeptCause>) => void files.push(new Map(causes)) }
+  }
+
+  it('says a save during a turn came from the agent, with the turn', async () => {
+    const w = written()
+    let now: KeptCause = { cause: 'person' }
+    const l = loop(() => ({}), { causeNow: () => now, writeCauses: w.writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    now = agent
+    l.seen()
+    l.save()
+    const state = await l.settled()
+    expect(told(state)).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn]])
+    expect(w.files.at(-1)).toEqual(new Map([[1, { cause: 'unknown' }], [2, agent]]))
+  })
+
+  it('says a save between turns came from the person, and has no turn on it', async () => {
+    const l = loop(() => ({}), { causeNow: () => ({ cause: 'person' }), writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    l.seen()
+    l.save()
+    const state = await l.settled()
+    expect(state.history[1]).toMatchObject({ number: 2, cause: 'person' })
+    expect('turn' in state.history[1]).toBe(false)
+  })
+
+  it('does not know what made the opening build, or a Rebuild', async () => {
+    const l = loop(() => ({}), { causeNow: () => agent, writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    l.builds.rebuild(info().id)
+    const state = await l.settled()
+    expect(told(state)).toEqual([[1, 'unknown', undefined], [2, 'unknown', undefined]])
+  })
+
+  it('stamps the build a route asked for with the route cause', async () => {
+    const l = loop(() => ({}), { writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    l.builds.rebuild(info().id, { cause: 'route' })
+    expect(told(await l.settled())[1]).toEqual([2, 'route', undefined])
+  })
+
+  it('tells the running build its cause while it runs', async () => {
+    const l = loop(() => ({ FAKE_KERNEL_DELAY_MS: '100' }), { causeNow: () => agent, writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    l.seen()
+    l.save()
+    await l.settled()
+    const running = l.states.flatMap((s) => s.history.filter((e) => e.verdict === 'running'))
+    expect(running.map((e) => [e.number, e.cause, e.turn])).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn]])
+  })
+
+  it('lets the highest cause win, whole, when several fold into one build', async () => {
+    const causes: KeptCause[] = [{ cause: 'person' }, agent, { cause: 'person' }]
+    const l = loop(() => ({ FAKE_KERNEL_DELAY_MS: '150' }), { causeNow: () => causes.shift() ?? { cause: 'person' }, writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await expect.poll(() => l.asked.length).toBe(1)
+    // While the first build runs: a person's save, then Claude's, then a person's again, all for the next one.
+    l.seen()
+    l.seen()
+    l.seen()
+    l.save()
+    expect(told(await l.settled())[1]).toEqual([2, 'agent', agent.turn])
+    // A route beats a person's save, and an agent beats a route.
+    l.builds.rebuild(info().id)
+    await expect.poll(() => l.asked.length).toBe(3)
+    l.seen()
+    l.builds.rebuild(info().id, { cause: 'route' })
+    l.save()
+    expect(told(await l.settled())[3]).toEqual([4, 'route', undefined])
+  })
+
+  it('puts a save heard while a build runs on the next build, not the running one', async () => {
+    const l = loop(() => ({ FAKE_KERNEL_DELAY_MS: '200' }), { causeNow: () => agent, writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await expect.poll(() => l.asked.length).toBe(1)
+    l.seen()
+    l.save()
+    const state = await l.settled()
+    expect(told(state)).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn]])
+  })
+
+  it('puts a save heard before the engine is asked, while the build starts, on the next build', async () => {
+    // The causes on file are read before the engine is asked: held here, that is the moment an engine's first ping takes.
+    let release: () => void = () => {}
+    const held = new Promise<Map<number, KeptCause>>((resolve) => (release = () => resolve(new Map())))
+    const l = loop(() => ({}), { causeNow: () => ({ cause: 'person' }), writeCauses: written().writeCauses, readCauses: () => held })
+    l.builds.open(info())
+    l.seen()
+    l.save()
+    release()
+    await expect.poll(() => l.asked.length).toBe(2)
+    expect(told(await l.settled())).toEqual([[1, 'unknown', undefined], [2, 'person', undefined]])
+  })
+
+  it('keeps a burst that has not settled off the build that starts', async () => {
+    let release: () => void = () => {}
+    const held = new Promise<Map<number, KeptCause>>((resolve) => (release = () => resolve(new Map())))
+    const l = loop(() => ({}), { causeNow: () => agent, writeCauses: written().writeCauses, readCauses: () => held })
+    l.builds.open(info())
+    l.seen()
+    release()
+    await expect.poll(() => l.asked.length).toBe(1)
+    l.save()
+    expect(told(await l.settled())).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn]])
+  })
+
+  it('forgets what wanted a build that a folder with no board.py did not make', async () => {
+    rmSync(join(project.dir, 'board.py'))
+    let now: KeptCause = agent
+    const l = loop(() => ({}), { causeNow: () => now, writeCauses: written().writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    // Claude saves another Python file in a turn: nothing is built.
+    l.seen()
+    l.save(['calc.py'])
+    await l.settled()
+    expect(l.starts()).toBe(0)
+    // Later the person writes board.py: its build is theirs, not that turn's.
+    now = { cause: 'person' }
+    project.touch()
+    l.seen()
+    l.save()
+    expect(told(await l.settled())).toEqual([[1, 'person', undefined]])
+  })
+
+  it('tells the causes it had on file for the builds the engine lists, and none for the others', async () => {
+    const l = loop(() => ({}), {
+      readCauses: async () => new Map<number, KeptCause>([[1, { cause: 'person' }], [5, agent]]),
+      writeCauses: written().writeCauses
+    })
+    mkdirSync(join(project.dir, '.pino'), { recursive: true })
+    writeFileSync(join(project.dir, '.pino', 'builds.json'), JSON.stringify({ schema: 'pino.builds/1', builds: [{ number: 1, hash: null, verdict: 'ok', at: 't' }, { number: 2, hash: null, verdict: 'ok', at: 't' }] }))
+    l.builds.open(info())
+    const state = await l.settled()
+    expect(told(state)).toEqual([[1, 'person', undefined], [2, undefined, undefined], [3, 'unknown', undefined]])
+    expect('cause' in state.history[1] || 'turn' in state.history[1]).toBe(false)
+  })
+
+  it('keeps the causes in a file that a fresh loop reads back', async () => {
+    const first = loop(() => ({}), { causeNow: () => agent })
+    first.builds.open(info())
+    await first.settled()
+    first.seen()
+    first.save()
+    await first.settled()
+    await expect.poll(() => existsSync(join(project.dir, '.pino', 'build-causes.json'))).toBe(true)
+    await expect.poll(() => readJson<{ builds: unknown[] }>(join(project.dir, '.pino', 'build-causes.json')).builds.length).toBe(2)
+    first.builds.close(info().id)
+    const again = loop()
+    again.builds.open(info())
+    const state = await again.settled()
+    expect(told(state)).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn], [3, 'unknown', undefined]])
+  })
+
+  it('says when the causes it is writing have landed, so that a folder is not removed under them', async () => {
+    let landed = false
+    let release: () => void = () => {}
+    const writeCauses = () => new Promise<void>((resolve) => (release = () => ((landed = true), resolve())))
+    const l = loop(() => ({}), { writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    expect(l.builds.writes).toBe(1)
+    l.builds.close(info().id)
+    const done = l.builds.writing().then(() => landed)
+    release()
+    expect(await done).toBe(true)
+    expect(l.builds.writes).toBe(0)
+  })
+
+  it('does not hold up a build for a write that fails', async () => {
+    const l = loop(() => ({}), { writeCauses: () => Promise.reject(new Error('disk full')), readCauses: async () => new Map() })
+    l.builds.open(info())
+    expect((await l.settled()).latest!.number).toBe(1)
   })
 })

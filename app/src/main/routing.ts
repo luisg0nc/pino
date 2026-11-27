@@ -1,7 +1,7 @@
 // Routing as main runs it: one route job a project, its progress told in the build state, and a build when it ends, so
 // that the build's own `routing` is the one truth of where the copper stands. The trial tools go through here too.
 
-import { isRecord, type RouteProgress, type RoutingState } from '../shared/build'
+import { isRecord, type KeptCause, type RouteProgress, type RoutingState } from '../shared/build'
 import { ENGINE_STARTING } from '../shared/fab'
 import type { ProjectInfo } from '../shared/project'
 import { engineMayWrite, type Builds } from './builds'
@@ -46,7 +46,13 @@ export class Routing {
   private readonly words = new Map<string, string>()
   private readonly now: () => number
 
-  constructor(private readonly deps: { kernel: () => KernelClient; builds: Builds; now?: () => number }) {
+  constructor(private readonly deps: {
+    kernel: () => KernelClient
+    builds: Builds
+    /** What made a build now (`Builds`'s own): Claude's turn at work, or the person. Asked when Claude starts a route. */
+    causeNow?: (projectId: string) => KeptCause
+    now?: () => number
+  }) {
     this.now = deps.now ?? Date.now
   }
 
@@ -68,20 +74,25 @@ export class Routing {
     if (why) throw new Error(why)
   }
 
-  start(p: ProjectInfo): Promise<Started> {
+  /**
+   * Starts the project's route, or says the one running. `by` is who asked: the person in the window, whose route is
+   * what makes the build that follows, or Claude's tool, whose turn is.
+   */
+  start(p: ProjectInfo, by: 'person' | 'agent' = 'agent'): Promise<Started> {
     const held = this.jobs.get(p.id)
     if (held) return held.started.then((s) => ({ ...s, already: true }))
+    const cause: KeptCause = by === 'person' ? { cause: 'route' } : (this.deps.causeNow?.(p.id) ?? { cause: 'unknown' })
     let finish: () => void = () => {}
     const done = new Promise<void>((resolve) => (finish = resolve))
     const job = { done, finish, dropped: false, progress: null } as unknown as Job
     // Held before anything is waited for, so that a second start finds this one.
     this.jobs.set(p.id, job)
-    job.started = this.begin(p, job)
+    job.started = this.begin(p, job, cause)
     job.started.catch(() => this.end(p.id, job))
     return job.started
   }
 
-  private async begin(p: ProjectInfo, job: Job): Promise<Started> {
+  private async begin(p: ProjectInfo, job: Job, cause: KeptCause): Promise<Started> {
     this.need(p)
     await engineMayWrite(p.dir)
     const drawn = this.deps.builds.lastGood(p.id)
@@ -109,7 +120,7 @@ export class Routing {
         this.end(p.id, job)
         this.deps.builds.patch(p.id, { route: null })
         // The engine answers this one from its cache: the build then says where the copper stands.
-        this.deps.builds.rebuild(p.id)
+        this.deps.builds.rebuild(p.id, cause)
       })
     return { job: asked.id, build: drawn.number, already: false }
   }

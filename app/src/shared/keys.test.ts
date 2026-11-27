@@ -73,7 +73,15 @@ it('says which key of a row was pressed', () => {
 
 it('knows what typing would take', () => {
   for (const key of ['V', '?', 'Esc', 'Enter', 'Shift+Enter', 'Left', 'Ctrl+C', 'Ctrl+R']) expect([key, typed(key)]).toEqual([key, true])
-  for (const key of ['Ctrl+Shift+E', 'F6', 'Ctrl+`', 'F12']) expect([key, typed(key)]).toEqual([key, false])
+  for (const key of ['Ctrl+Shift+E', 'Ctrl+Shift+H', 'F6', 'Ctrl+`', 'F12']) expect([key, typed(key)]).toEqual([key, false])
+})
+
+it('has the builds timeline as its one global key, which typing never takes', () => {
+  const global = KEYS.filter((row) => row.scope === 'global')
+  expect(global.map((row) => row.id)).toEqual(['builds.toggle'])
+  for (const row of global) for (const key of row.keys) expect([key, typed(key)]).toEqual([key, false])
+  expect(pressed({ key: 'H', ctrlKey: true, shiftKey: true }, 'builds.toggle')).toBe(true)
+  expect(hint('builds.toggle')).toBe('Ctrl+Shift+H')
 })
 
 it('has the keys of the views in a scope of their own, with no clash', () => {

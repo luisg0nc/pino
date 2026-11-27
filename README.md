@@ -65,8 +65,8 @@ pino builds it into a KiCad 10 project and shows it. pino is a sibling of
   extended part says why in `board.py`.
 - **Fab files.** `release` writes Gerbers, drill files, a BOM and a placement file in JLC's columns, with a README
   that says what to upload and what to check in JLC's preview. Each release is a version, `fab/v1.0.0/`.
-- **Every build kept.** The builds strip at the top of the session has a picture of each build. Press one to see
-  that build in the views.
+- **Every build kept.** A bar under the views groups the builds by what made them: a prompt, your own saves, a
+  route. Open it with Ctrl+Shift+H to see a picture of each build, and press one to see it in the views.
 - **What it cost.** Each turn ends with what Claude Code says it cost and how many tokens it took, and a turn far
   above the project's usual one says what happened in it. The Usage tab adds it up by day, conversation and prompt.
 - **Local.** pino itself uploads nothing. The only requests it makes are part lookups on jlcsearch, which carry pino's

@@ -10,6 +10,11 @@ paths:
   - "app/src/renderer/look.ts"
   - "app/src/renderer/ui/ViewPane.tsx"
   - "app/src/renderer/ui/view/**"
+  - "app/src/renderer/ui/strip/**"
+  - "app/src/renderer/ui/route/Head.tsx"
+  - "app/src/renderer/state/timeline.ts"
+  - "app/src/renderer/styles/strip.css"
+  - "app/e2e/timeline.spec.ts"
 ---
 
 # The three views: Board, Schematic and 3D
@@ -47,12 +52,42 @@ route's copper while there is one.
   view (a stale route's parts, a route with no model), it says so under its switches, and so does Claude's picture.
 - It is drawn only when something changed. Where there is no WebGL the tab says so: an error thrown out of an effect
   blanks the window.
-- The route card's head says how the build stands in a word or three (`headSaid`); the counts are in its checks.
+- The route card's head names the newest build in the builds timeline's words (`buildNamed`: `Latest build · prompt 5`,
+  `· saved by you`, `· routed by you`; an earlier run's is `Latest build` alone; its history id is the title only) and
+  says how it stands in a word or three (`headSaid`: `routed`, `copper stale`, `checks pass`); the counts are in its
+  checks. An older build on show is `Prompt 3 · older build` with Back to latest, and no word: the word is the newest's.
 - Pins nearer than `GATHER` are one pin with a count. A chip stands off what it marks: at a part's or a pad's corner.
 - A tag stands clear of what it names and is tied to it by a leader. What lies over a view carries `data-tag-avoid`.
   The wheel zooms over chips, pins and tags as over the drawing: it is heard on the view's root.
 - At the foot of a view, one band at a time (`bandFor`): an older build, a failed build, a route under way, stale
   copper.
+
+## The builds timeline (`ui/strip/`, from torno #332)
+
+- **A bar under the views, folded by default.** `BuildsTimeline` is drawn by `ViewPane` under the Schematic, the Board
+  and 3D (`isViewTab`), never on the Brief or Usage, which are no build's (torno draws it only with the model on
+  screen). It is `--timeline-h`
+  (34 px) across the foot of the views, above the status line; `.views:has(> .timeline) > .views-panel` stands the view
+  on it, and the band sits on it. The bar: the toggle (`.timeline-toggle`, `Builds` and how many are kept) and a chip
+  for each group (`.tl-chip`, oldest at the left; the person's own have a dot in their violet; a prompt's ends with
+  what it cost, `chipCost`, torno #372, rule `usage`). The drawer rises from
+  the bar over the view (it never resizes it), `inert` while folded. Open or shut is `state/timeline.ts`, the window's
+  (`localStorage` `pino.timeline`), toggled by the toggle and by `builds.toggle` (`Ctrl+Shift+H`, global, `App`'s
+  `useTimelineKey`, only with one of a project's three views on screen). Which groups show every build is the run's only.
+- The rules are `strip.ts`, pure and held by `strip.test.ts`: `stripNodes(history, at, numbering)` (one node a build,
+  its caption as today: `ok`, `routed`, `stale`, `2 errors`, `failed`, `not kept`, `building`; `by`, the label:
+  `Prompt 4` for a build of a numbered prompt, `Saved by you`, `Routed by you`, `Earlier` for `unknown`, `Claude Code`
+  for a prompt with no number; a running build nothing is known of is `Building`), `stripGroups` (consecutive builds of
+  one prompt, or of one other cause, are one group), `groupTitle` (the prompt's words, then its builds; never in the
+  label), `buildNamed` (the route card's head) and `stripSays`. What made a build is main's (`BuildEntry.cause`, see
+  `engine-client`); the prompts are numbered by `chat.prompts` (`useStripNodes`). pino has no Manual edit (no
+  Parameters) and no Went back (no Go back).
+- In the drawer a group of several builds is a pile (`.tl-pile`) until a click on it or its label shows every build;
+  a chip opens the drawer at its group. A build is a button: a press shows it in the views (`actions.showBuild`), the
+  newest that drew being the live one; one not kept cannot be pressed. There is no menu, compare, star or review.
+- `e2e/timeline.spec.ts` holds the bar, the groups and their costs, the drawer, the key, the Brief and Usage, and the
+  window's memory;
+  `views.spec.ts` the route's and a save's builds.
 
 ## Motion
 

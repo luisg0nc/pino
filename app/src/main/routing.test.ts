@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { referenceModel } from '../test/marks'
 import { tempProject } from '../test/fixtures'
+import type { KeptCause } from '../shared/build'
 import { routedLoop } from '../test/routing'
 
 let project: ReturnType<typeof tempProject>
@@ -19,8 +20,8 @@ afterEach(async () => {
   project.remove()
 })
 
-const loop = (env: Record<string, string> = {}) => {
-  const l = routedLoop(project, env)
+const loop = (env: Record<string, string> = {}, causeNow?: (projectId: string) => KeptCause) => {
+  const l = routedLoop(project, env, undefined, causeNow)
   done.push(l.dispose)
   return l
 }
@@ -75,6 +76,33 @@ describe('routing', () => {
     expect(l.builds.latest(l.info.id)!.routing).toMatchObject({ state: 'current', number: 1 })
     expect(l.builds.latest(l.info.id)!.number).toBe(2)
     expect(l.routing.lastWords(l.info.id)).toContain('Route r1: router')
+  })
+
+  it('makes the build after a route the person started a route build', async () => {
+    const l = loop()
+    await l.built()
+    await l.routing.start(l.info, 'person')
+    await l.routing.whenDone(l.info.id)
+    const state = await l.built()
+    expect(state.history.map((e) => [e.number, e.cause])).toEqual([[1, 'unknown'], [2, 'route']])
+  })
+
+  it('makes the build after a route Claude started carry the turn it was started in', async () => {
+    const turn = { prompt: 'u3', conversation: 'c1' }
+    const l = loop({}, () => ({ cause: 'agent', turn }))
+    await l.built()
+    await l.routing.start(l.info)
+    await l.routing.whenDone(l.info.id)
+    const state = await l.built()
+    expect(state.history.at(-1)).toMatchObject({ number: 2, cause: 'agent', turn })
+  })
+
+  it('does not know what made the build after a route Claude started with no turn named', async () => {
+    const l = loop()
+    await l.built()
+    await l.routing.start(l.info)
+    await l.routing.whenDone(l.info.id)
+    expect((await l.built()).history.at(-1)).toMatchObject({ number: 2, cause: 'unknown' })
   })
 
   it('keeps one route a project, and cancels it', async () => {
