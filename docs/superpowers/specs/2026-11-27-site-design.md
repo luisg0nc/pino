@@ -34,8 +34,8 @@ screenshots.
 ## Approaches
 
 - **A. Copy torno's site and cut it down (picked).** Copy `site/index.html`, `site/assets/site.css`, `site.js`,
-  `app/scripts/build-site.mjs`, `app/src/site.test.ts`, `.github/workflows/pages.yml`, and the picture pipeline
-  (`app/e2e/readme.spec.ts`, `readme-workspace.ts`, `app/scripts/readme-images.py`) from torno, then adapt. Sibling
+  `app/scripts/build-site.mjs`, `app/src/site.test.ts`, `.github/workflows/pages.yml` and `app/scripts/readme-images.py`
+  from torno, then adapt; the pictures come from pino's own `shots.spec.ts`. Sibling
   look, least work, and the shared code stays traceable in `shared-from-torno.json`.
 - B. A fresh design with mocked directions. More distinctive, but a separate thing from torno's site and slower;
   Luis asked for something like torno's.
@@ -61,7 +61,8 @@ A square link preview (1200 x 1200, the mark in the middle) and the og and twitt
 
 ## The pictures
 
-- A Playwright spec, copied from torno's `readme.spec.ts`, launches the built app with `PINO_TEST=1` (hidden window,
+- A new group in pino's own `app/e2e/shots.spec.ts` (the one spec allowed to take pictures; torno's `readme.spec.ts`
+  is the model) launches the built app with `PINO_TEST=1` (hidden window,
   temp profile, stand-in agent, recorded parts answers, offline), sizes the window, opens each tab and captures it
   with `webContents.capturePage()`. It does not use `page.screenshot()`.
 - It runs only when `PINO_SITE_BOARD` names a board folder, so CI and `pnpm test:e2e` skip it.
