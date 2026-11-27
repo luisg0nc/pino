@@ -4,11 +4,12 @@
 // Each picture is a launch of its own: a hidden window's `capturePage()` gives one picture, and the next call never
 // returns (torno found the same).
 
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
+import { appendFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { basename, join, relative, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { capture, clickTarget, markScene, markTrack, screenOf, settled, startRoute, waitForBuild, zoomOn } from './helpers'
-import { launch, referenceProject, type Launched } from './launch'
+import { launch, referenceProject, tempFolder, type Launched } from './launch'
 
 const folder = process.env.PINO_SHOTS ? resolve(process.env.PINO_SHOTS) : null
 const inRepo = folder !== null && `${folder}/`.startsWith(`${resolve(__dirname, '../..')}/`)
@@ -274,6 +275,112 @@ const SHOTS: Record<string, Shot> = {
 
 test.beforeAll(() => {
   mkdirSync(folder!, { recursive: true })
+})
+
+// ---- the landing page's pictures (site/index.html): `app/scripts/site-images.py` crops them (docs/images/README.md)
+
+/** A board to take them of, built and routed: only ever read, each launch works on a copy of its own. */
+const siteBoard = process.env.PINO_SITE_BOARD ? resolve(process.env.PINO_SITE_BOARD) : null
+
+/**
+ * What of the board's folder stays behind: the conversations, the session and the marks, which are the person's; the
+ * Brief and the thumbnail, which the copy makes anew; and the files that hold a path of the machine or a lock.
+ */
+const LEFT_BEHIND = [/^\.pino\/(chat|marks|kicad|brief)$/, /^\.pino\/(session\.json|thumb\.png|thumb\.json)$/, /(^|\/)(log\.txt|[^/]+\.lock)$/]
+
+/** The board in a workspace of its own, `<temp>/boards/simple-blinker`, with a Brief written for the picture. */
+function siteCopy(): string {
+  const dir = join(tempFolder('site'), 'boards', 'simple-blinker')
+  cpSync(siteBoard!, dir, { recursive: true, filter: (from) => !LEFT_BEHIND.some((left) => left.test(relative(siteBoard!, from))) })
+  writeFileSync(join(dir, 'brief.md'), '# Simple blinker\n\nA small board that runs on a 9 V battery. Press the button and the LED blinks three times, then waits for the next press.\n')
+  mkdirSync(join(dir, '.pino', 'brief'), { recursive: true })
+  // The person's own cards, so that the picture puts no words in Claude's mouth. What they say is in board.py.
+  const cards = [
+    { id: 'C1', kind: 'requirement', by: 'person', text: 'One press of the button blinks the LED three times' },
+    { id: 'C2', kind: 'part', by: 'person', text: 'Step clock: ICM7555, a CMOS 555', part: { lcsc: 'C434506' } },
+    { id: 'C3', kind: 'power', by: 'person', text: '9 V battery on a snap, about 30 uA between presses' },
+    { id: 'C4', kind: 'decision', by: 'person', text: 'A CD4017 counts the blinks, then holds the 555 in reset' }
+  ]
+  writeFileSync(join(dir, '.pino', 'brief', 'cards.json'), JSON.stringify({ next: 5, cards }))
+  return dir
+}
+
+const onSiteBrief = async (run: Launched): Promise<void> => {
+  await tab(run, 'Brief').click()
+  await expect(run.page.locator('[data-card="C4"]')).toBeVisible()
+  await expect(run.page.locator('.brief-words')).toContainText('9 V battery')
+}
+const onSiteSheet = async (run: Launched): Promise<void> => {
+  await tab(run, 'Schematic').click()
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().sheet?.symbols ?? 0)).toBeGreaterThan(0)
+  // Fitted, a block's title can stand under the tool rail: the sheet is dragged clear of it, from a bare part of it.
+  await run.page.mouse.move(900, 820)
+  await run.page.mouse.down()
+  await run.page.mouse.move(900, 842, { steps: 8 })
+  await run.page.mouse.up()
+}
+/** The Board, with the route the copy brought drawn on it. */
+const onSiteBoard = async (run: Launched): Promise<void> => {
+  await onBoard(run)
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.state().build?.lastGood?.routing?.state ?? null), { timeout: 30_000 }).toBe('current')
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().board?.route ?? null)).not.toBeNull()
+}
+const onSite3d = async (run: Launched): Promise<void> => {
+  await onSiteBoard(run)
+  await tab(run, '3D').click()
+  await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.drawn().three?.loaded ?? false), { timeout: 30_000 }).toBe(true)
+}
+
+const SITE_SHOTS: Record<string, Pick<Shot, 'dark'> & { at(run: Launched): Promise<void> }> = {
+  brief: { at: onSiteBrief },
+  schematic: { at: onSiteSheet },
+  board: { at: onSiteBoard },
+  '3d': { at: onSite3d },
+  hero: { at: onSiteBoard },
+  'hero-dark': { dark: true, at: onSiteBoard }
+}
+
+test.describe('site', () => {
+  test.skip(siteBoard === null || !existsSync(join(siteBoard, 'board.py')), 'set PINO_SITE_BOARD to a board folder')
+  test.setTimeout(180_000)
+
+  for (const [name, shot] of Object.entries(SITE_SHOTS)) {
+    test(name, async () => {
+      // The real engine, which fetches nothing into the run's empty home and looks no part up.
+      const env = { UV_NO_SYNC: '1', UV_OFFLINE: '1', PINO_CACHE_DIR: tempFolder('cache'), PINO_TEST_SIZE: '1600x1000' }
+      const run = await launch({ project: siteCopy(), agent: true, kernel: 'real', env })
+      try {
+        const scheme = shot.dark ? ('dark' as const) : ('light' as const)
+        await run.app.evaluate(({ nativeTheme }, source) => void (nativeTheme.themeSource = source), scheme)
+        await run.page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme })
+        await expect.poll(() => run.page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([1600, 1000])
+        await expect.poll(() => run.page.evaluate(() => window.__pinoTest!.state().build?.latest?.verdict ?? null), { timeout: 150_000 }).toBe('ok')
+        await waitForBuild(run.page, 1)
+        await shot.at(run)
+        await run.page.mouse.move(5, 5)
+        await run.page.evaluate(() => document.fonts.ready.then(() => undefined))
+        await settled(run.page)
+        await run.page.waitForTimeout(1500)
+        // Nothing of the person's home is on screen or in a tooltip, the title bar first.
+        const title = run.page.locator('[data-region="title"]')
+        await expect(title).toContainText('simple-blinker')
+        for (const said of [await title.innerHTML(), await run.page.evaluate(() => `${document.title}\n${document.body.innerText}`)]) expect(said).not.toContain(homedir())
+        // The window's regions, in the page's pixels, for the crops.
+        const boxes = await run.page.evaluate(() => {
+          const found: Record<string, { x: number; y: number; width: number; height: number }> = {}
+          for (const el of document.querySelectorAll<HTMLElement>('[data-region]')) {
+            const { x, y, width, height } = el.getBoundingClientRect()
+            if (width > 0 && height > 0) found[el.dataset.region!] ??= { x, y, width, height }
+          }
+          return { window: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }, ...found }
+        })
+        writeFileSync(join(folder!, `site-${name}.json`), JSON.stringify(boxes, null, 1))
+        await capture(run.app, join(folder!, `site-${name}.png`))
+      } finally {
+        await run.app.close()
+      }
+    })
+  }
 })
 
 for (const [name, shot] of Object.entries(SHOTS)) {

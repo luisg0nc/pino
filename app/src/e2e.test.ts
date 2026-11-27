@@ -41,9 +41,15 @@ describe('the specs', () => {
     expect(read('e2e/launch.ts')).toContain("PINO_PARTS_OFFLINE: '1'")
   })
 
-  it("runs the engine's stand-in everywhere but in the one spec of the real engine", () => {
+  it("runs the engine's stand-in everywhere but in the spec of the real engine and the landing page's pictures", () => {
     expect(read('e2e/launch.ts')).toContain('PINO_KERNEL_CMD: `node ${FAKE_KERNEL}`')
-    expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts')).toEqual(['e2e/real-kernel.spec.ts'])
+    expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts')).toEqual(['e2e/real-kernel.spec.ts', 'e2e/shots.spec.ts'])
+    // In shots.spec.ts it is one launch, in the group that runs only where a run names a board to take pictures of.
+    const shots = read('e2e/shots.spec.ts')
+    const group = shots.slice(shots.indexOf("test.describe('site'"))
+    expect(shots.match(/kernel: 'real'/g)).toHaveLength(1)
+    expect(group).toContain("kernel: 'real'")
+    expect(group).toContain('test.skip(siteBoard === null ||')
   })
 
   it('takes its pictures only where a run names a folder outside the repository, and never resizes the window first', () => {
