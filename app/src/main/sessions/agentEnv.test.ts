@@ -13,6 +13,38 @@ describe('withoutSession', () => {
   })
 })
 
+describe('in an AppImage', () => {
+  const APPDIR = '/tmp/.mount_pinoAb'
+  // What the AppImage's runtime and AppRun set. With nothing set before, AppRun leaves an empty entry behind.
+  const MOUNTED = {
+    APPDIR,
+    APPIMAGE: '/home/a/pino.AppImage',
+    ARGV0: './pino.AppImage',
+    OWD: '/home/a',
+    PATH: `${APPDIR}:${APPDIR}/usr/sbin:/usr/bin:/bin`,
+    LD_LIBRARY_PATH: `${APPDIR}/usr/lib:`,
+    XDG_DATA_DIRS: `${APPDIR}/usr/share:/usr/share/gnome:/usr/share/`,
+    GSETTINGS_SCHEMA_DIR: `${APPDIR}/usr/share/glib-2.0/schemas:`
+  }
+
+  it("gives nothing pino starts the mount's folders or the runtime's variables", () => {
+    const said = { PATH: '/usr/bin:/bin', XDG_DATA_DIRS: '/usr/share/gnome:/usr/share/' }
+    expect(withoutSession(MOUNTED)).toEqual(said)
+    expect(agentEnv(MOUNTED)).toEqual(said)
+  })
+
+  it("keeps the person's own entries, and a folder that only begins with the mount's name", () => {
+    expect(withoutSession({ APPDIR, LD_LIBRARY_PATH: `${APPDIR}/usr/lib:/opt/lib:${APPDIR}-other` })).toEqual({ LD_LIBRARY_PATH: `/opt/lib:${APPDIR}-other` })
+  })
+
+  it('changes nothing outside an AppImage', () => {
+    for (const appdir of [undefined, '', '/']) {
+      const env = { PATH: '/usr/bin:', LD_LIBRARY_PATH: '/opt/lib:', ARGV0: 'zsh', OWD: '/o', ...(appdir === undefined ? {} : { APPDIR: appdir }) }
+      expect(withoutSession(env)).toEqual(env)
+    }
+  })
+})
+
 describe('agentEnv', () => {
   it("takes out an outer pino's session, pino's own switches and the marks of a Claude Code session", () => {
     const own = { PINO_TEST: '1', PINO_AGENT_CMD: 'node x', PINO_CONFIG: '/c', PINO_PROJECT: '/p', PINO_DEBUG: '1' }

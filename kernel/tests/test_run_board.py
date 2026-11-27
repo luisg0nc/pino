@@ -1,5 +1,7 @@
+import sys
 import time
 
+import pytest
 from helpers import SMALL_BOARD_PY, small_board_py
 from pino_kernel.run_board import run_board
 
@@ -7,6 +9,15 @@ from pino_kernel.run_board import run_board
 def test_good_board(make_project, fixture_libs):
     r = run_board(make_project(SMALL_BOARD_PY), libraries=fixture_libs)
     assert r.problems == [] and r.circuit.parts[0].ref == "J1" and r.seconds > 0
+
+
+@pytest.mark.parametrize("quiet", [True, False])
+def test_the_runner_writes_bytecode_only_when_its_parent_does(make_project, fixture_libs, monkeypatch, quiet):
+    # The packaged app's engine writes none beside its sources, and -I does not read PYTHONDONTWRITEBYTECODE.
+    monkeypatch.setattr(sys, "dont_write_bytecode", quiet)
+    board = "import sys\nsys.stderr.write(f'quiet={sys.flags.dont_write_bytecode}')\n" + SMALL_BOARD_PY
+    r = run_board(make_project(board), libraries=fixture_libs)
+    assert r.problems == [] and f"quiet={int(quiet)}" in r.log
 
 
 def test_syntax_error_has_file_and_line(make_project, fixture_libs):

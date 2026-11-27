@@ -18,6 +18,8 @@ const MAY_NAME_TORNO = [
   'app/src/names.test.ts',
   // The landing page links torno as pino's sibling, and its test holds the link.
   'app/src/site.test.ts',
+  // It names the list of what pino copied, shared-from-torno.json.
+  '.github/PULL_REQUEST_TEMPLATE.md',
   'app/src/shared/app.ts',
   '.claude/hooks/guard-bash.sh',
   '.claude/hooks/guard-bash.test.sh'

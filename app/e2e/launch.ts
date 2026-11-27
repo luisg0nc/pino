@@ -54,9 +54,10 @@ export interface Launched {
 
 /**
  * `kernel`: the engine's stand-in (the default), or the real engine through `uv`, which only `real-kernel.spec.ts`
- * asks for.
+ * asks for. `packaged`: the executable of a packaged app, started in the place of the build in `out/`
+ * (`packaged.spec.ts`).
  */
-export async function launch(opts: { project?: string; agent?: boolean; env?: Record<string, string>; kernel?: 'fake' | 'real'; args?: string[] } = {}): Promise<Launched> {
+export async function launch(opts: { project?: string; agent?: boolean; env?: Record<string, string>; kernel?: 'fake' | 'real'; args?: string[]; packaged?: string } = {}): Promise<Launched> {
   const home = tempFolder('home')
   const config = opts.env?.PINO_CONFIG ?? join(tempFolder('config'), 'config.json')
   // What the shell the specs run from may have set of pino's own switches means nothing to a run.
@@ -80,7 +81,8 @@ export async function launch(opts: { project?: string; agent?: boolean; env?: Re
   }
   // A CI runner has no GPU: the 3D view and Claude's picture of it are drawn in software there.
   const software = process.env.CI ? ['--enable-unsafe-swiftshader'] : []
-  const app = await electron.launch({ args: ['.', ...software, ...(opts.args ?? [])], cwd: appDir, env })
+  const args = [...software, ...(opts.args ?? [])]
+  const app = await electron.launch(opts.packaged ? { executablePath: opts.packaged, args, env } : { args: ['.', ...args], cwd: appDir, env })
   const page = await app.firstWindow()
   await page.waitForSelector('[data-region]')
   return { app, page, config }

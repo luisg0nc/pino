@@ -46,7 +46,9 @@ The person is working on this desktop. No test, script or check may put a window
   passes `--disable-gpu --disable-software-rasterizer` (`--disable-webgl` and `--disable-3d-apis` leave it on).
 - Every spec runs the engine's stand-in (`app/test/fake-kernel.mjs`, whose header lists its switches).
   `real-kernel.spec.ts` asks for the real engine (`launch({ kernel: 'real' })`), and is skipped where uv,
-  kicad-cli or `kernel/.venv` is missing; it runs uv offline, so nothing is fetched into the run's empty home. The
+  kicad-cli or `kernel/.venv` is missing; it runs uv offline, so nothing is fetched into the run's empty home.
+  `packaged.spec.ts` runs the engine a packaged app carries, and runs only when `PINO_PACKAGED` names the app: its
+  first start lets uv download what builds the engine, the one run that reaches the network. The
   one other that does is the `site` group of `shots.spec.ts`, which runs only when asked (`src/e2e.test.ts`).
 - A CSS animation that never ends grows a hidden window's memory for as long as it runs: there is none, and
   `styles/styles.test.ts` fails for one.

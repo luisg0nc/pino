@@ -4,11 +4,36 @@ paths:
   - "app/src/launcher.test.ts"
   - "app/src/main/loginPath.ts"
   - "app/src/main/loginPath.test.ts"
+  - "app/electron-builder.yml"
+  - "app/src/main/paths.ts"
+  - "app/e2e/packaged.spec.ts"
+  - ".github/workflows/release.yml"
 ---
 
-# The launcher and the desktop entry
+# The launcher, the desktop entry and the package
 
-Linux only. There is no packaged app yet.
+Linux only.
+
+## The package
+
+- `pnpm dist:linux` makes `app/dist/pino-<version>.AppImage` and `pino-app-<version>.tar.gz` (`electron-builder.yml`);
+  `pnpm pack:check` makes the folder alone, `app/dist/linux-unpacked`. The version is the one in `app/package.json`,
+  which the root `package.json` repeats (`ci.test.ts`). The engine's version (`kernel/`) is its own.
+- The package carries the engine's sources beside the asar (`resources/kernel`: `pyproject.toml`, `uv.lock`, `NOTICE`,
+  `src/`), the window's icon, `LICENSE` and `NOTICE`. uv, KiCad 10 and Claude Code stay the person's. A new thing main
+  reads from the repository is added to `extraResources` and found through `main/paths.ts`.
+- Packaged, the engine is `uv run --frozen --no-dev` on that folder, with its environment in
+  `<userData>/kernel-env` and no bytecode (`kernel/client.ts` `kernelCommand`, `kernelEnv`): an AppImage is read-only,
+  and mounted somewhere new at every start. `run_board.py` passes `-B` on to the child that runs `board.py`, since
+  `-I` reads no `PYTHON*` variable. Nothing is ever written in the package.
+- The renderer's build writes `out/renderer/third-party-licenses.txt` for what it bundles (`electron.vite.config.ts`).
+- In the AppImage, `AppRun` puts the mount's folders into `PATH`, `LD_LIBRARY_PATH` and others: `withoutSession`
+  (`sessions/agentEnv.ts`) takes them out of everything pino starts.
+- `PINO_PACKAGED=<executable> pnpm -C app exec playwright test e2e/packaged.spec.ts` checks the folder or the
+  AppImage, hidden. CI does not run it: run it by hand after a change to the package, the engine's start or its files.
+- `.github/workflows/release.yml`: a `v*` tag runs the checks, builds both files and puts them on a draft release;
+  `workflow_dispatch` is a dry run that makes none. The notes are written by hand.
+- The package installs no desktop entry and does not update itself.
 
 ## `scripts/pino`
 

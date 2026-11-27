@@ -15,7 +15,8 @@ import { PinoDomain } from './domain'
 import { frameOptions, MIN_WINDOW, SURFACE, windowSize } from './frame'
 import { startHttp } from './http'
 import { broadcast, registerIpc } from './ipc'
-import { kernelCommand, kernelHolder, startKernel } from './kernel/client'
+import { kernelCommand, kernelEnv, kernelHolder, startKernel } from './kernel/client'
+import { kernelDir, windowIconFile } from './paths'
 import { applyLoginPath } from './loginPath'
 import { MarkStore } from './marks/store'
 import { mountMcp } from './mcp/server'
@@ -127,9 +128,10 @@ function changeConfig(change: (config: Config) => Config): Promise<void> {
 }
 
 /** The one engine of this run, and the build loop over it. Neither starts anything until a project has a board. */
-const kernel = kernelHolder(() =>
-  startKernel(kernelCommand(process.env, app.getAppPath()), { env: process.env, cwd: app.getPath('userData') })
-)
+const engineCommand = (): string[] => kernelCommand(process.env, kernelDir(), app.isPackaged)
+/** Read when the engine is asked for, after the login shell has said its PATH. */
+const engineStart = () => ({ env: { ...process.env, ...kernelEnv({ packaged: app.isPackaged, userData: app.getPath('userData') }) }, cwd: app.getPath('userData') })
+const kernel = kernelHolder(() => startKernel(engineCommand(), engineStart()))
 /** A save is Claude's when a tool call of its session accounts for it (never by a turn being at work), else the person's. */
 const builds = new Builds({ kernel: () => kernel.get(), causeNow: (projectId, path) => causeOfSave(sessions?.wroteBy(projectId, path)) })
 const routing = new Routing({ kernel: () => kernel.get(), builds, turnNow: (projectId) => sessions?.turnNow(projectId) })
@@ -202,13 +204,9 @@ const testHooks = {
   configPath: (): string | null => configPath
 }
 
-/**
- * The window's icon, where the desktop takes it from the window and not from the desktop entry (X11): the icon beside
- * the launcher, when it is there. Electron reads no SVG, so it is `scripts/pino.svg` drawn at 512 px
- * (`rsvg-convert -w 512 -h 512`); the desktop entry names the drawing itself.
- */
+/** The window's icon (`paths.ts`), when it is there; the desktop entry names the drawing itself. */
 function windowIcon(): NativeImage | undefined {
-  const file = resolve(app.getAppPath(), '..', 'scripts', `${APP.name}.png`)
+  const file = windowIconFile()
   if (!existsSync(file)) return undefined
   const icon = nativeImage.createFromPath(file)
   return icon.isEmpty() ? undefined : icon
@@ -269,7 +267,7 @@ function createWindow(): BrowserWindow {
 
   // electron-vite serves the renderer from its dev server under `pnpm dev`.
   // `?test=1` tells the renderer to expose its test hook (window.__pinoTest).
-  const devUrl = process.env.ELECTRON_RENDERER_URL
+  const devUrl = app.isPackaged ? undefined : process.env.ELECTRON_RENDERER_URL
   if (devUrl) void win.loadURL(isTest ? `${devUrl}?test=1` : devUrl)
   else void win.loadFile(join(__dirname, '../renderer/index.html'), isTest ? { query: { test: '1' } } : {})
   return win
@@ -396,7 +394,7 @@ void app.whenReady().then(async () => {
   const adapter = claudeAdapter(env('AGENT_CMD'))
   let engineSaid: Promise<EngineInfo> | undefined
   const engineInfo = () =>
-    (engineSaid ??= readEngine(versionCommand(kernelCommand(process.env, app.getAppPath())), { env: process.env, cwd: app.getPath('userData') }).then((said) => ({
+    (engineSaid ??= readEngine(versionCommand(engineCommand()), engineStart()).then((said) => ({
       ...said,
       claude: findCommand(adapter.probe.command, agentEnv(process.env).PATH) !== null
     })))

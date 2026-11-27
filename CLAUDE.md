@@ -19,8 +19,10 @@ tools. Routing in the app works only with an engine that routes (serve protocol 
   `docs/images/` into it (`docs/images/README.md` says how those are made), and `.github/workflows/pages.yml` deploys
   it. Its story is drawn from `site/stories/`, whose board data `app/scripts/story-board.mjs` makes from a real
   project's builds and routes. `app/src/site.test.ts` holds it.
-- `.github/workflows/ci.yml` runs the unit tests, the typecheck, the guard cases and the e2e suite
-  (`app/src/ci.test.ts` holds it).
+- `.github/workflows/ci.yml` runs the unit tests, the typecheck, the guard cases and the e2e suite, and
+  `release.yml` builds the Linux package for a `v*` tag onto a draft release (`app/src/ci.test.ts` holds both).
+  `pnpm dist:linux` builds it here (`app/electron-builder.yml`).
+- Pull requests go to `dev`; `main` holds the last release (`CONTRIBUTING.md`).
 
 ## Tests
 
@@ -73,6 +75,7 @@ changed.
 - Tests never run the real `claude`: they set `PINO_AGENT_CMD` to the stand-in.
 - Tests never reach the network: jlcsearch answers are recorded (`PINO_PARTS_RECORDED`), every launch sets
   `PINO_PARTS_OFFLINE=1`, and caches go to a temp `PINO_CACHE_DIR`, never the person's home (`kernel/README.md`).
+  The one exception is the opt-in check of the packaged app, whose first start lets uv download what builds the engine.
 - Tests never open a visible window: every Electron launch sets `PINO_TEST=1` (hidden window, temp profile), never
   `--ozone-platform=headless`, never `page.screenshot()`, never the clipboard. Tests never steal focus, never touch
   the person's home, and kill only processes they started, by pid.

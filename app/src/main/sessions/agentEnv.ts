@@ -32,12 +32,36 @@ const PARENT_SESSION_VARIABLES = new Set([
   'CLAUDE_PID'
 ])
 
+/** What an AppImage's runtime sets for the app it starts. */
+const APPIMAGE_VARIABLES = ['APPDIR', 'APPIMAGE', 'ARGV0', 'OWD']
+/** The lists its `AppRun` puts the mount's folders into. */
+const APPIMAGE_LISTS = ['PATH', 'LD_LIBRARY_PATH', 'XDG_DATA_DIRS', 'GSETTINGS_SCHEMA_DIR']
+
+/**
+ * What pino's own AppImage added is for pino's window alone: claude, kicad-cli, uv and what they start are the
+ * person's, and would load the mount's old libraries. An empty entry goes too: AppRun leaves one where the list was
+ * empty, and the loader reads it as the current folder.
+ */
+function withoutAppImage(env: Record<string, string>): Record<string, string> {
+  const mount = env.APPDIR
+  if (!mount || mount === '/') return env
+  const out = { ...env }
+  for (const name of APPIMAGE_VARIABLES) delete out[name]
+  for (const name of APPIMAGE_LISTS) {
+    if (out[name] === undefined) continue
+    const kept = out[name].split(':').filter((dir) => dir !== '' && dir !== mount && !dir.startsWith(`${mount}/`))
+    if (kept.length) out[name] = kept.join(':')
+    else delete out[name]
+  }
+  return out
+}
+
 /**
  * The environment every process pino starts inherits (through `agentEnv`, the agent): pino's, without what a session
- * of an outer pino gave it. pino's switches stay for all but the agent.
+ * of an outer pino gave it, or its AppImage. pino's switches stay for all but the agent.
  */
 export function withoutSession(env: Record<string, string | undefined>): Record<string, string> {
-  return Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => entry[1] !== undefined && !SESSION_VARIABLES.has(entry[0])))
+  return withoutAppImage(Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => entry[1] !== undefined && !SESSION_VARIABLES.has(entry[0]))))
 }
 
 /**

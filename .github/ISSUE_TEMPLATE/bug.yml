@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in pino does not work as it should
+labels: [bug]
+body:
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Your Linux distribution with its version, the desktop, and Wayland or X11. pino runs on Linux only.
+      placeholder: Arch Linux, KDE Plasma, Wayland
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pino version
+      description: The release (and whether it is the AppImage or the tar.gz), or the commit (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+  - type: textarea
+    id: ready
+    attributes:
+      label: What pino says it needs
+      description: The three lines on the first screen (Claude Code, KiCad, the Python environment), and the output of `uv --version`, `kicad-cli version` and `claude --version`.
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did, what you expected, what happened
+      description: One line for each, in that order.
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback
+      description: If a build failed, what pino said about it, the traceback included.
+      render: text
+  - type: textarea
+    id: model
+    attributes:
+      label: The board
+      description: A small `board.py` that shows the problem is best. Check it for anything private first.
+      render: python
+  - type: dropdown
+    id: area
+    attributes:
+      label: Does routing or a release come into it?
+      options:
+        - Neither
+        - Routing
+        - A release (fab files)

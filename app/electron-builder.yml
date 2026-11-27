@@ -1,0 +1,44 @@
+# The Linux package (`pnpm dist:linux`). Paths are from app/.
+appId: io.github.luisg0nc.pino
+productName: pino
+directories:
+  output: dist
+
+# What runs in the app: the build (main, preload, renderer), without source maps. Dependencies of main and preload are
+# added by electron-builder from package.json.
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+
+asar: true
+
+# Beside the asar, in `resources/` (`src/main/paths.ts`). Never `.venv`, `tests`, caches. `src/**` holds the engine's
+# data files too. KiCad is not carried: it is the person's.
+extraResources:
+  - from: ../kernel
+    to: kernel
+    filter:
+      - pyproject.toml
+      - uv.lock
+      - NOTICE
+      - src/**
+      - '!**/__pycache__'
+      - '!**/__pycache__/**'
+      - '!**/*.pyc'
+  - from: ../scripts/pino.png
+    to: icon.png
+  - from: ../LICENSE
+    to: LICENSE
+  - from: ../NOTICE
+    to: NOTICE
+
+# An AppImage and a tar.gz of the same folder, in `app/dist/`. Not signed, and not installed by pino:
+# `scripts/pino --install-desktop` is for a clone. `pnpm pack:check` builds the folder alone (`--linux dir`), the files
+# the tar.gz holds, to check the packaging with `e2e/packaged.spec.ts`. No macOS or Windows build.
+linux:
+  target: [AppImage, tar.gz]
+  category: Development
+  icon: ../scripts/pino.png
+  maintainer: luisg0nc
+  synopsis: A workbench for designing circuit boards with an AI coding agent

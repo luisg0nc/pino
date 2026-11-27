@@ -132,7 +132,7 @@ the full rules: the build, routing, parts, fab files and design rules.
 ### Requirements
 
 - Linux
-- Node.js 22.12 or later, and pnpm 10
+- Node.js 22.12 or later, and pnpm 10, to run from source
 - [uv](https://docs.astral.sh/uv/), which runs the engine on Python 3.12 or later
 - [KiCad 10](https://www.kicad.org/), with its symbol, footprint and 3D model libraries
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`claude`) on your `PATH`, logged in
@@ -142,13 +142,39 @@ cache in your home folder, once.
 
 ### Install
 
+The [latest release](https://github.com/luisg0nc/pino/releases/latest) has an AppImage and a `.tar.gz`, for x86-64.
+They carry the app and the engine, so you don't need Node.js or pnpm. You still need uv, KiCad 10 and Claude Code.
+
+```sh
+chmod +x pino-0.1.0.AppImage
+./pino-0.1.0.AppImage
+
+# or
+tar xzf pino-app-0.1.0.tar.gz
+./pino-app-0.1.0/pino-app
+```
+
+On Ubuntu 23.10 and later, the `.tar.gz` stops with "The SUID sandbox helper binary was found, but is not
+configured correctly". Give the helper in the extracted folder what it asks for, once:
+
+```sh
+sudo chown root:root pino-app-0.1.0/chrome-sandbox
+sudo chmod 4755 pino-app-0.1.0/chrome-sandbox
+```
+
+The AppImage needs FUSE 2 (`fuse2` on Arch, `libfuse2` or `libfuse2t64` on Debian and Ubuntu). The first start
+needs the network, so that uv can set up the engine's Python environment in `~/.config/pino/kernel-env`. Neither
+download adds pino to your applications menu, and neither updates itself.
+
+To run from source instead:
+
 ```sh
 git clone https://github.com/luisg0nc/pino.git
 cd pino
 pnpm install
 ```
 
-### Run
+### Run from source
 
 ```sh
 scripts/pino ~/boards           # open a folder of boards
@@ -166,10 +192,11 @@ If a folder brings Claude Code settings of its own, pino asks before the first c
 
 ### Your first five minutes
 
-Copy `kernel/tests/fixtures/reference/`, the reference board, into your folder of boards and open the copy. Click a part on the Board, then the same part on the
-Schematic. Point at the LEDs and ask the agent to move them to the other edge. Watch it edit `board.py`, the build
-that follows, and the routing. When the checks pass, press **Fab files…** in the status line to see what a release
-would hold.
+Copy [`kernel/tests/fixtures/reference/`](kernel/tests/fixtures/reference/), the reference board (it's in a clone and
+in the release's source archive), into your folder of boards and open the copy. Click a part on the Board, then the
+same part on the Schematic. Point at the LEDs and ask the agent to move them to the other edge. Watch it edit
+`board.py`, the build that follows, and the routing. When the checks pass, press **Fab files…** in the status line to
+see what a release would hold.
 
 ## Working with Claude Code in pino
 
@@ -197,8 +224,9 @@ A few habits that save time.
 ## Contributing
 
 Issues and pull requests are welcome. pino is young, so for anything bigger than a fix, please open an issue first
-to talk it over. [CLAUDE.md](CLAUDE.md) covers where things are and the rules the code holds to, with the detail by
-area in `.claude/rules/`.
+to talk it over. [CONTRIBUTING.md](CONTRIBUTING.md) says how, and pull requests go to `dev`.
+[CLAUDE.md](CLAUDE.md) covers where things are and the rules the code holds to, with the detail by area in
+`.claude/rules/`.
 
 The tests, from the repository root:
 
