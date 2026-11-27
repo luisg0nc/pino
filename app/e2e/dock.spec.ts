@@ -61,6 +61,37 @@ test('the session dock is resized by dragging its edge and with the arrow keys, 
   }
 })
 
+// torno's #361: what the drag wrote on the shell stayed, over the default of every window after it.
+test("a drag of the dock's edge that ends where it began leaves the window's default to follow its width", async () => {
+  const { app, page } = await launch({ project: tempProject() })
+  // What stands over the CSS default: a spec never resizes the window, so this is what is read.
+  const inline = () => page.locator('.shell').evaluate((el: HTMLElement) => el.style.getPropertyValue('--dock-w'))
+  try {
+    await expect(edge(page)).toBeVisible()
+    const at = (await edge(page).boundingBox())!
+    const x = at.x + at.width / 2
+    const y = at.y + at.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x - 100, y, { steps: 4 })
+    await expect.poll(() => width(page)).toBe(484)
+    expect(await inline()).toBe('484px')
+    await page.mouse.move(x, y, { steps: 4 })
+    await page.mouse.up()
+    expect(await width(page)).toBe(384)
+    expect(await kept(page)).toBeNull()
+    expect(await inline()).toBe('')
+
+    // With a width kept, the one on the shell stays.
+    await dragEdgeBy(page, -100)
+    await dragEdgeBy(page, 0)
+    expect(await inline()).toBe('484px')
+    expect(await kept(page)).toBe('484')
+  } finally {
+    await app.close()
+  }
+})
+
 test('a dock width the person set is kept across a reload and a relaunch', async () => {
   const dir = tempProject()
   // One profile for both launches, as the person has one: a test run's own is removed when it ends.
