@@ -72,6 +72,7 @@ const bridge: PinoBridge = {
     setMode: (sessionId, mode) => invoke('chat:setMode', sessionId, mode),
     setEffort: (sessionId, effort) => invoke('chat:setEffort', sessionId, effort),
     prompts: (projectId) => invoke('chat:prompts', projectId),
+    usage: (projectId) => invoke('chat:usage', projectId),
     models: () => invoke('chat:models'),
     onItem: (cb) => subscribe('chat:item', cb),
     onMeta: (cb) => subscribe('chat:meta', cb),

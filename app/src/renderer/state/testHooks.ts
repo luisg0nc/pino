@@ -2,7 +2,7 @@
 // screen a thing is, for the e2e specs. Each view that is mounted registers itself.
 
 import type { Target } from '../../shared/board/refs'
-import type { ViewTab } from '../../shared/view'
+import { isViewTab, type ViewTab } from '../../shared/view'
 import { store } from './store'
 
 export interface ViewHooks {
@@ -29,7 +29,7 @@ if (underTest && window.__pinoTest) {
   Object.assign(window.__pinoTest, {
     screenOf: (target: Target) => {
       const { tab } = store.getState()
-      return tab === 'brief' ? null : (views.get(tab)?.screenOf(target) ?? null)
+      return !isViewTab(tab) ? null : (views.get(tab)?.screenOf(target) ?? null)
     },
     drawn: () => Object.fromEntries([...views].map(([tab, hooks]) => [DRAWN_AS[tab], hooks.drawn()]))
   })

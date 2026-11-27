@@ -23,7 +23,7 @@ const MOST_FINDINGS = 5
 const STOP_LIMIT = 1200
 
 export interface DomainDeps {
-  builds: Pick<Builds, 'state' | 'startedAt' | 'endedAt' | 'whenSettled' | 'routedOn' | 'pending'>
+  builds: Pick<Builds, 'state' | 'startedAt' | 'endedAt' | 'whenSettled' | 'routedOn' | 'pending' | 'ranSince'>
   marks: {
     /** The person's marks not yet sent, oldest first. */
     drafts(project: ProjectInfo): Promise<Mark[]>
@@ -80,6 +80,7 @@ export function verdictText(r: BuildResult, state: BuildState, routedOn: number 
 function viewLine(view: NonNullable<ReturnType<DomainDeps['view']>>): string {
   // Nothing of a view is in front of them there, so what is selected in one is not said.
   if (view.tab === 'brief') return 'The person sees the Brief.'
+  if (view.tab === 'usage') return 'The person sees the Usage page.'
   const what = view.tab === 'board' ? `${TAB_NAMES.board} tab, ${layerWords(view.look.active)}` : view.tab === '3d' ? '3D tab' : `${TAB_NAMES.schematic} tab`
   const held = view.selection ? ` Selected: ${view.selection.text}.` : ''
   return `The person sees the ${what}.${held}`
@@ -207,6 +208,10 @@ export class PinoDomain implements SessionDomain {
     const changed = latest.hash !== turn.board && latest.changes.circuit.length + latest.changes.layout.length > 0
     if (seen || !changed) return null
     return hold('unlooked', `h${latest.number} was built in this turn and you have not looked at it. Call ${this.deps.toolName('look')} or ${this.deps.toolName('check')} before finishing.`)
+  }
+
+  turnBuilds(project: ProjectInfo, since: number) {
+    return this.deps.builds.ranSince(project.id, since)
   }
 
   private routedOn(projectId: string, r: BuildResult): number | undefined {
