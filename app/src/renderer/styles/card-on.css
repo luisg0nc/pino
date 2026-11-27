@@ -6,6 +6,11 @@
   font-size: var(--text-row);
 }
 
+/* A number of the fab's name may be one word with what follows ("2-layer"): the room `.num` has beside it would split it. */
+.route-brief-fab .num {
+  margin-inline: 0;
+}
+
 .on-rows {
   margin: 0 0 var(--space-1);
   padding: 0;
