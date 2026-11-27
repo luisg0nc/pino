@@ -206,6 +206,26 @@ describe('Sessions', () => {
     expect(answering).toEqual([[asked.id], [asked.id]])
   })
 
+  it('tells the domain which prompt was folded into a turn at work, and which begins one', async () => {
+    const asked: Array<[string, boolean | undefined]> = []
+    const domain: SessionDomain = {
+      promptContext: async (_project, prompt, folded) => {
+        asked.push([prompt, folded])
+        return { text: '', sentMarkIds: [] }
+      },
+      stopAnswer: async () => null
+    }
+    const sessions = manager({ domain })
+    const id = await started(sessions)
+    await sessions.send(id, { text: 'work 1' })
+    await until(() => expect(of(sessions, id, 'tool')).toHaveLength(1))
+    await sessions.send(id, { text: 'say folded in' })
+    await until(() => expect(of(sessions, id, 'turn')).toHaveLength(1))
+    await turn(sessions, id, 'say a turn of its own')
+    await until(() => expect(of(sessions, id, 'turn')).toHaveLength(2))
+    expect(asked).toEqual([['work 1', false], ['say folded in', true], ['say a turn of its own', false]])
+  })
+
   it("puts the marks the domain sent on the prompt's context item, and calls delivered once the hook is answered", async () => {
     const delivered: string[] = []
     const domain: SessionDomain = {

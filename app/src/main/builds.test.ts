@@ -479,6 +479,35 @@ describe("a Stop is held for Claude's builds, by their cause and not by when the
     expect(await t.stop()).toBeNull()
   })
 
+  it("still holds for this turn's build when a build of an earlier prompt's comes after it, as a route's end does", async () => {
+    const t = await stopping()
+    await t.claude('claude, moved\n')
+    t.l.builds.rebuild(info().id, { cause: 'agent', turn: { prompt: 'u6' } })
+    await t.l.settled()
+    expect((await t.stop())!.reason).toContain('h2 was built in this turn')
+  })
+
+  it("files a save of this turn under its prompt though an earlier prompt's build was already waiting", async () => {
+    const t = await stopping({ FAKE_KERNEL_DELAY_MS: '200' })
+    const asked = t.l.asked.length
+    t.l.builds.rebuild(info().id)
+    await expect.poll(() => t.l.asked.length).toBe(asked + 1)
+    // Behind the build at work: a route of an earlier prompt ends, and then this turn's save settles.
+    t.l.builds.rebuild(info().id, { cause: 'agent', turn: { prompt: 'u6' } })
+    await t.claude('claude, moved\n')
+    expect(t.l.builds.state(info().id)!.history.at(-1)).toMatchObject({ cause: 'agent', turn: { prompt: 'u7' } })
+    expect(t.l.builds.claudesBuild(info().id, 1_000_005, ['u7'])!.result.number).toBe(3)
+  })
+
+  // The CLI folds a prompt sent while a tool runs into the turn at work, and its hook is a prompt's like any other.
+  it('still holds for a build of a prompt of this turn that began before another was folded into it', async () => {
+    const t = await stopping()
+    await t.claude('claude, moved\n')
+    t.l.later(10)
+    await t.domain.promptContext(info(), 'and also this', true)
+    expect((await t.domain.stopAnswer(info(), ['u7', 'u8']))!.reason).toContain('h2 was built in this turn')
+  })
+
   // torno's review of its build causes: what is read after the wait must still be Claude's build, not the newest there is.
   it("keeps Claude's build in the turn when a build of the person's lands while the Stop waits for it", async () => {
     const t = await stopping({ FAKE_KERNEL_DELAY_MS: '200' })

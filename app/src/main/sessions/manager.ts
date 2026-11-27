@@ -705,7 +705,9 @@ export class Sessions {
 
     const prompt = typeof fields.prompt === 'string' ? fields.prompt : undefined
     // The prompt goes ahead without it rather than wait for the hook to time out.
-    const context = await this.deps.domain.promptContext(session.project, prompt ?? '').catch((e: unknown) => {
+    // Asked before the transcript hears of this prompt: a turn that has taken one up already is at work.
+    const folded = session.chat.transcript.answering().length > 0
+    const context = await this.deps.domain.promptContext(session.project, prompt ?? '', folded).catch((e: unknown) => {
       console.error(`no context for the prompt in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`)
       return { text: '', sentMarkIds: [], delivered: undefined }
     })

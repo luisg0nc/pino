@@ -118,9 +118,10 @@ export class PinoDomain implements SessionDomain {
     if (hash) this.lookedHash.set(projectId, hash)
   }
 
-  async promptContext(project: ProjectInfo, _prompt: string): Promise<PromptContext> {
+  async promptContext(project: ProjectInfo, _prompt: string, folded = false): Promise<PromptContext> {
     const state = this.deps.builds.state(project.id)
-    this.turns.set(project.id, { startedAt: this.now(), board: state?.lastGood?.hash ?? null, holds: 0, held: new Set() })
+    // A prompt folded into the turn at work begins none: the board the turn began with, and what it was held for, stand.
+    if (!folded || !this.turns.has(project.id)) this.turns.set(project.id, { startedAt: this.now(), board: state?.lastGood?.hash ?? null, holds: 0, held: new Set() })
     const lines: string[] = []
     if (state?.engine.state === 'failed') lines.push(`The engine is not running: ${state.engine.reason.slice(state.engine.reason.indexOf(': ') + 2)}.`)
     else if (state?.latest) lines.push(verdictText(state.latest, state, this.routedOn(project.id, state.latest)))
