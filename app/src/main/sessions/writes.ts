@@ -43,6 +43,8 @@ interface Running {
   since: number
   /** It waits for the person's answer: nothing is written meanwhile. */
   waiting: boolean
+  /** Its request was given up: whether it runs is not known until its end is told. */
+  unsure?: boolean
 }
 
 interface Run extends Running {
@@ -139,6 +141,17 @@ export class ClaudeWrites {
     call.since = this.now()
   }
 
+  /**
+   * The CLI gave its request up. The call may have been decided elsewhere and run all the same, so it counts again
+   * from now; one whose end is never told by the end of the turn never ran (`over`).
+   */
+  cancelled(session: string, id: string): void {
+    const call = this.running.get(`${session}\n${id}`)
+    if (!call?.waiting) return
+    this.allowed(session, id)
+    call.unsure = true
+  }
+
   /** The call never runs. */
   refused(session: string, id: string): void {
     this.running.delete(`${session}\n${id}`)
@@ -162,7 +175,11 @@ export class ClaudeWrites {
 
   /** The session's turn, or the session itself, is over: no call of it runs any more. */
   over(session: string): void {
-    for (const [key, call] of this.running) if (call.session === session) this.ended(session, key.slice(session.length + 1), true)
+    for (const [key, call] of this.running) {
+      if (call.session !== session) continue
+      if (call.unsure) this.running.delete(key)
+      else this.ended(session, key.slice(session.length + 1), true)
+    }
   }
 
   /** Whether the save of `path` just heard is Claude's, and of which prompt; undefined for one that is the person's. */

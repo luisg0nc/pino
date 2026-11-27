@@ -559,7 +559,7 @@ export class Sessions {
   private cancelAsk(session: Session, requestId: string): void {
     const toolUseId = session.asks.get(requestId)?.toolUseId
     if (!session.asks.delete(requestId)) return
-    if (toolUseId !== undefined) this.writes.refused(session.id, toolUseId)
+    if (toolUseId !== undefined) this.writes.cancelled(session.id, toolUseId)
     session.chat.transcript.cancelled(requestId)
     if (session.asks.size === 0) this.advance(session, 'answered')
   }

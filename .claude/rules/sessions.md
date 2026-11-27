@@ -48,7 +48,9 @@ paths:
   does not refuse (with the turn it is of), a request for it that waits (`can_use_tool`, by `tool_use_id`: the hook
   comes before the request, and while it waits nothing is written), the person's answer, its `PostToolUse`, its
   `tool_result` in the stream (which also ends one that failed or that the CLI denied by itself), and the end of the
-  turn or session.
+  turn or session. A request the CLI gives up (`control_cancel_request`, or still open at the `result`) does not drop
+  its call, which may have been decided elsewhere and run: it counts from the cancel on, and one whose end is never
+  told by the end of the turn is dropped, with nothing kept of it.
   - `Write`, `Edit`, `MultiEdit`, `NotebookEdit`: that file's saves while the call runs, and after it while the file is
     as the tool left it (mtime and size), however late the save is heard. A call that failed wrote nothing.
   - `Bash` names no file, so any watched file whose mtime or ctime, whichever is later, falls while the command runs

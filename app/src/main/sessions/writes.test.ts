@@ -256,6 +256,37 @@ describe('a Bash, whose files cannot be read from its command', () => {
   })
 })
 
+describe('a request the CLI gives up (`control_cancel_request`)', () => {
+  // It may have been decided elsewhere (a `PermissionRequest` hook of the person's), and the call then runs.
+  it('still claims what the call writes if it runs after all, from the cancel on', () => {
+    writes.began(edit())
+    writes.waits('s1', 't1')
+    writes.cancelled('s1', 't1')
+    save('claude')
+    writes.ended('s1', 't1', true)
+    writes.over('s1')
+    expect(by()).toEqual({ turn })
+  })
+
+  it('claims no save of a command made while the card waited', () => {
+    writes.began(bash('python gen.py'))
+    writes.waits('s1', 't1')
+    save('mine, while the card waits')
+    time += 100
+    writes.cancelled('s1', 't1')
+    expect(by()).toBeUndefined()
+  })
+
+  it('claims nothing for one that never ran by the end of the turn: no stamp is kept of it', () => {
+    writes.began(edit())
+    writes.waits('s1', 't1')
+    save('mine, while the card waits')
+    writes.cancelled('s1', 't1')
+    writes.over('s1')
+    expect(by()).toBeUndefined()
+  })
+})
+
 describe('surelyWritesNothing', () => {
   it.each(['sleep 5', 'ls -la', 'cat board.py', 'grep -n U1 board.py | head -5', 'cd sub && ls', 'wc -l *.py; pwd', 'echo done'])('is sure of %s', (command) => {
     expect(surelyWritesNothing(command)).toBe(true)
