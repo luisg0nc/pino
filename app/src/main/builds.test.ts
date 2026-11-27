@@ -1,9 +1,11 @@
 import { existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { toolName } from '../shared/app'
 import type { BuildResult, BuildState, KeptCause } from '../shared/build'
 import { fx, readJson, tempProject, FAKE_KERNEL } from '../test/fixtures'
 import { Builds, causeOfSave, readBuildHistory, watchProject, type OnChange } from './builds'
+import { PinoDomain } from './domain'
 import { kernelHolder, startKernel, type KernelClient } from './kernel/client'
 import { ClaudeWrites } from './sessions/writes'
 
@@ -81,8 +83,6 @@ describe('the build loop', () => {
     expect(state.problem).toBeNull()
     expect(state.history).toMatchObject([{ number: 1, hash: state.latest!.hash, verdict: 'ok', kept: true }])
     expect(l.states.some((s) => s.building && s.history.some((e) => e.verdict === 'running'))).toBe(true)
-    expect(l.builds.startedAt(info().id)).toBeDefined()
-    expect(l.builds.endedAt(info().id)).toBeDefined()
   })
 
   it('builds nothing, and starts no engine, for a folder with no board.py yet', async () => {
@@ -261,12 +261,12 @@ describe('the build loop', () => {
   })
 
   it('counts a save seen but not settled as one to wait for', async () => {
-    const l = loop()
+    const l = loop(() => ({}), { causeNow: () => ({ cause: 'agent' }) })
     l.builds.open(info())
     await l.settled()
-    expect(l.builds.pending(info().id)).toBe(false)
+    expect(l.builds.claudesComing(info().id, 0, [])).toBeUndefined()
     l.seen()
-    expect(l.builds.pending(info().id)).toBe(true)
+    expect(l.builds.claudesComing(info().id, 0, [])).toBe(2)
     let settled: BuildState | null = null
     const waiting = l.builds.whenSettled(info().id, 1_000_000 + 60_000).then((s) => (settled = s))
     await new Promise((r) => setTimeout(r, 50))
@@ -274,7 +274,7 @@ describe('the build loop', () => {
     l.save()
     await waiting
     expect(settled!.latest!.number).toBe(2)
-    expect(l.builds.pending(info().id)).toBe(false)
+    expect(l.builds.claudesComing(info().id, 0, [])).toBeUndefined()
   })
 
   it('builds again when asked to', async () => {
@@ -391,6 +391,102 @@ describe('whose save it was, and whose count (Claude by its tool calls)', () => 
     l.builds.rebuild(info().id, { cause: 'agent' })
     await l.settled()
     expect(l.builds.ranSince(info().id, since, ['u7'])).toMatchObject({ count: 1 })
+  })
+})
+
+describe("a Stop is held for Claude's builds, by their cause and not by when they began", () => {
+  /** A turn at work on the real loop and ledger: the first save that changes the file moves a part. */
+  async function stopping(env: Record<string, string> = {}) {
+    const writes = new ClaudeWrites()
+    const l = loop(() => ({ FAKE_KERNEL_MOVE: 'R4:1,0', ...env }), { causeNow: (id, path) => causeOfSave(writes.by(id, path)), readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    l.later(10)
+    const domain = new PinoDomain({
+      builds: l.builds,
+      marks: { drafts: async () => [], open: async () => [], markSent: async () => {} },
+      cards: { read: async () => ({ next: 1, cards: [] }), told: async () => ({}), markTold: async () => {} },
+      brief: async () => undefined,
+      view: () => null,
+      toolName,
+      now: () => l.later(0)
+    })
+    await domain.promptContext(info(), 'go')
+    l.later(10)
+    let calls = 0
+    const save = async () => {
+      l.seen()
+      l.save()
+      await l.settled()
+    }
+    return {
+      l,
+      domain,
+      /** Claude's tool call writes the board, for the prompt named, and the build of it comes back. */
+      async claude(text: string, prompt = 'u7') {
+        const id = `t${++calls}`
+        writes.began({ session: 's1', project: info().id, dir: project.dir, id, tool: 'Edit', input: { file_path: join(project.dir, 'board.py') }, turn: { prompt, conversation: 'c1' } })
+        project.touch(text)
+        writes.ended('s1', id, true)
+        await save()
+        // The file's stamp must differ from the one the call left, or a save of the person's would read as that call's.
+        await new Promise((r) => setTimeout(r, 30))
+      },
+      async person(text: string) {
+        project.touch(text)
+        await save()
+      },
+      stop: () => domain.stopAnswer(info(), ['u7'])
+    }
+  }
+
+  it("does not ask Claude to look at a build of the person's save mid-turn", async () => {
+    const t = await stopping()
+    await t.person('mine, moved\n')
+    expect(await t.stop()).toBeNull()
+  })
+
+  it("does not ask Claude to fix board.py when the person's save failed", async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '2' })
+    await t.person('mine, broken\n')
+    expect(await t.stop()).toBeNull()
+  })
+
+  it("still holds for Claude's own build, unseen, when the person's save after it failed, and names it", async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '3' })
+    await t.claude('claude, moved\n')
+    await t.person('mine, broken, and longer\n')
+    expect((await t.stop())!.reason).toBe('h2 was built in this turn and you have not looked at it. Call mcp__pino__look or mcp__pino__check before finishing.')
+  })
+
+  it("holds for Claude's failed build with its line", async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '2' })
+    await t.claude('claude, broken\n')
+    expect((await t.stop())!.reason).toContain('h2 failed: invalid syntax, board.py line 12.')
+  })
+
+  it("holds nothing for a failure of Claude's that a later save has built past", async () => {
+    const t = await stopping({ FAKE_KERNEL_FAIL_ON: '2' })
+    await t.claude('claude, broken\n')
+    await t.person('mine, mended, and longer\n')
+    expect(await t.stop()).toBeNull()
+  })
+
+  it("holds nothing for a build of an earlier prompt's save that began in this turn", async () => {
+    const t = await stopping()
+    await t.claude('claude, from the turn before\n', 'u6')
+    expect(await t.stop()).toBeNull()
+  })
+
+  it("does not wait for a save of the person's", async () => {
+    const t = await stopping()
+    const from = Date.now()
+    const waited = vi.spyOn(t.l.builds, 'whenSettled')
+    project.touch('mine, not settled\n')
+    t.l.seen()
+    expect(await t.stop()).toBeNull()
+    expect(waited).not.toHaveBeenCalled()
+    expect(Date.now() - from).toBeLessThan(1000)
   })
 })
 

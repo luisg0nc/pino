@@ -394,6 +394,11 @@ export class Transcript {
     if (item?.kind === 'user' && item.state === 'queued') this.takeUp(item)
   }
 
+  /** Every prompt the turn at work has taken up. */
+  answering(): string[] {
+    return [...this.turnPrompts]
+  }
+
   /** The prompt the last hook (or command) took up, for whoever says which prompt a turn is of; undefined before any. */
   taken(): { item: string; text: string } | undefined {
     return this.promptTaken

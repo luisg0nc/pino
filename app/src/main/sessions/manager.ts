@@ -686,7 +686,7 @@ export class Sessions {
 
     // A Stop held back is no end of the turn: the agent goes on, and so does its status.
     if (event === 'Stop' && !session.killTimer) {
-      const held = await this.deps.domain.stopAnswer(session.project).catch((e: unknown) => {
+      const held = await this.deps.domain.stopAnswer(session.project, session.chat.transcript.answering()).catch((e: unknown) => {
         console.error(`no answer to the Stop in ${session.project.id}: ${e instanceof Error ? e.message : String(e)}`)
         return null
       })

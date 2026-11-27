@@ -114,6 +114,22 @@ export function causeOfSave(claude: { turn?: BuildTurn } | undefined): KeptCause
   return { cause: 'agent', ...(claude.turn ? { turn: { ...claude.turn } } : {}) }
 }
 
+/**
+ * Whether a cause is Claude's in a turn that took up `prompts`: its tool calls made it, for one of them or for none that
+ * could be named. By cause: a save of the person's is no turn's, whenever it was made.
+ */
+function ofPrompts(made: KeptCause | undefined, prompts: readonly string[]): boolean {
+  return made?.cause === 'agent' && (!made.turn || prompts.includes(made.turn.prompt))
+}
+
+/** A build of Claude's that came back. */
+export interface ClaudesBuild {
+  result: BuildResult
+  endedAt: number
+  /** A later build drew something, whoever made it. */
+  redrawn: boolean
+}
+
 interface Entry {
   project: ProjectInfo
   state: BuildState
@@ -126,7 +142,10 @@ interface Entry {
   /** Waiting out the rest of RESTART_MS before another start of the engine. */
   retry?: NodeJS.Timeout
   startedAt?: number
-  endedAt?: number
+  /** The build at work: what made it, and when the engine was asked, once it has been. */
+  making?: { made: KeptCause; startedAt?: number }
+  /** The newest build of Claude's that came back, and whether one after it drew something. */
+  claudes?: ClaudesBuild & { startedAt: number; made: KeptCause }
   /** The builds that came back, oldest first, the last `MOST_RAN`: when each began, what made it, and whether it drew something. */
   ran: Array<{ number: number; startedAt: number; drew: boolean; made: KeptCause }>
   /** For each route seen current, the build it was first seen on. */
@@ -260,19 +279,26 @@ export class Builds {
     return this.entries.get(projectId)?.state.lastGood ?? null
   }
 
-  /** Whether a save has been heard of that no build has started for yet. */
-  pending(projectId: string): boolean {
+  /**
+   * The number of the build of Claude's that is on its way in a turn that began at `since` and took up `prompts`: the
+   * one at work, or the next, for a save heard of or settled that no build has started for yet. Undefined when none is.
+   */
+  claudesComing(projectId: string, since: number, prompts: readonly string[]): number | undefined {
     const entry = this.entries.get(projectId)
-    return entry !== undefined && (entry.seen || (entry.wanted && entry.retry === undefined && !entry.running))
+    if (!entry) return undefined
+    const running = entry.state.history.find((e) => e.verdict === 'running')?.number
+    const newest = running ?? Math.max(entry.state.history.at(-1)?.number ?? 0, entry.state.latest?.number ?? 0)
+    const at = entry.running ? entry.making : undefined
+    if (at && ofPrompts(at.made, prompts) && (at.startedAt ?? since) >= since) return running ?? newest + 1
+    const heard = entry.seen && ofPrompts(entry.burst, prompts)
+    const waits = entry.wanted && entry.retry === undefined && ofPrompts(entry.pending, prompts)
+    return heard || waits ? newest + 1 : undefined
   }
 
-  /** When the newest build began, and when the newest one ended. */
-  startedAt(projectId: string): number | undefined {
-    return this.entries.get(projectId)?.startedAt
-  }
-
-  endedAt(projectId: string): number | undefined {
-    return this.entries.get(projectId)?.endedAt
+  /** The newest build of Claude's in such a turn that came back. */
+  claudesBuild(projectId: string, since: number, prompts: readonly string[]): ClaudesBuild | undefined {
+    const last = this.entries.get(projectId)?.claudes
+    return last && last.startedAt >= since && ofPrompts(last.made, prompts) ? last : undefined
   }
 
   /**
@@ -282,7 +308,7 @@ export class Builds {
    */
   ranSince(projectId: string, since: number, prompts: readonly string[]): TurnBuilds | undefined {
     const ran = this.entries.get(projectId)?.ran ?? []
-    const during = ran.filter((b) => b.startedAt >= since && b.made.cause === 'agent' && (!b.made.turn || prompts.includes(b.made.turn.prompt)))
+    const during = ran.filter((b) => b.startedAt >= since && ofPrompts(b.made, prompts))
     if (during.length === 0) return undefined
     const from = ran.findLast((b) => b.drew && b.startedAt < since)?.number
     const to = during.findLast((b) => b.drew)?.number
@@ -377,9 +403,11 @@ export class Builds {
     // Whatever wanted this build is taken as it starts: a save heard from now on, even while the engine is asked, is for the next one.
     const cause = entry.pending ?? { cause: 'unknown' }
     entry.pending = undefined
+    entry.making = { made: cause }
     this.say(entry, { building: true })
     void this.run(entry, cause).finally(() => {
       entry.running = false
+      entry.making = undefined
       if (this.entries.get(entry.project.id) !== entry) return
       if (entry.wanted) this.next(entry)
       else this.finish(entry)
@@ -466,6 +494,7 @@ export class Builds {
       await entry.loaded
       if (!open()) return
       entry.startedAt = this.now()
+      entry.making = { made: cause, startedAt: entry.startedAt }
       const before = entry.state.history
       const number = Math.max(before.at(-1)?.number ?? 0, entry.state.latest?.number ?? 0) + 1
       asked = true
@@ -476,7 +505,8 @@ export class Builds {
       // The engine numbers its builds, and its number is the one the cause belongs to.
       entry.causes.set(result.number, cause)
       this.keepCauses(entry)
-      entry.endedAt = this.now()
+      if (cause.cause === 'agent') entry.claudes = { result, startedAt: entry.startedAt, endedAt: this.now(), made: cause, redrawn: false }
+      else if (result.hash !== null && entry.claudes) entry.claudes.redrawn = true
       entry.ran.push({ number: result.number, startedAt: entry.startedAt, drew: result.hash !== null, made: cause })
       if (entry.ran.length > MOST_RAN) entry.ran.shift()
       // A result older than the one shown never replaces it.
@@ -500,7 +530,6 @@ export class Builds {
     } catch (e) {
       if (!open()) return
       if (!asked) entry.pending = entry.pending ? merged(cause, entry.pending) : cause
-      entry.endedAt = this.now()
       const history = entry.state.history.filter((one) => one.verdict !== 'running')
       if (e instanceof EngineDown || (e instanceof KernelError && e.kind === 'stopped')) {
         const reason = e instanceof EngineDown ? e.message : `The engine stopped: ${e.message}`

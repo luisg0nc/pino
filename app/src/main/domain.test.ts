@@ -26,15 +26,15 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
   let time = 1000
   let pending = false
   let startedAt: number | undefined
-  let endedAt: number | undefined
+  let came: { result: BuildResult; startedAt: number; endedAt: number } | undefined
   const markSent = vi.fn(async () => {})
   let settle = async () => {}
   const deps: DomainDeps = {
     builds: {
       state: () => state,
-      startedAt: () => startedAt,
-      endedAt: () => endedAt,
-      pending: () => pending,
+      // Every build and save of this fake is Claude's: whose is whose is held on the real loop (builds.test.ts).
+      claudesComing: (_id, since) => (pending || (state.building && (startedAt ?? -Infinity) >= since) ? (state.history.find((e) => e.verdict === 'running')?.number ?? (state.latest?.number ?? 0) + 1) : undefined),
+      claudesBuild: (_id, since) => (came && came.startedAt >= since ? { result: came.result, endedAt: came.endedAt, redrawn: false } : undefined),
       whenSettled: async () => {
         await settle()
         return state
@@ -61,7 +61,7 @@ function domain(opts: { state?: Partial<BuildState>; drafts?: StrokeMark[]; open
       state = { ...state, building: true, history: [...state.history, { number: (state.latest?.number ?? 0) + 1, hash: null, verdict: 'running', at: '', kept: false }], ...over }
     },
     lands(result: BuildResult, over: Partial<BuildState> = {}) {
-      endedAt = time
+      came = { result, startedAt: startedAt!, endedAt: time }
       state = { ...state, building: false, latest: result, lastGood: result.hash ? result : state.lastGood, history: state.history.filter((e) => e.verdict !== 'running'), ...over }
     },
     saveSeen() {
@@ -186,8 +186,8 @@ describe('holding a Stop', () => {
     const t = domain()
     await turn(t)
     t.begins()
-    expect(await t.d.stopAnswer(project)).toEqual({ decision: 'block', reason: 'h2, started in this turn, is still building. Wait for it, then call mcp__pino__check.' })
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toEqual({ decision: 'block', reason: 'h2, started in this turn, is still building. Wait for it, then call mcp__pino__check.' })
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
   })
 
   it('waits for a build that is nearly done, and then holds for its being unseen', async () => {
@@ -198,7 +198,7 @@ describe('holding a Stop', () => {
       t.later(5)
       t.lands(changed(2))
     })
-    expect((await t.d.stopAnswer(project))!.reason).toBe('h2 was built in this turn and you have not looked at it. Call mcp__pino__look or mcp__pino__check before finishing.')
+    expect((await t.d.stopAnswer(project, []))!.reason).toBe('h2 was built in this turn and you have not looked at it. Call mcp__pino__look or mcp__pino__check before finishing.')
   })
 
   it('waits for a save that has not started its build yet', async () => {
@@ -211,7 +211,7 @@ describe('holding a Stop', () => {
       t.later(5)
       t.lands(changed(2))
     })
-    expect((await t.d.stopAnswer(project))!.reason).toContain('h2 was built in this turn')
+    expect((await t.d.stopAnswer(project, []))!.reason).toContain('h2 was built in this turn')
   })
 
   it('answers at once when no save waits and nothing builds', async () => {
@@ -220,7 +220,7 @@ describe('holding a Stop', () => {
     const waited = vi.fn(async () => {})
     t.onSettle(waited)
     const from = Date.now()
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
     expect(waited).not.toHaveBeenCalled()
     expect(Date.now() - from).toBeLessThan(50)
   })
@@ -231,7 +231,7 @@ describe('holding a Stop', () => {
     t.begins()
     t.later(5)
     t.lands(failed)
-    expect((await t.d.stopAnswer(project))!.reason).toBe('h2 failed: invalid syntax, board.py line 12. The views still show h1. Fix board.py, or say it is still broken.')
+    expect((await t.d.stopAnswer(project, []))!.reason).toBe('h2 failed: invalid syntax, board.py line 12. The views still show h1. Fix board.py, or say it is still broken.')
   })
 
   it('holds a Stop once for a build of the turn that nobody looked at', async () => {
@@ -240,8 +240,8 @@ describe('holding a Stop', () => {
     t.begins()
     t.later(5)
     t.lands(changed(2))
-    expect((await t.d.stopAnswer(project))!.decision).toBe('block')
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect((await t.d.stopAnswer(project, []))!.decision).toBe('block')
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
   })
 
   it('holds nothing once Claude has looked, or for a build that changed nothing', async () => {
@@ -252,12 +252,12 @@ describe('holding a Stop', () => {
     seen.lands(changed(2))
     seen.later(5)
     seen.d.looked(project.id)
-    expect(await seen.d.stopAnswer(project)).toBeNull()
+    expect(await seen.d.stopAnswer(project, [])).toBeNull()
     const same = domain()
     await turn(same)
     same.begins()
     same.lands({ ...ref, number: 2, changes: { circuit: [], layout: [] } })
-    expect(await same.d.stopAnswer(project)).toBeNull()
+    expect(await same.d.stopAnswer(project, [])).toBeNull()
   })
 
   // The engine numbers a build it has cached anew, and says what changed since the last one with another hash.
@@ -267,7 +267,7 @@ describe('holding a Stop', () => {
     t.begins()
     t.later(5)
     t.lands(changed(2, ref.hash!))
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
   })
 
   it('holds nothing for a board Claude has looked at, built again', async () => {
@@ -281,7 +281,7 @@ describe('holding a Stop', () => {
     t.begins()
     t.later(5)
     t.lands(changed(3, 'cccccccc0002'))
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
   })
 
   it('still holds for a new board built twice in a turn and never looked at', async () => {
@@ -292,7 +292,7 @@ describe('holding a Stop', () => {
       t.later(5)
       t.lands(changed(number, 'cccccccc0002'))
     }
-    expect((await t.d.stopAnswer(project))!.reason).toContain('h3 was built in this turn')
+    expect((await t.d.stopAnswer(project, []))!.reason).toContain('h3 was built in this turn')
   })
 
   it('holds nothing for a build begun before the turn', async () => {
@@ -300,32 +300,32 @@ describe('holding a Stop', () => {
     t.begins()
     t.later(50)
     await turn(t)
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
     t.lands(failed)
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
   })
 
   it('never holds a third time in a turn, and counts anew in the next', async () => {
     const t = domain()
     await turn(t)
     t.begins()
-    const first = await t.d.stopAnswer(project)
+    const first = await t.d.stopAnswer(project, [])
     t.later(5)
     t.lands(failed)
-    const second = await t.d.stopAnswer(project)
+    const second = await t.d.stopAnswer(project, [])
     t.begins()
     t.later(5)
     t.lands(changed(3))
-    expect([first!.decision, second!.decision, await t.d.stopAnswer(project)]).toEqual(['block', 'block', null])
+    expect([first!.decision, second!.decision, await t.d.stopAnswer(project, [])]).toEqual(['block', 'block', null])
     expect(MOST_HOLDS).toBe(2)
     await turn(t)
     t.begins()
-    expect((await t.d.stopAnswer(project))!.decision).toBe('block')
+    expect((await t.d.stopAnswer(project, []))!.decision).toBe('block')
   })
 
   it('holds nothing before any prompt', async () => {
     const t = domain()
     t.begins()
-    expect(await t.d.stopAnswer(project)).toBeNull()
+    expect(await t.d.stopAnswer(project, [])).toBeNull()
   })
 })

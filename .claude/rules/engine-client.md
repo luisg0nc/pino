@@ -61,10 +61,13 @@ paths:
 
 ## What a Stop waits for
 
-`domain.ts` holds a turn at its end only while the turn's own build is running, has failed or was not looked at
-(`check` or `look`), at most twice. It waits only for a save the watcher has heard of or a build of this turn, never
-for a fixed time: with a fixed wait at every Stop, a turn is still at work when the next prompt arrives, and the CLI
-folds that prompt into it.
+`domain.ts` holds a turn at its end only while a build Claude made in it is on its way, or its newest one failed or
+was not looked at (`check` or `look`), at most twice. Which builds those are is told by cause, by the rule of the
+turn's line (`builds.ts` `ofPrompts`: cause `agent`, for a prompt the turn took up or for none that could be named;
+`claudesComing`, `claudesBuild`), never by when a build began alone: the person's save mid-turn is neither waited for
+nor held for. A failure of Claude's that a later build drew past is let go. It waits only for a save of Claude's the
+watcher has heard of or a build of Claude's, never for a fixed time: with a fixed wait at every Stop, a turn is still
+at work when the next prompt arrives, and the CLI folds that prompt into it.
 
 ## Claude's tools (`main/mcp/`)
 

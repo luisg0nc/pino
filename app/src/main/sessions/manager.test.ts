@@ -184,12 +184,16 @@ describe('Sessions', () => {
   it("adds the domain's context to a prompt and takes its Stop answer", async () => {
     const prompts: string[] = []
     let stops = 0
+    const answering: string[][] = []
     const domain: SessionDomain = {
       promptContext: async (of_, prompt) => {
         prompts.push(`${of_.id} ${prompt}`)
         return { text: 'CTX', sentMarkIds: [] }
       },
-      stopAnswer: async () => (++stops === 1 ? { decision: 'block', reason: 'KEEP GOING' } : null)
+      stopAnswer: async (_project, turn) => {
+        answering.push([...turn])
+        return ++stops === 1 ? { decision: 'block', reason: 'KEEP GOING' } : null
+      }
     }
     const sessions = manager({ domain })
     const id = await started(sessions)
@@ -197,6 +201,9 @@ describe('Sessions', () => {
     expect(prompts).toEqual([`${project.id} say hello`])
     expect(of(sessions, id, 'context')).toMatchObject([{ text: 'CTX', marks: [] }])
     expect(stops).toBe(2)
+    // The Stop is answered for the prompts of the turn that ends, which is how a build of Claude's is told as its.
+    const [asked] = of(sessions, id, 'user')
+    expect(answering).toEqual([[asked.id], [asked.id]])
   })
 
   it("puts the marks the domain sent on the prompt's context item, and calls delivered once the hook is answered", async () => {

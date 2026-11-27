@@ -15,8 +15,8 @@ export interface PromptContext {
 
 export interface SessionDomain {
   promptContext(project: ProjectInfo, prompt: string): Promise<PromptContext>
-  /** The Stop hook's answer: null lets the turn end; a block sends the agent on with the reason. */
-  stopAnswer(project: ProjectInfo): Promise<{ decision: 'block'; reason: string } | null>
+  /** The Stop hook's answer, for a turn that took up `prompts`: null lets it end; a block sends the agent on with the reason. */
+  stopAnswer(project: ProjectInfo, prompts: readonly string[]): Promise<{ decision: 'block'; reason: string } | null>
   /** The builds a turn made since `since` (ms) for its `prompts`, kept on the item of the turn that ends; none to say it made none. */
   turnBuilds?(project: ProjectInfo, since: number, prompts: readonly string[]): TurnBuilds | undefined
 }
