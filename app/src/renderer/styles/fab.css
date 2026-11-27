@@ -1,5 +1,5 @@
-/* Fab files: the status line's pill and its popover (`ui/FabPopover.tsx`), and the fab's limits in the route card's
-   Brief (`ui/route/FabBlock.tsx`). The popover, the buttons and the rows are the ones there are. */
+/* Fab files: the status line's pill and its popover (`ui/FabPopover.tsx`), and the fab's limits in the Brief page's
+   Fab section (`ui/route/FabBlock.tsx`).The popover, the buttons and the rows are the ones there are. */
 
 .status-fab {
   height: 21px;

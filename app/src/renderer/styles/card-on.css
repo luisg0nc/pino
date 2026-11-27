@@ -1,0 +1,43 @@
+/* ---- The left column's Brief section (ui/route/BriefBlock.tsx): the fab's name, where the build and the Brief disagree,
+   and the way to the Brief. A row says its whole sentence, over two lines where the column is narrow. */
+
+.route-brief-fab {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-row);
+}
+
+.on-rows {
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+.on-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 3px 0;
+  font-size: var(--text-row);
+  line-height: 1.3;
+}
+
+.on-row .button {
+  height: 22px;
+  padding: 0 9px;
+  flex: none;
+}
+
+.on-words {
+  flex: 1;
+  min-width: 0;
+}
+
+.on-dot {
+  flex: none;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--warn);
+}

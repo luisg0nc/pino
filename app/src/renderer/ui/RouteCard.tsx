@@ -1,11 +1,11 @@
 import type { ProjectInfo } from '../../shared/project'
 import { releaseFindings } from '../../shared/checks'
-import { actions, useStore } from '../state/store'
+import { useStore } from '../state/store'
 import { useViewModel } from '../state/viewModel'
 import { BlocksBlock } from './route/BlocksBlock'
 import { BoardBlock } from './route/BoardBlock'
+import { BriefBlock } from './route/BriefBlock'
 import { ChecksBlock } from './route/ChecksBlock'
-import { FabBlock } from './route/FabBlock'
 import { Head } from './route/Head'
 import { InHand } from './route/InHand'
 import { MarkInHand } from './route/MarkInHand'
@@ -17,7 +17,7 @@ import { Section } from './route/Section'
 /**
  * The route card at the left of an open project: the project read top to bottom. Its head says the newest build; under
  * it what is in hand, how far the routing is, every check, the board in numbers and, over the sheet, its blocks and the
- * net in hand; and last the way to the Brief, with the fab's limits under it.
+ * net in hand; and last the Brief: the fab by name, where the build and the Brief disagree, and the way to it.
  */
 export function RouteCard({ project }: { project: ProjectInfo }) {
   const build = useStore((s) => s.build)
@@ -63,12 +63,7 @@ export function RouteCard({ project }: { project: ProjectInfo }) {
         </Section>
       )}
       {model && tab !== 'schematic' && <BoardBlock model={model} />}
-      <Section title="Brief">
-        <button type="button" className="link-button route-brief" onClick={() => actions.setTab('brief')}>
-          Open the Brief
-        </button>
-        <FabBlock />
-      </Section>
+      <BriefBlock />
     </div>
   )
 }

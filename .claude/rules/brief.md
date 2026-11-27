@@ -4,6 +4,8 @@ paths:
   - "app/src/shared/cards.ts"
   - "app/src/shared/brief.ts"
   - "app/src/renderer/ui/brief/**"
+  - "app/src/renderer/ui/route/BriefBlock.tsx"
+  - "app/src/renderer/styles/card-on.css"
   - "app/src/renderer/state/cards.ts"
   - "app/src/main/mcp/cardTools.ts"
   - "app/e2e/brief.spec.ts"
@@ -56,6 +58,10 @@ A project's **Brief** is two things: `brief.md`, the person's own words, and the
   **Size and shape** (every size; beside one named `Board width` or `Board height`, what
   the build on show measures, marked past 0.05 mm: the board file is the truth, the card what was asked for), **Rules**
   and **Fab** (what the person asked, above the fab's limits).
+- **The left column's Brief section** (`ui/route/BriefBlock.tsx`): the fab the board is checked against, by name,
+  "Open the Brief", and between them a row with a Brief button only where the build on show and the Brief disagree
+  (`boardDisagreements`, `shared/brief.ts`: the same `sizeAgainst` as the page). The fab's limits are listed on the
+  page alone. What the page comes to flag against the build gets its row here from the same rule.
 - **The spine** (`ui/brief/Spine.tsx`): a node a prompt, "Prompt <n> · <time>", with what the person said in it; a
   card Claude changed shows its old words struck in the node of the prompt that wrote them. Cards with no prompt are
   one node first ("Before pino kept the prompt"). Pointing at a card (its id) gives "Make it yours", "Remove" and, on a
