@@ -76,15 +76,13 @@ A square link preview (1200 x 1200, the mark in the middle) and the og and twitt
 
 - `.github/workflows/pages.yml` deploys `site/` on a push to `main` that touches the site or its pictures. GitHub
   Pages set to deploy from Actions, custom domain `pino.luisg.me` (a `site/CNAME` file).
-- DNS: a `pino.luisg.me` CNAME to `luisg0nc.github.io`, DNS only, added in `~/projects/cloudflare/dns_luisg_me.tf`
-  beside `luisg_me_torno_cname`. Luis runs `terraform apply`.
+- DNS: a `pino.luisg.me` CNAME to `luisg0nc.github.io`, DNS only.
 
 ## Order, and what stays with Luis
 
 1. Build the page and the pictures on a branch; preview it locally (`python3 -m http.server -d site`) and show Luis.
 2. Merge after green CI and the review.
-3. Luis: the leak audit's findings (old commits still hold the fixture skill names; a history rewrite is his call),
-   then making the repository public, turning Pages on, the DNS apply, and Enforce HTTPS once the certificate is
+3. Luis: making the repository public, turning Pages on, the DNS record, and Enforce HTTPS once the certificate is
    issued.
 
 ## Left to the builder
