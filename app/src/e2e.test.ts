@@ -41,9 +41,11 @@ describe('the specs', () => {
     expect(read('e2e/launch.ts')).toContain("PINO_PARTS_OFFLINE: '1'")
   })
 
-  it("runs the engine's stand-in everywhere but in the spec of the real engine and the landing page's pictures", () => {
+  it("runs the engine's stand-in everywhere but in the specs of the real engine and the package, and the landing page's pictures", () => {
     expect(read('e2e/launch.ts')).toContain('PINO_KERNEL_CMD: `node ${FAKE_KERNEL}`')
-    expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts')).toEqual(['e2e/real-kernel.spec.ts', 'e2e/shots.spec.ts'])
+    expect(specsNaming(/kernel: 'real'/).filter((f) => f !== 'e2e/launch.ts').sort()).toEqual(['e2e/packaged.spec.ts', 'e2e/real-kernel.spec.ts', 'e2e/shots.spec.ts'])
+    // The package's spec runs only where a run names the packaged app.
+    expect(read('e2e/packaged.spec.ts')).toContain('test.skip(!packaged,')
     // In shots.spec.ts it is one launch, in the group that runs only where a run names a board to take pictures of.
     const shots = read('e2e/shots.spec.ts')
     const group = shots.slice(shots.indexOf("test.describe('site'"))

@@ -192,7 +192,10 @@ it('is one app to the desktop: the entry, the window and the launcher name the s
   const main = readFileSync(resolve(__dirname, 'main/index.ts'), 'utf8')
   expect(main).toContain('app.setName(APP.name)')
   expect(main).toContain("setDesktopName?.(`${APP.name}.desktop`)")
-  expect(main).toContain("resolve(app.getAppPath(), '..', 'scripts', `${APP.name}.png`)")
+  // The window's icon: beside the launcher in a clone, and the same drawing in the package's resources.
+  const paths = readFileSync(resolve(__dirname, 'main/paths.ts'), 'utf8')
+  expect(paths).toContain("join(app.getAppPath(), '..', 'scripts', `${APP.name}.png`)")
+  expect(readFileSync(resolve(__dirname, '../electron-builder.yml'), 'utf8')).toContain('- from: ../scripts/pino.png\n    to: icon.png')
 })
 
 it('gives the window the icon as a picture of 512 px: Electron cannot read the drawing itself', () => {

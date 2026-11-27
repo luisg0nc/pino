@@ -13,11 +13,25 @@ const STDERR_KEPT = 4000
 const SHUTDOWN_GRACE_MS = 2000
 const TERM_GRACE_MS = 2000
 
-/** The command that runs the engine: PINO_KERNEL_CMD split on spaces, else uv on the kernel beside the app. */
-export function kernelCommand(env: NodeJS.ProcessEnv, appPath: string): string[] {
+/**
+ * The command that runs the engine: PINO_KERNEL_CMD split on spaces, else uv on the engine's folder (PINO_KERNEL_DIR,
+ * else `dir`: `paths.ts`). A packaged app's is frozen, since the folder is read-only in an AppImage, and leaves out
+ * the tests' dependencies.
+ */
+export function kernelCommand(env: NodeJS.ProcessEnv, dir: string, packaged = false): string[] {
   const said = env[envName('KERNEL_CMD')]?.trim()
   if (said) return said.split(/\s+/)
-  return ['uv', 'run', '--directory', env[envName('KERNEL_DIR')] ?? resolve(appPath, '..', 'kernel'), 'pino-kernel', 'serve']
+  return ['uv', 'run', ...(packaged ? ['--frozen', '--no-dev'] : []), '--directory', env[envName('KERNEL_DIR')] ?? dir, 'pino-kernel', 'serve']
+}
+
+/**
+ * What a packaged app adds to the engine's environment: its Python environment under `userData`, outside the package
+ * (`uv run` in `<resources>/kernel` would make a `.venv` inside it, which a read-only AppImage refuses), and no
+ * bytecode written beside its sources. Nothing in development. Always an absolute path.
+ */
+export function kernelEnv(opts: { packaged: boolean; userData: string }): Record<string, string> {
+  if (!opts.packaged) return {}
+  return { UV_PROJECT_ENVIRONMENT: resolve(opts.userData, 'kernel-env'), PYTHONDONTWRITEBYTECODE: '1' }
 }
 
 /** `refused`: the engine answered that it cannot. `stopped`: it exited, or never started. */

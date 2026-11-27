@@ -1,0 +1,25 @@
+name: Feature request
+description: Something you wish pino did
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        pino is not a PCB editor: you don't place parts or draw tracks by hand. The board is the Python file, and
+        changes that keep it that way fit best.
+  - type: textarea
+    id: moment
+    attributes:
+      label: The moment you wished for it
+      description: What you were doing and what got in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: instead
+    attributes:
+      label: What you did instead
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like
+      description: And how it keeps the board as the Python file.

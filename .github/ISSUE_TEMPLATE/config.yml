@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: The README
+    url: https://github.com/luisg0nc/pino#readme
+    about: What pino does, what it needs and how to run it.
+  - name: Report a security problem
+    url: https://github.com/luisg0nc/pino/security/advisories/new
+    about: Privately, please. See SECURITY.md.

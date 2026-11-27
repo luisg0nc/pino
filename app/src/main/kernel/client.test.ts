@@ -1,10 +1,10 @@
 // The client against the engine's stand-in. Every process here is one this file started, and each is checked gone.
 
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { alive, FAKE_KERNEL, tempProject } from '../../test/fixtures'
-import { KernelError, kernelCommand, kernelHolder, startKernel, type KernelClient } from './client'
+import { KernelError, kernelCommand, kernelEnv, kernelHolder, startKernel, type KernelClient } from './client'
 
 let project: ReturnType<typeof tempProject>
 const clients: KernelClient[] = []
@@ -73,10 +73,20 @@ describe('the kernel client', () => {
     expect(k.alive).toBe(false)
   })
 
-  it('names the dev command from the app path, or PINO_KERNEL_CMD', () => {
-    expect(kernelCommand({}, '/r/app')).toEqual(['uv', 'run', '--directory', '/r/kernel', 'pino-kernel', 'serve'])
-    expect(kernelCommand({ PINO_KERNEL_DIR: '/k' }, '/r/app')).toEqual(['uv', 'run', '--directory', '/k', 'pino-kernel', 'serve'])
-    expect(kernelCommand({ PINO_KERNEL_CMD: 'node /x/fake.mjs' }, '/r/app')).toEqual(['node', '/x/fake.mjs'])
+  it('names the dev command from the engine folder, or PINO_KERNEL_CMD', () => {
+    expect(kernelCommand({}, '/r/kernel')).toEqual(['uv', 'run', '--directory', '/r/kernel', 'pino-kernel', 'serve'])
+    expect(kernelCommand({ PINO_KERNEL_DIR: '/k' }, '/r/kernel')).toEqual(['uv', 'run', '--directory', '/k', 'pino-kernel', 'serve'])
+    expect(kernelCommand({ PINO_KERNEL_CMD: 'node /x/fake.mjs' }, '/r/kernel', true)).toEqual(['node', '/x/fake.mjs'])
+  })
+
+  it('is frozen and without the tests dependencies when packaged', () => {
+    expect(kernelCommand({}, '/res/kernel', true)).toEqual(['uv', 'run', '--frozen', '--no-dev', '--directory', '/res/kernel', 'pino-kernel', 'serve'])
+  })
+
+  it("puts the engine's environment under userData when packaged, with no bytecode, and adds nothing otherwise", () => {
+    expect(kernelEnv({ packaged: true, userData: '/u/pino' })).toEqual({ UV_PROJECT_ENVIRONMENT: '/u/pino/kernel-env', PYTHONDONTWRITEBYTECODE: '1' })
+    expect(isAbsolute(kernelEnv({ packaged: true, userData: 'rel/pino' }).UV_PROJECT_ENVIRONMENT)).toBe(true)
+    expect(kernelEnv({ packaged: false, userData: '/u/pino' })).toEqual({})
   })
 
   it("relays a job's events, then its result", async () => {
