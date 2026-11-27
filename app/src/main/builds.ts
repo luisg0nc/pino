@@ -144,6 +144,8 @@ export class Builds {
   private readonly now: () => number
   private readonly pingTimeoutMs: number
   private readonly entries = new Map<string, Entry>()
+  /** The writes of `.pino/build-causes.json` under way (`keepCauses`). */
+  private readonly writesUnderWay = new Set<Promise<void>>()
   private readonly stateListeners = new Set<(s: BuildState) => void>()
   private readonly resultListeners = new Set<(projectId: string, r: BuildResult) => void>()
   /** Each engine's answer to its one ping, whoever asked first. */
@@ -373,9 +375,24 @@ export class Builds {
     })
   }
 
-  /** Writes the causes on file, without holding anything up: a write that fails is let go. */
+  /** Writes the causes on file, without holding up a build: a write that fails is let go. It is counted in `writing`. */
   private keepCauses(entry: Entry): void {
-    void entry.loaded.then(() => this.writeCauses(entry.project.dir, new Map(entry.causes))).catch(() => {})
+    const write: Promise<void> = entry.loaded.then(() => this.writeCauses(entry.project.dir, new Map(entry.causes))).catch(() => {})
+    this.writesUnderWay.add(write)
+    void write.finally(() => this.writesUnderWay.delete(write))
+  }
+
+  /** How many writes of the causes are under way. */
+  get writes(): number {
+    return this.writesUnderWay.size
+  }
+
+  /**
+   * Once every write of the causes under way has landed or failed: what closes a project and then removes or leaves its
+   * folder (a quit, a test) waits for this, so that nothing is written into `.pino` after.
+   */
+  async writing(): Promise<void> {
+    while (this.writesUnderWay.size > 0) await Promise.all([...this.writesUnderWay])
   }
 
   private finish(entry: Entry): void {

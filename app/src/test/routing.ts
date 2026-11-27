@@ -33,6 +33,8 @@ export function routedLoop(project: ReturnType<typeof tempProject>, env: Record<
     built: () => builds.whenSettled(info.id, Date.now() + 10_000),
     async dispose() {
       builds.close(info.id)
+      // A causes file still being written would land in the project's .pino as the test removes it.
+      await builds.writing()
       await holder.dispose()
     }
   }

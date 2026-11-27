@@ -56,7 +56,8 @@ paths:
 - **What made each build** (`main/buildCauses.ts`): `.pino/build-causes.json` (`pino.build-causes/1`: the build's
   number, its cause, and for Claude's the prompt of its turn), by `Builds` in main alone, through `writeOwn`, ignored
   by git (`ensureIgnored`). It keeps the newest 200 by number; a row that is not one is left out when it is read, and a
-  write that fails is let go.
+  write that fails is let go. A write never holds up a build, so `Builds.writing()` says when those under way have
+  landed: the quit waits for it, and so does a test before it removes the project's folder.
 - **The card's picture** (`main/thumb.ts`): `.pino/thumb.png` and `.pino/thumb.json` (the build's hash and when),
   through `writeOwn`, both ignored by git. The window draws it and main keeps it only for the open project, only of its
   newest good build, and only a PNG of 512 KB at most. It is read only as a plain file through no link. Opening a

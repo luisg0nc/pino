@@ -434,7 +434,8 @@ const quitWaits = quitGate(3000)
 
 app.on('before-quit', (event) => {
   // The engine is asked to shut down; it has the same three seconds, and its whole group is killed with pino.
-  const wait = quitWaits([sessions?.busy ? sessions.stopAll() : null, configWriting > 0 ? configWritten : null, kernel.current() ? kernel.dispose() : null])
+  // A causes file still being written lands before pino goes (`Builds.writing`).
+  const wait = quitWaits([sessions?.busy ? sessions.stopAll() : null, configWriting > 0 ? configWritten : null, kernel.current() ? kernel.dispose() : null, builds.writes > 0 ? builds.writing() : null])
   if (!wait) return
   event.preventDefault()
   void wait.then(() => app.quit())

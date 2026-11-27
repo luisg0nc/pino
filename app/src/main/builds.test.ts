@@ -49,7 +49,10 @@ function loop(env: () => Record<string, string> = () => ({}), deps: Partial<Cons
   builds.onState((s) => states.push(structuredClone(s)))
   builds.onResult((_id, r) => results.push(r))
   done.push(
-    () => builds.close(info().id),
+    () => {
+      builds.close(info().id)
+      return builds.writing()
+    },
     () => holder.dispose()
   )
   return {
@@ -147,6 +150,8 @@ describe('the build loop', () => {
     await builds.whenSettled(info().id, Date.now() + 5000)
     expect(builds.latest(info().id)!.number).toBe(3)
     expect(results).toEqual([3])
+    builds.close(info().id)
+    await builds.writing()
   })
 
   // `uv` waiting on a lock, or a sync that hangs: the engine is there and says nothing.
@@ -299,6 +304,8 @@ describe('the build a route was made on', () => {
     }
     expect(builds.routedOn(info().id, 'cccccccc00000001')).toBe(5)
     expect(builds.routedOn(info().id, 'cccccccc00000002')).toBeUndefined()
+    builds.close(info().id)
+    await builds.writing()
   })
 })
 
@@ -530,6 +537,21 @@ describe('what made each build', () => {
     again.builds.open(info())
     const state = await again.settled()
     expect(told(state)).toEqual([[1, 'unknown', undefined], [2, 'agent', agent.turn], [3, 'unknown', undefined]])
+  })
+
+  it('says when the causes it is writing have landed, so that a folder is not removed under them', async () => {
+    let landed = false
+    let release: () => void = () => {}
+    const writeCauses = () => new Promise<void>((resolve) => (release = () => ((landed = true), resolve())))
+    const l = loop(() => ({}), { writeCauses, readCauses: async () => new Map() })
+    l.builds.open(info())
+    await l.settled()
+    expect(l.builds.writes).toBe(1)
+    l.builds.close(info().id)
+    const done = l.builds.writing().then(() => landed)
+    release()
+    expect(await done).toBe(true)
+    expect(l.builds.writes).toBe(0)
   })
 
   it('does not hold up a build for a write that fails', async () => {
