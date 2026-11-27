@@ -80,8 +80,9 @@ paths:
   (`ui/FolderMenu.tsx`; button "Workspace <name>", menu "Workspaces": the recent workspaces, the open one marked
   "current", and "Open workspace…"). On a project, a slash and its crumb ("Project <name>", menu "Projects": "New
   project…", "All projects", then every project, the open one "current", an empty one "empty"). Both lists are read when the menu opens (`useMenu` for the keys; it moves the focus into a menu in a layout effect, so the menu has
-  them as soon as it is drawn). A page that listens for keys leaves them to a `[role="menu"]` outside it
-  (`e2e/menus.spec.ts` holds both). The menus and their rows are `.menu` and
+  them as soon as it is drawn). The pages that listen for keys, and the Brief's picture opened large, leave a
+  focused `[role="menu"]` its keys (`e2e/menus.spec.ts` holds this and the focus); the ink pad does not, and covers the
+  title bar's menus. The menus and their rows are `.menu` and
   `.menu-item` (`viewbars.css`), as are the view cube's. A recent workspace's row is two lines (name, path), so its
   style is `.menu-item.folder-item` (`titlebar.css`): `.folder-item` alone loses its height and padding to
   `.menu-item`, which comes later in the cascade (`e2e/menus.spec.ts` holds the rows apart).
