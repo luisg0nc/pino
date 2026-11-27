@@ -177,7 +177,7 @@ export class ClaudeWrites {
     }
     const left = this.left.get(keyOf(project, file))
     if (left && stat && left.stamp === `${stat.mtimeMs}:${stat.size}`) return claude(left.turn)
-    const run = this.runs.findLast((one) => one.project === project && (stat ? stat.changedMs >= one.since - MTIME_SLACK_MS && stat.changedMs <= one.end :this.now() <= one.end + REMOVED_HEARD_MS))
+    const run = this.runs.findLast((one) => one.project === project && (stat ? stat.changedMs >= one.since - MTIME_SLACK_MS && Math.floor(stat.changedMs) <= one.end : this.now() <= one.end + REMOVED_HEARD_MS))
     return run ? claude(run.turn) : undefined
   }
 }
