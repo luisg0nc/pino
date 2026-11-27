@@ -271,7 +271,7 @@
     { "pino": "app/src/renderer/ui/usage/UsagePage.tsx", "torno": "app/src/renderer/ui/usage/UsagePage.tsx", "commit": "e253b28abf145c9b48c25d54971c6535751ba976", "mode": "adapted", "change": "no terminal conversations; the open project's name" },
     { "pino": "app/src/renderer/ui/usage/usageView.ts", "torno": "app/src/renderer/ui/usage/usageView.ts", "commit": "e253b28abf145c9b48c25d54971c6535751ba976", "mode": "adapted", "change": "no terminal rows; turns kept without a cost are said apart from resumed ones" },
     { "pino": "app/src/renderer/ui/usage/usageView.test.ts", "torno": "app/src/renderer/ui/usage/usageView.test.ts", "commit": "e253b28abf145c9b48c25d54971c6535751ba976", "mode": "adapted", "change": "to match usageView.ts" },
-    { "pino": "app/e2e/usage.spec.ts", "torno": "app/e2e/usage.spec.ts", "commit": "e253b28abf145c9b48c25d54971c6535751ba976", "mode": "adapted", "change": "rewritten on pino's launch: a resumed conversation, Open in Usage, a live look and build" },
+    { "pino": "app/e2e/usage.spec.ts", "torno": "app/e2e/usage.spec.ts", "commit": "e253b28abf145c9b48c25d54971c6535751ba976", "mode": "adapted", "change": "rewritten on pino's launch: a resumed conversation, Open in Usage, a live look and build; the live turn waits for the new session after Stop" },
     { "pino": ".claude/rules/usage.md", "torno": ".claude/rules/usage.md", "commit": "e253b28abf145c9b48c25d54971c6535751ba976", "mode": "adapted", "change": "pino's tab, builds and transcript; no terminal and no timeline chips" }
   ]
 }

@@ -16,6 +16,7 @@ let open: Launched
 const dockOf = (page: Page): Locator => page.locator('[data-region="session"]')
 const composer = (page: Page): Locator => page.locator('[data-chat-composer]')
 const usagePage = (page: Page): Locator => page.locator('main .usage-page')
+const state = (page: Page) => page.evaluate(() => window.__pinoTest!.state())
 const tab = (page: Page, name: string): Locator => page.getByRole('tablist', { name: 'Views' }).getByRole('tab', { name })
 
 async function say(page: Page, text: string): Promise<void> {
@@ -77,9 +78,15 @@ test('a resumed conversation: a large turn says why, and its first new turn says
 test('the end of a live turn says what it took, and its pictures and builds are counted', async () => {
   const { page } = open
   await tab(page, 'Board').click()
+  // The resumed session ends, and a new one takes its place: until it has, the composer on show is the old session's,
+  // still open while its stop is on the way, and a prompt written there goes with it.
+  const before = (await state(page)).session!.sessionId
   await fromMore(dockOf(page), 'Stop')
+  await expect.poll(async () => (await state(page)).session?.status).toBe('exited')
   await newSession(dockOf(page))
-  await expect(composer(page)).toBeVisible()
+  await expect.poll(async () => (await state(page)).session?.sessionId).not.toBe(before)
+  await expect.poll(async () => (await state(page)).session?.status).toBe('idle')
+  await expect(composer(page)).toBeEnabled()
   // The save is built while the turn is still at work.
   await say(page, 'tool mcp__pino__look {}\nwrite extra.py a = 1\nslow 3')
   const line = dockOf(page).locator('.chat .chat-turn .chat-turn-usage')
