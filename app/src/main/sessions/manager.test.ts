@@ -299,6 +299,29 @@ describe('Sessions', () => {
       expect(sessions.wroteBy(project.id, file())).toBeUndefined()
     })
 
+    // torno's review of its build causes: a call nobody told over would claim every later save, for good.
+    it.each([
+      ['the person interrupted', (sessions: Sessions, id: string) => sessions.interrupt(id)],
+      ['the session was ended under', (sessions: Sessions, id: string) => sessions.stop(id)],
+      ['the CLI died in', async (sessions: Sessions) => sessions.killAll()]
+    ])('is not one made after %s a command of its that was under way', async (_how, end) => {
+      const sessions = manager()
+      const id = await started(sessions)
+      // A command that may write: one that surely writes nothing is of no account to begin with.
+      await sessions.send(id, { text: 'hold 30 python gen.py' })
+      await until(() => expect(of(sessions, id, 'tool')).toHaveLength(1))
+      // While it runs, a save is taken for its: the call is there to be told over.
+      await until(() => {
+        writeFileSync(file(), 'generated')
+        expect(sessions.wroteBy(project.id, file())).toBeDefined()
+      })
+      await end(sessions, id)
+      await until(() => expect(sessions.turnNow(project.id)).toBeUndefined())
+      await new Promise((r) => setTimeout(r, 50))
+      writeFileSync(file(), 'mine')
+      expect(sessions.wroteBy(project.id, file())).toBeUndefined()
+    })
+
     it('is not one made after a request the person refused', async () => {
       const sessions = manager()
       const id = await started(sessions)
